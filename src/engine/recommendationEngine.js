@@ -1,29 +1,32 @@
 import { MAPS, MONSTERS } from '../data/maps.js';
 
-const monsterById = Object.fromEntries(MONSTERS.map((monster) => [monster.id, monster]));
+const seedMonsterById = Object.fromEntries(MONSTERS.map((monster) => [monster.id, monster]));
 
-export function getMapRecommendations({ classLine, level, statPlan }) {
+export function getMapRecommendations({ classLine, level, statPlan, maps = MAPS, monsters = MONSTERS }) {
   const playerLevel = Number(level) || 1;
   const accuracy = classLine.id === 'magician' ? statPlan.derived.magicAccuracy : statPlan.derived.accuracy;
+  const monsterById = Object.fromEntries(monsters.map((monster) => [monster.id, monster]));
 
-  return MAPS.map((map) => {
-    const monsters = map.monsters.map((id) => monsterById[id]).filter(Boolean);
+  return maps.map((map) => {
+    const mapMonsters = Array.isArray(map.monsterDetails)
+      ? map.monsterDetails
+      : map.monsters.map((id) => monsterById[id] ?? seedMonsterById[id]).filter(Boolean);
     const levelScore = scoreLevelFit(playerLevel, map.levelRange);
-    const hitScore = scoreHitFit(accuracy, monsters);
-    const classScore = scoreClassFit(classLine.id, monsters, map);
-    const densityScore = map.tags.includes('密集') || map.tags.includes('热门') ? 12 : 6;
-    const riskPenalty = monsters.some((monster) => monster.requiredAccuracy > accuracy + 18) ? 16 : 0;
+    const hitScore = scoreHitFit(accuracy, mapMonsters);
+    const classScore = scoreClassFit(classLine.id, mapMonsters, map);
+    const densityScore = scoreDensity(map);
+    const riskPenalty = mapMonsters.some((monster) => monster.requiredAccuracy > accuracy + 18) ? 16 : 0;
     const score = Math.round(levelScore + hitScore + classScore + densityScore - riskPenalty);
 
     return {
       ...map,
-      monsters,
+      monsters: mapMonsters,
       score: Math.max(0, Math.min(100, score)),
       accuracy,
-      canHitAll: monsters.every((monster) => accuracy >= monster.requiredAccuracy),
-      warning: buildWarning(accuracy, monsters, classLine.id),
+      canHitAll: mapMonsters.every((monster) => accuracy >= monster.requiredAccuracy),
+      warning: buildWarning(accuracy, mapMonsters, classLine.id),
     };
-  }).sort((a, b) => b.score - a.score);
+  }).sort((a, b) => b.score - a.score || b.spawnTotal - a.spawnTotal);
 }
 
 function scoreLevelFit(level, [min, max]) {
@@ -43,21 +46,29 @@ function scoreHitFit(accuracy, monsters) {
 
 function scoreClassFit(classId, monsters, map) {
   if (classId === 'cleric' || classId === 'magician') {
-    if (monsters.some((monster) => monster.elementWeakness.includes('holy'))) return 20;
+    if (monsters.some((monster) => monster.elementWeakness.includes('holy') || monster.undead)) return 20;
   }
   if (classId === 'warrior' && map.tags.includes('战士友好')) return 16;
   if (classId === 'bowman' && !map.tags.includes('高血量')) return 10;
-  if (classId === 'thief' && map.tags.includes('热门')) return 10;
-  if (classId === 'pirate' && map.tags.includes('密集')) return 8;
+  if (classId === 'thief' && (map.tags.includes('热门') || map.tags.includes('高密度'))) return 10;
+  if (classId === 'pirate' && (map.tags.includes('密集') || map.tags.includes('高密度'))) return 8;
+  return 6;
+}
+
+function scoreDensity(map) {
+  if (Number(map.spawnTotal) >= 35) return 16;
+  if (Number(map.spawnTotal) >= 18) return 11;
+  if (map.tags.includes('密集') || map.tags.includes('热门')) return 12;
   return 6;
 }
 
 function buildWarning(accuracy, monsters, classId) {
   const hardTargets = monsters.filter((monster) => accuracy < monster.requiredAccuracy);
   if (!hardTargets.length) return '命中压力可控，可以尝试。';
-  const names = hardTargets.map((monster) => monster.name).join('、');
-  if (classId === 'magician') return `${names} 的魔法命中可能不稳，建议降低等级差或补 INT/LUK。`;
-  return `${names} 的命中要求偏高，建议补 DEX/命中装备后再来。`;
+  const names = hardTargets.slice(0, 3).map((monster) => monster.name).join('、');
+  const suffix = hardTargets.length > 3 ? ` 等 ${hardTargets.length} 种怪` : '';
+  if (classId === 'magician') return `${names}${suffix} 的魔法命中可能不稳，建议降低等级差或补 INT/LUK。`;
+  return `${names}${suffix} 的命中要求偏高，建议补 DEX/命中装备后再来。`;
 }
 
 export function getMonsterRows(map) {
