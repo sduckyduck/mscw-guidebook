@@ -18,6 +18,7 @@ import { buildLowCostRoute, getMaterialValueIndex, getProfessionRecipes } from '
 import { buildStatPlan } from './engine/levelEngine.js';
 import { getMapRecommendations } from './engine/recommendationEngine.js';
 import { probeOfficialData } from './engine/dataLoader.js';
+import { loadOfficialGuideData } from './engine/officialDataAdapter.js';
 
 const tabs = [
   { id: 'character', name: '角色模拟', icon: UserRound },
@@ -26,6 +27,8 @@ const tabs = [
   { id: 'crafting', name: '锻造系统', icon: Boxes },
   { id: 'data', name: '数据状态', icon: Database },
 ];
+
+const professionIconMap = Object.fromEntries(PROFESSIONS.map((profession) => [profession.id, profession]));
 
 function App() {
   const [editionId, setEditionId] = useState('china');
@@ -36,6 +39,8 @@ function App() {
   const [targetCraftLevel, setTargetCraftLevel] = useState(8);
   const [activeTab, setActiveTab] = useState('character');
   const [dataProbe, setDataProbe] = useState([]);
+  const [officialData, setOfficialData] = useState(null);
+  const [officialError, setOfficialError] = useState('');
 
   const edition = EDITIONS.find((item) => item.id === editionId) ?? EDITIONS[0];
   const availableClasses = CLASS_LINES.filter((item) => edition.classIds.includes(item.id));
@@ -43,13 +48,25 @@ function App() {
   const selectedBranch = classLine.branches.find((item) => item.id === branchId) ?? classLine.branches[0];
   const statPlan = useMemo(() => buildStatPlan(classLine, level), [classLine, level]);
   const recommendations = useMemo(
-    () => getMapRecommendations({ classLine, level, statPlan }).slice(0, 5),
-    [classLine, level, statPlan],
+    () => getMapRecommendations({
+      classLine,
+      level,
+      statPlan,
+      maps: officialData?.maps,
+      monsters: officialData?.monsters,
+    }).slice(0, 5),
+    [classLine, level, statPlan, officialData],
   );
   const skillRows = SKILL_BUILDS[selectedBranch?.id] ?? SKILL_BUILDS[classLine.id] ?? [];
-  const professionRecipes = getProfessionRecipes(professionId);
-  const materialValue = getMaterialValueIndex().slice(0, 8);
-  const craftingRoute = buildLowCostRoute(professionId, targetCraftLevel);
+  const professions = useMemo(() => buildProfessionList(officialData), [officialData]);
+  const activeProfessionId = professions.some((profession) => profession.id === professionId)
+    ? professionId
+    : professions[0]?.id ?? 'smithing';
+  const recipes = officialData?.recipes;
+  const materials = officialData?.materials;
+  const professionRecipes = getProfessionRecipes(activeProfessionId, recipes, materials);
+  const materialValue = getMaterialValueIndex(recipes, materials).slice(0, 8);
+  const craftingRoute = buildLowCostRoute(activeProfessionId, targetCraftLevel, recipes, materials);
 
   useEffect(() => {
     if (!classLine.branches.some((branch) => branch.id === branchId)) {
@@ -59,6 +76,14 @@ function App() {
 
   useEffect(() => {
     probeOfficialData().then(setDataProbe);
+    loadOfficialGuideData()
+      .then((data) => {
+        setOfficialData(data);
+        setOfficialError('');
+      })
+      .catch((error) => {
+        setOfficialError(error.message || '官方数据读取失败');
+      });
   }, []);
 
   return (
@@ -80,6 +105,9 @@ function App() {
                 {item.name}
               </button>
             ))}
+            <span className={officialData ? 'data-badge ok' : 'data-badge'}>
+              {officialData ? `官方数据已接入：${officialData.overview?.monsters ?? officialData.monsters.length} 怪物 / ${officialData.maps.length} 刷图地图` : '正在读取官方数据'}
+            </span>
           </div>
         </div>
         <CharacterCard classLine={classLine} branch={selectedBranch} statPlan={statPlan} level={level} />
@@ -175,6 +203,11 @@ function App() {
       {activeTab === 'maps' && (
         <section className="grid one-col">
           <Panel title="推荐地图与怪物表" icon={Map}>
+            <p className="panel-copy">
+              {officialData
+                ? '当前推荐已使用 public/AppData/monsters.json 和 maps.json。评分综合等级差、命中压力、怪物密度和职业适配。'
+                : '当前使用示例数据；官方数据读取完成后会自动切换。'}
+            </p>
             <div className="map-list">
               {recommendations.map((map) => (
                 <article className="map-card" key={map.id}>
@@ -186,10 +219,12 @@ function App() {
                     </div>
                     <div className="score-badge">{map.score}</div>
                   </div>
+                  {map.thumbnail && <img className="map-thumb" src={map.thumbnail} alt={`${map.name} minimap`} />}
                   <div className="tag-row">
                     {map.tags.map((tag) => (
                       <span key={tag}>{tag}</span>
                     ))}
+                    {Number.isFinite(map.spawnTotal) && <span>刷怪数 {map.spawnTotal}</span>}
                   </div>
                   <p className={map.canHitAll ? 'safe-text' : 'warn-text'}>
                     <Crosshair size={16} /> {map.warning}
@@ -204,18 +239,31 @@ function App() {
                           <th>EXP</th>
                           <th>命中需求</th>
                           <th>防御</th>
+                          <th>攻击</th>
                           <th>属性</th>
                         </tr>
                       </thead>
                       <tbody>
                         {map.monsters.map((monster) => (
-                          <tr key={monster.id}>
-                            <td>{monster.name}</td>
+                          <tr key={`${map.id}-${monster.id}`}>
+                            <td>
+                              <div className="monster-cell">
+                                {(monster.gif || monster.thumbnail) && (
+                                  <img
+                                    src={monster.gif || monster.thumbnail}
+                                    alt=""
+                                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                                  />
+                                )}
+                                <span>{monster.name}</span>
+                              </div>
+                            </td>
                             <td>{monster.level}</td>
                             <td>{monster.hp}</td>
                             <td>{monster.exp}</td>
                             <td>{monster.requiredAccuracy}</td>
                             <td>{monster.defense}</td>
+                            <td>{monster.physicalAttack ?? '-'}</td>
                             <td>{formatElement(monster)}</td>
                           </tr>
                         ))}
@@ -256,11 +304,16 @@ function App() {
       {activeTab === 'crafting' && (
         <section className="grid two-col wide-left">
           <Panel title="六大锻造系统" icon={Boxes}>
+            <p className="panel-copy">
+              {officialData
+                ? `当前锻造模块已读取官方 ${officialData.recipes.length} 条配方，并按金币/经验效率做低成本路线。`
+                : '当前使用示例配方；官方 crafting.json 读取完成后会自动切换。'}
+            </p>
             <div className="profession-grid">
-              {PROFESSIONS.map((profession) => (
+              {professions.map((profession) => (
                 <button
                   key={profession.id}
-                  className={professionId === profession.id ? 'profession-card active' : 'profession-card'}
+                  className={activeProfessionId === profession.id ? 'profession-card active' : 'profession-card'}
                   onClick={() => setProfessionId(profession.id)}
                 >
                   <span>{profession.icon}</span>
@@ -296,7 +349,7 @@ function App() {
                       <td>{step.from} → {step.to}</td>
                       <td>{step.recipe}</td>
                       <td>{step.crafts}</td>
-                      <td>{step.cost}</td>
+                      <td>{step.cost.toLocaleString()}</td>
                       <td>{step.materials.join('，')}</td>
                     </tr>
                   ))}
@@ -310,7 +363,7 @@ function App() {
                 <article key={material.id} className="material-card">
                   <div>
                     <strong>{material.name}</strong>
-                    <p>{material.source}</p>
+                    <p>{material.source} · 覆盖 {material.recipeCount} 配方 · 总需求 {material.totalDemand}</p>
                   </div>
                   <span>{material.score}</span>
                 </article>
@@ -318,10 +371,10 @@ function App() {
             </div>
             <h3 className="section-mini-title">当前专业高效配方</h3>
             <div className="mini-list">
-              {professionRecipes.map((recipe) => (
+              {professionRecipes.slice(0, 10).map((recipe) => (
                 <div key={recipe.id}>
                   <strong>{recipe.output}</strong>
-                  <span>效率 {recipe.efficiency} · {recipe.materialNames.join('，')}</span>
+                  <span>Lv.{recipe.level} · 效率 {recipe.efficiency} · {recipe.materialNames.join('，')}</span>
                 </div>
               ))}
             </div>
@@ -333,8 +386,21 @@ function App() {
         <section className="grid two-col">
           <Panel title="官方数据接入状态" icon={Database}>
             <p className="panel-copy">
-              当前版本先用 seed data 跑通交互。等你把 `AppData` 和 `RawData` 放到 `public/` 并 push 后，这里会显示可读取的数据入口。
+              {officialData
+                ? '官方 AppData 已经成功接入。地图推荐和锻造系统现在优先使用 public/AppData 下的数据。'
+                : '正在检测 public/AppData 和 public/RawData。'}
             </p>
+            {officialError && <p className="warn-text">{officialError}</p>}
+            {officialData?.overview && (
+              <div className="stat-grid data-stats">
+                <Metric label="怪物" value={officialData.overview.monsters} />
+                <Metric label="地图" value={officialData.overview.maps} />
+                <Metric label="配方" value={officialData.overview.recipes} />
+                <Metric label="技能" value={officialData.overview.skills} />
+                <Metric label="装备" value={officialData.overview.equipment} />
+                <Metric label="专业" value={officialData.overview.num_disciplines} />
+              </div>
+            )}
             <div className="mini-list">
               {dataProbe.map((item) => (
                 <div key={item.path}>
@@ -346,16 +412,30 @@ function App() {
           </Panel>
           <Panel title="下一步数据解析计划" icon={BookOpen}>
             <ol className="plan-list">
-              <li>扫描 RawData 中怪物、地图、物品、技能、配方相关 JSON。</li>
-              <li>写 converter，把官方字段转成本项目的 monsters/maps/recipes/skills schema。</li>
-              <li>把经验、HP、防御、回避、属性抗性、掉落材料接入推荐引擎。</li>
-              <li>接入角色 sprite/装备 sprite，替换当前剪影预览。</li>
+              <li>把角色 sprite / 装备 sprite 接到角色预览框。</li>
+              <li>把 `skills.json` 转成每个职业的技能树和推荐加点表。</li>
+              <li>把 `items.json` 接入装备池，计算不同等级的武器/装备推荐。</li>
+              <li>把怪物掉落材料接到锻造系统，做刷怪囤货路线。</li>
             </ol>
           </Panel>
         </section>
       )}
     </main>
   );
+}
+
+function buildProfessionList(officialData) {
+  if (!officialData?.professions?.length) return PROFESSIONS;
+
+  return officialData.professions.map((profession) => {
+    const local = professionIconMap[profession.id];
+    return {
+      id: profession.id,
+      name: local?.name ?? profession.name,
+      icon: local?.icon ?? '🔧',
+      focus: local?.focus ?? `Skill ID ${profession.skillId}`,
+    };
+  });
 }
 
 function CharacterCard({ classLine, branch, statPlan, level }) {
@@ -411,9 +491,10 @@ function Feature({ label, value }) {
 }
 
 function formatElement(monster) {
-  const weak = monster.elementWeakness.length ? `弱 ${monster.elementWeakness.join('/')}` : '无弱点';
-  const resist = monster.elementResist.length ? `抗 ${monster.elementResist.join('/')}` : '无抗性';
-  return `${weak}; ${resist}`;
+  const weak = monster.elementWeakness?.length ? `弱 ${monster.elementWeakness.join('/')}` : '无弱点';
+  const resist = monster.elementResist?.length ? `抗 ${monster.elementResist.join('/')}` : '无抗性';
+  const special = monster.undead ? '不死系' : '';
+  return [weak, resist, special].filter(Boolean).join('; ');
 }
 
 export default App;
