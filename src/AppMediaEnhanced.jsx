@@ -11,6 +11,7 @@ import { getMapRecommendations } from './engine/recommendationEngine.js';
 import { loadOfficialGuideData } from './engine/officialDataAdapter.js';
 import { getApNote, getRecommendedSkillAllocation, getSkillPlan } from './engine/skillPlanner.js';
 import './styles/dashboard.css';
+import './styles/character-dashboard.css';
 
 const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['materials', '材料']];
 const JOBS = [['warrior', '战士'], ['magician', '魔法师'], ['bowman', '弓箭手'], ['thief', '飞侠'], ['pirate', '海盗']].map(([id, name]) => ({ id, name }));
@@ -126,7 +127,7 @@ export default function AppMediaEnhanced() {
     <nav className="top-tabs">{TABS.map(([id, name]) => <button key={id} className={tab === id ? 'top-tab active' : 'top-tab'} onClick={() => changeTab(id)}>{name}</button>)}</nav>
     {edition.dataMode !== 'official-appdata' && <p className="load-error">国服数据/公式已预留，当前暂不启用真实推荐。</p>}
     {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} weapon={weapon} gear={gear} stats={stats} candidatesBySlot={candidatesBySlot} onPickSlot={setPickerSlot} onOpenMaps={() => changeTab('maps')} />}
-    {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
+    {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
     {tab === 'materials' && <MaterialsPage data={activeData} />}
     {pickerSlot && <GearPicker slot={pickerSlot} items={candidatesBySlot[pickerSlot] ?? []} current={gear.find((item) => item.slot === pickerSlot)} onChoose={(item) => chooseGear(pickerSlot, item)} onClose={() => setPickerSlot(null)} />}
