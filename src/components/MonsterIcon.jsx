@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { iconSourcesFromNames } from './IconFallback.jsx';
+import IconFallback, { iconSourcesFromNames } from './IconFallback.jsx';
 
 const OSMS_MONSTERS_URLS = [
   'https://sduckyduck.github.io/osms-classic-guidebook/data/monsters.json',
@@ -58,6 +58,8 @@ const MONSTER_LOCAL_ALIASES = {
   'fire boar': ['fire boar', 'fire-boar', 'fire_boar', '3210100'],
   'wild boar': ['wild boar', 'wild-boar', 'wild_boar', '2230101'],
 };
+
+const MONSTER_ICON_FOLDERS = ['icons/monsters', 'icons/monster', 'icons'];
 
 let osmsMonsterIndex = null;
 let osmsMonsterPromise = null;
@@ -119,7 +121,7 @@ async function fetchFirstJson(urls) {
   let lastError = null;
   for (const url of urls) {
     try {
-      const response = await fetch(`${url}?v=png-monster-icons-4`, { cache: 'no-store' });
+      const response = await fetch(`${url}?v=png-monster-icons-5`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`${url} ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -151,18 +153,22 @@ function getMapleStoryIoSource(monster, preferredOnly = false) {
   return id ? `https://maplestory.io/api/${API_REGION}/${API_VERSION}/mob/${id}/icon?resize=3` : '';
 }
 
-function getLocalMonsterSources(monster) {
+function getMonsterNames(monster) {
   const key = normalizeName(monster?.name);
   const aliases = MONSTER_LOCAL_ALIASES[key] ?? [];
-  const id = monster?.id ?? monster?.mobId ?? monster?.monsterId ?? monster?.mapleMobId ?? monster?.msioId;
-  return iconSourcesFromNames([monster?.name, key, id, ...aliases], ['icons/monsters', 'icons/monster', 'icons']);
+  const id = monster?.id ?? monster?.mobId ?? monster?.monsterId ?? monster?.mapleMobId ?? monster?.msioId ?? LAST_RESORT_MSIO_ID_BY_NAME[key];
+  return unique([monster?.name, key, id, ...aliases]);
+}
+
+function getLocalMonsterSources(monster) {
+  return iconSourcesFromNames(getMonsterNames(monster), MONSTER_ICON_FOLDERS);
 }
 
 export function getMonsterIconSources(monster, index) {
   const matched = index?.get(normalizeName(monster?.name));
 
   return unique([
-    // 1) User-uploaded icons in public/icons win first.
+    // 1) Direct path guesses for user-uploaded icons in public/icons.
     ...getLocalMonsterSources(monster),
 
     // 2) Known-good MapleStory.io mob IDs where local/OSMS data can be stale.
@@ -187,8 +193,8 @@ export function getMonsterIconSources(monster, index) {
 
 export default function MonsterIcon({ monster, size = 36 }) {
   const [index, setIndex] = useState(osmsMonsterIndex);
-  const [sourceIndex, setSourceIndex] = useState(0);
   const sources = useMemo(() => getMonsterIconSources(monster, index), [monster, index]);
+  const names = useMemo(() => getMonsterNames(monster), [monster]);
 
   useEffect(() => {
     let stopped = false;
@@ -198,20 +204,17 @@ export default function MonsterIcon({ monster, size = 36 }) {
     return () => { stopped = true; };
   }, []);
 
-  useEffect(() => setSourceIndex(0), [monster?.name, monster?.id, sources.join('|')]);
-
   return (
     <div style={{ width: size + 10, height: size + 10, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', flex: '0 0 auto' }}>
-      {sources[sourceIndex] ? (
-        <img
-          src={sources[sourceIndex]}
-          alt={monster?.name ?? ''}
-          onError={() => setSourceIndex((value) => value + 1)}
-          style={{ width: size, height: size, objectFit: 'contain', imageRendering: 'pixelated' }}
-        />
-      ) : (
-        <span style={{ color: '#b8c2cc', fontWeight: 1000 }}>—</span>
-      )}
+      <IconFallback
+        names={names}
+        folders={MONSTER_ICON_FOLDERS}
+        sources={sources}
+        alt={monster?.name ?? ''}
+        debugLabel={`monster:${monster?.name ?? ''}`}
+        fallback={<span style={{ color: '#b8c2cc', fontWeight: 1000 }}>—</span>}
+        style={{ width: size, height: size, objectFit: 'contain', imageRendering: 'pixelated' }}
+      />
     </div>
   );
 }
