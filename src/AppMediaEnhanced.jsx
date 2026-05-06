@@ -6,7 +6,7 @@ import OsmsDataImage from './components/OsmsDataImage.jsx';
 import SkillPanel from './components/SkillPanel.jsx';
 import { CLASS_LINES, EDITIONS } from './data/classes.js';
 import { buildStatPlan } from './engine/levelEngine.js';
-import { selectGear } from './engine/gearSelector.js';
+import { applyGearOverrides, getGearCandidatesBySlot, selectGear } from './engine/gearSelector.js';
 import { getMapRecommendations } from './engine/recommendationEngine.js';
 import { loadOfficialGuideData } from './engine/officialDataAdapter.js';
 import { getApNote, getSkillPlan } from './engine/skillPlanner.js';
@@ -17,6 +17,7 @@ const JOBS = [['warrior', '战士'], ['magician', '魔法师'], ['bowman', '弓�
 const BUDGETS = [['low', '低资金'], ['mid', '普通'], ['high', '有钱']].map(([id, name]) => ({ id, name }));
 const PRIORITIES = [['stable', '稳定'], ['exp', '经验'], ['material', '材料'], ['meso', '金币']].map(([id, name]) => ({ id, name }));
 const SLOTS = [['weapon', '武器'], ['cap', '头盔'], ['overall', '套服'], ['top', '上衣'], ['bottom', '裤子'], ['shoes', '鞋子'], ['glove', '手套'], ['shield', '盾牌']];
+const BASE_DASHBOARD_SLOTS = [['weapon', '武器'], ['cap', '头盔'], ['overall', '套服'], ['shoes', '鞋子']];
 const emptyData = { items: [], maps: [], monsters: [], recipes: [], materials: [] };
 
 export default function AppMediaEnhanced() {
@@ -28,6 +29,8 @@ export default function AppMediaEnhanced() {
   const [level, setLevel] = useState(25);
   const [budget, setBudget] = useState('low');
   const [priority, setPriority] = useState('material');
+  const [gearOverrides, setGearOverrides] = useState({});
+  const [pickerSlot, setPickerSlot] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
@@ -46,10 +49,13 @@ export default function AppMediaEnhanced() {
     if (!classes.some((x) => x.id === classId)) setClassId(classes[0]?.id ?? 'warrior');
     if (!classLine.branches.some((x) => x.id === branchId)) setBranchId(classLine.branches[0]?.id ?? classLine.id);
   }, [classes, classId, branchId, classLine]);
+  useEffect(() => { setGearOverrides({}); setPickerSlot(null); }, [editionId, classId, branchId, gender, level, budget]);
 
   const statPlan = useMemo(() => buildStatPlan(classLine, level), [classLine, level]);
   const maps = useMemo(() => getMapRecommendations({ classLine, level, statPlan, maps: activeData.maps, monsters: activeData.monsters }).slice(0, 8), [classLine, level, statPlan, activeData]);
-  const gear = useMemo(() => selectGear({ classLine, branch, level, budget, gender, statPlan, items: activeData.items }), [classLine, branch, level, budget, gender, statPlan, activeData]);
+  const recommendedGear = useMemo(() => selectGear({ classLine, branch, level, budget, gender, statPlan, items: activeData.items }), [classLine, branch, level, budget, gender, statPlan, activeData]);
+  const candidatesBySlot = useMemo(() => getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items: activeData.items }), [classLine, branch, level, budget, gender, statPlan, activeData]);
+  const gear = useMemo(() => applyGearOverrides(recommendedGear, gearOverrides), [recommendedGear, gearOverrides]);
   const weapon = gear.find((x) => x.slot === 'weapon');
   const mainAttack = calcMainAttack(classLine, statPlan, weapon);
   const stats = compactStats(statPlan, classLine, mainAttack);
@@ -59,24 +65,38 @@ export default function AppMediaEnhanced() {
   const apNote = useMemo(() => getApNote({ classLine, statPlan }), [classLine, statPlan]);
   const controls = { edition, editionId, setEditionId, classId, setClassId, branchId, setBranchId, gender, setGender, level, setLevel, budget, setBudget, priority, setPriority, classes, classLine, minLevel, maxLevel };
 
+  const chooseGear = (slot, item) => {
+    setGearOverrides((old) => {
+      const next = { ...old, [slot]: item };
+      if (slot === 'overall') { delete next.top; delete next.bottom; }
+      if (slot === 'top' || slot === 'bottom') delete next.overall;
+      return next;
+    });
+    setPickerSlot(null);
+  };
+
   return <main className="app-shell">
     <nav className="top-tabs">{TABS.map(([id, name]) => <button key={id} className={tab === id ? 'top-tab active' : 'top-tab'} onClick={() => setTab(id)}>{name}</button>)}</nav>
     {edition.dataMode !== 'official-appdata' && <p className="load-error">国服数据/公式已预留，当前暂不启用真实推荐。</p>}
-    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} weapon={weapon} gear={gear} stats={stats} />}
+    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} weapon={weapon} gear={gear} stats={stats} candidatesBySlot={candidatesBySlot} onPickSlot={setPickerSlot} />}
     {tab === 'character' && <><Parameters {...controls} /><StatsCard stats={stats} classLine={classLine} /><SkillPanel plan={skillPlan} apNote={apNote} /></>}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
-    {tab === 'gear' && <GearPage gear={gear} />}
+    {tab === 'gear' && <GearPage gear={gear} candidatesBySlot={candidatesBySlot} onPickSlot={setPickerSlot} />}
     {tab === 'materials' && <MaterialsPage data={activeData} />}
+    {pickerSlot && <GearPicker slot={pickerSlot} items={candidatesBySlot[pickerSlot] ?? []} current={gear.find((item) => item.slot === pickerSlot)} onChoose={(item) => chooseGear(pickerSlot, item)} onClose={() => setPickerSlot(null)} />}
     {error && <p className="load-error">官方数据读取提示：{error}</p>}
   </main>;
 }
 
-function Dashboard({ controls, classLine, gender, level, bestMonster, bestMap, weapon, gear, stats }) {
+function Dashboard({ controls, classLine, gender, level, bestMonster, bestMap, weapon, gear, stats, candidatesBySlot, onPickSlot }) {
   return <section className="mg-dashboard">
     <h1 className="mg-dashboard-title">MapleGuide: {classLine.name}开荒仪表盘</h1>
     <p className="mg-dashboard-subtitle">根据您的参数，为您推荐最佳路线</p>
     <div className="mg-dashboard-grid">
-      <ConfigPanel {...controls} />
+      <div className="mg-left-stack">
+        <ConfigPanel {...controls} />
+        <DashboardEquipmentSlots gear={gear} candidatesBySlot={candidatesBySlot} onPickSlot={onPickSlot} />
+      </div>
       <div className="mg-right-stack">
         <StatusPanel bestMonster={bestMonster} bestMap={bestMap} />
         <PreviewPanel classLine={classLine} gender={gender} level={level} weapon={weapon} gear={gear} stats={stats} />
@@ -124,6 +144,30 @@ function SelectField({ label, value, onChange, options }) {
   </div>;
 }
 
+function dashboardSlots(gear, candidatesBySlot) {
+  const by = Object.fromEntries((gear ?? []).map((item) => [item.slot, item]));
+  const lastSlot = by.shield || (candidatesBySlot?.shield?.length ?? 0) ? ['shield', '盾牌'] : ['glove', '手套'];
+  return [...BASE_DASHBOARD_SLOTS, lastSlot];
+}
+
+function DashboardEquipmentSlots({ gear, candidatesBySlot, onPickSlot }) {
+  const by = Object.fromEntries((gear ?? []).map((item) => [item.slot, item]));
+  const slots = dashboardSlots(gear, candidatesBySlot);
+  return <section className="mg-equipment-board">
+    <div className="mg-equipment-head">
+      <h2 className="mg-panel-title">装备快捷栏</h2>
+      <span>点击更换</span>
+    </div>
+    <div className="mg-equipment-grid">
+      {slots.map(([slot, label]) => <button className="mg-equip-tile" key={slot} onClick={() => onPickSlot(slot)} disabled={!(candidatesBySlot?.[slot]?.length)}>
+        <MsioItemIcon item={by[slot]} size={30} />
+        <span>{label}</span>
+        <strong>{by[slot]?.title ?? '未装备'}</strong>
+      </button>)}
+    </div>
+  </section>;
+}
+
 function StatusPanel({ bestMonster, bestMap }) {
   return <section className="mg-status-panel">
     <h2 className="mg-panel-title">推荐 & 状态</h2>
@@ -139,7 +183,7 @@ function StatusPanel({ bestMonster, bestMap }) {
 }
 
 function PreviewPanel({ classLine, gender, level, weapon, gear, stats }) {
-  return <section className="mg-preview-card">
+  return <section className="mg-preview-card no-rail">
     <div className="mg-preview-main">
       <div className="mg-character-frame"><CharacterPreview classLine={classLine} gender={gender} gear={gear} /></div>
       <div>
@@ -148,25 +192,34 @@ function PreviewPanel({ classLine, gender, level, weapon, gear, stats }) {
       </div>
       <div className="preview-meta"><strong>{classLine.name} Lv.{level}</strong><span>{weapon?.title ?? '装备读取中'}</span></div>
     </div>
-    <EquipmentRail gear={gear} />
   </section>;
 }
 
-function EquipmentRail({ gear }) {
-  const by = Object.fromEntries((gear ?? []).map((x) => [x.slot, x]));
-  const visibleSlots = SLOTS.slice(0, 6);
-  return <aside className="mg-equip-rail">
-    {visibleSlots.map(([slot, label]) => <div className="mg-equip-mini" key={slot}>
-      <MsioItemIcon item={by[slot]} size={30} />
-      <span>{label}</span>
-      <strong>{by[slot]?.title ?? '未装备'}</strong>
-    </div>)}
-  </aside>;
+function GearPicker({ slot, items, current, onChoose, onClose }) {
+  const label = SLOTS.find(([id]) => id === slot)?.[1] ?? slot;
+  return <div className="mg-picker-backdrop" onClick={onClose}>
+    <div className="mg-picker-sheet" onClick={(event) => event.stopPropagation()}>
+      <div className="mg-picker-head">
+        <h2>选择{label}</h2>
+        <button onClick={onClose}>关闭</button>
+      </div>
+      <div className="mg-picker-list">
+        {items.length ? items.map((item) => <button key={`${slot}-${item.id}`} className={current?.id === item.id ? 'mg-picker-item active' : 'mg-picker-item'} onClick={() => onChoose(item)}>
+          <MsioItemIcon item={item} size={36} />
+          <div>
+            <strong>{item.title}</strong>
+            <span>Lv.{item.reqLevel ?? '-'} · {item.weaponType ?? item.reqJobLabel ?? item.label}</span>
+          </div>
+          <em>{current?.id === item.id ? '当前' : '替换'}</em>
+        </button>) : <p className="section-copy">当前等级和职业没有可替换装备。</p>}
+      </div>
+    </div>
+  </div>;
 }
 
 function NextStep({ bestMonster, bestMap, weapon, nextAp }) { return <Section title="下一步"><div className="info-list"><Info label="练级" title={`${bestMonster?.name ?? '推荐怪物'} Lv.${bestMonster?.level ?? '-'}`} desc="按当前命中和等级推荐" media={<MonsterIcon monster={bestMonster} size={38} />} /><Info label="地图" title={bestMap?.name ?? '推荐地图读取中'} desc={`${bestMap?.canHitAll ? '安全' : '需补命中'} · 刷怪数 ${bestMap?.spawnTotal ?? '-'}`} /><Info label="装备" title={weapon?.title ?? '职业武器'} desc={weapon?.desc ?? '按当前等级推荐'} media={<MsioItemIcon item={weapon} size={38} />} /><Info label="AP" title={nextAp} desc="按当前职业主属性优先" /></div></Section>; }
 function MapsPage({ maps, data }) { return <Section title="推荐路线"><p className="section-copy">{data?.maps?.length ? '地图大图、怪物图和刷怪数来自当前版本数据；图片缺失时会 fallback 到 OSMS Guide 的 data 资源。' : '当前版本地图数据未启用。'}</p><div className="map-stack">{maps.map((map) => <article className="map-result" key={map.id}><div className="map-result-main"><div><span className="item-label">Lv.{map.levelRange?.[0]}-{map.levelRange?.[1]} · {map.region}</span><h3>{map.monsters?.[0]?.name ?? map.name}</h3><p>{map.monsters?.[0] ? `Lv.${map.monsters[0].level} · EXP ${map.monsters[0].exp ?? '-'} · ${map.canHitAll ? '命中 100%' : '命中偏紧'}` : map.routeNote}</p></div><button className="option-btn" style={{ minWidth: 110 }}>查看地图</button></div>{map.thumbnail && <OsmsDataImage className="map-preview" src={map.thumbnail} sources={[map.minimap]} alt={map.name} placeholder="No Image" />}<h3 style={{ marginTop: 12 }}>{map.name}</h3><p className="section-copy">{map.spawnTotal ?? '-'} 只 · {map.canHitAll ? '安全' : '需补命中'}</p><div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>{map.monsters?.slice(0, 8).map((monster) => <div key={`${map.id}-${monster.id}`} style={{ minWidth: 82, border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: 8 }}><MonsterIcon monster={monster} size={34} /><strong style={{ display: 'block', fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{monster.name}</strong><span style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 900 }}>Lv.{monster.level}</span></div>)}</div></article>)}</div></Section>; }
-function GearPage({ gear }) { return <Section title="装备推荐"><p className="section-copy">装备 icon 使用同一套 MapleStory.io 名称映射。</p><div className="gear-stack">{gear.map((item) => <article className="gear-card" key={`${item.slot}-${item.id}`}><MsioItemIcon item={item} size={40} /><div><span className="item-label">{item.label} · Lv.{item.reqLevel ?? '-'}</span><h3>{item.title}</h3><p>{item.desc}</p></div></article>)}</div></Section>; }
+function GearPage({ gear, candidatesBySlot, onPickSlot }) { return <Section title="装备推荐"><p className="section-copy">装备 icon 使用同一套 MapleStory.io 名称映射，点击槽位可替换当前等级可用装备。</p><div className="mg-equipment-grid page-grid">{SLOTS.map(([slot, label]) => { const item = gear.find((g) => g.slot === slot); return <button className="mg-equip-tile" key={slot} onClick={() => onPickSlot(slot)} disabled={!(candidatesBySlot?.[slot]?.length)}><MsioItemIcon item={item} size={34} /><span>{label}</span><strong>{item?.title ?? '未装备'}</strong></button>; })}</div></Section>; }
 function MaterialsPage() { return <Section title="材料 / 锻造"><p className="section-copy">材料价值指数和锻造路线保留在后续国服/国际服数据整理阶段继续接入。</p></Section>; }
 function Parameters(props) { return <Section title="角色参数"><ConfigPanel {...props} /></Section>; }
 function StatsCard({ stats, classLine }) { return <Section title="最终属性"><div className="stat-stack">{stats.map(([label, value]) => <div className="stat-row" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><div className="next-ap-note"><strong>下一点 AP：{classLine.primaryStat}</strong><span>当前建议主 {classLine.primaryStat}，{classLine.secondaryStat} 只保留装备/命中需求。</span></div></Section>; }
