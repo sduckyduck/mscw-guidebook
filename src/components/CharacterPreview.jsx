@@ -117,7 +117,24 @@ function mappedGear(gear, idMap) {
 function actionFor(gear) {
   const w = (gear ?? []).find((item) => item.slot === 'weapon');
   const txt = `${w?.weaponType ?? w?.weapon_type ?? ''} ${w?.title ?? w?.name ?? ''}`.toLowerCase();
-  return txt.includes('crossbow') || txt.includes('pole arm') || txt.includes('polearm') || txt.includes('spear') ? 'stand2' : 'stand1';
+  const usesStand2 = [
+    'crossbow',
+    'pole arm',
+    'polearm',
+    'spear',
+    '2h',
+    '2-handed',
+    'two-handed',
+    'two handed',
+    'two hand',
+    'two-handed sword',
+    'two-handed axe',
+    'two-handed blunt weapon',
+    '2h sword',
+    '2h axe',
+    '2h blunt',
+  ].some((word) => txt.includes(word));
+  return usesStand2 ? 'stand2' : 'stand1';
 }
 
 function unique(ids) {
