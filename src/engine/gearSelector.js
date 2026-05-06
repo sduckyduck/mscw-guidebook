@@ -2,7 +2,7 @@ const JOB_BITS = { warrior: 1, magician: 2, bowman: 4, thief: 8, pirate: 16 };
 const JOB_LABEL = { warrior: 'Warrior', magician: 'Mage', bowman: 'Bowman', thief: 'Thief', pirate: 'Pirate' };
 
 const BRANCH_POLICIES = {
-  fighter: { weapons: ['1h sword', '1h axe'], shield: 'required' },
+  fighter: { weapons: ['2h sword', '2h axe'], shield: 'never' },
   page: { weapons: ['1h sword', '1h blunt weapon'], shield: 'required' },
   spearman: { weapons: ['spear', 'pole arm'], shield: 'never' },
   magician: { weapons: ['wand', 'staff'], shield: 'oneHandOnly' },
@@ -15,30 +15,23 @@ const BRANCH_POLICIES = {
   bandit: { weapons: ['dagger'], shield: 'required' },
   brawler: { weapons: ['knuckle'], shield: 'never' },
   gunslinger: { weapons: ['gun'], shield: 'never' },
-  warrior: { weapons: ['1h sword', '1h axe', '1h blunt weapon'], shield: 'required' },
+  warrior: { weapons: ['2h sword', '2h axe', 'spear', 'pole arm'], shield: 'never' },
   bowman: { weapons: ['bow'], shield: 'never' },
   thief: { weapons: ['dagger', 'claw'], shield: 'auto' },
   pirate: { weapons: ['gun', 'knuckle'], shield: 'never' },
 };
 
 const CLASS_POLICIES = {
-  warrior: { weapons: ['1h sword', '1h axe', '1h blunt weapon'], shield: 'required' },
+  warrior: { weapons: ['2h sword', '2h axe', 'spear', 'pole arm'], shield: 'never' },
   magician: { weapons: ['wand', 'staff'], shield: 'oneHandOnly' },
   bowman: { weapons: ['bow', 'crossbow'], shield: 'never' },
   thief: { weapons: ['dagger', 'claw'], shield: 'auto' },
   pirate: { weapons: ['gun', 'knuckle'], shield: 'never' },
 };
 
-const SLOT_LABEL = {
-  cap: '帽子',
-  overall: '套服',
-  top: '上衣',
-  bottom: '裤子',
-  shoes: '鞋子',
-  glove: '手套',
-  shield: '盾牌',
-  cape: '披风',
-  weapon: '武器',
+export const SLOT_LABELS = {
+  weapon: '武器', cap: '头盔', top: '上衣', overall: '套服', bottom: '裤子',
+  shoes: '鞋子', glove: '手套', shield: '盾牌', cape: '披风', earring: '耳环',
 };
 
 const BANNED_NAME_PATTERN = /\b(gm|admin|administrator|test|tester|beginner gm|maple admin|event|cash|nx|donor|vip|wedding|birthday|anniversary)\b/i;
@@ -46,12 +39,65 @@ const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|ballo
 const BANNED_WEAPON_NAMES = /\b(umbrella|snowboard|surfboard|flag|balloon|rose|bouquet|lollipop|fan|tube|briefcase|purse|shovel|plunger|sake bottle|red whip)\b/i;
 
 export function selectGear({ classLine, branch, level, budget, gender, statPlan, items }) {
-  if (!items?.length) {
-    return [{ label: '武器', title: classLine.weaponTypes?.[0] ?? '职业武器', desc: `Lv.${level} 过渡`, slot: 'weapon' }];
-  }
-
+  const bySlot = getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items });
+  const weapon = bySlot.weapon?.[0];
   const policy = getPolicy(classLine, branch);
-  const candidates = items
+  const ordered = [
+    bySlot.cap?.[0],
+    bySlot.overall?.[0] || bySlot.top?.[0],
+    bySlot.overall?.[0] ? null : bySlot.bottom?.[0],
+    bySlot.shoes?.[0],
+    bySlot.glove?.[0],
+    bySlot.cape?.[0],
+    shouldUseShield(policy, branch, weapon) ? bySlot.shield?.[0] : null,
+    weapon,
+  ].filter(Boolean);
+  return ordered.map((item) => toGear(item, classLine));
+}
+
+export function getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items }) {
+  if (!items?.length) return {};
+  const policy = getPolicy(classLine, branch);
+  const candidates = getBaseCandidates({ classLine, level, gender, statPlan, items });
+  const sort = (list) => list.map((item) => toGear(item, classLine)).sort((a, b) => gearScore(b, classLine, budget, level) - gearScore(a, classLine, budget, level));
+  const weaponCandidates = candidates.filter((item) => item.slot === 'weapon' && weaponMatchesPolicy(item, policy));
+  const classWeapon = weaponCandidates.filter((item) => isClassSpecific(item, classLine));
+  const earlyAllJobWeapon = weaponCandidates.filter((item) => isAllJob(item) && Number(item.reqLevel ?? 0) <= 12 && !isBannedWeaponName(item));
+  const weapon = classWeapon.length ? classWeapon : earlyAllJobWeapon;
+
+  const output = {
+    weapon: sort(weapon),
+    cap: sort(slotClassItems(candidates, 'cap', classLine)),
+    overall: sort(slotClassItems(candidates, 'overall', classLine)),
+    top: sort(slotClassItems(candidates, 'top', classLine)),
+    bottom: sort(slotClassItems(candidates, 'bottom', classLine)),
+    shoes: sort(slotClassItems(candidates, 'shoes', classLine)),
+    glove: sort(slotClassItems(candidates, 'glove', classLine)),
+    cape: sort(slotClassItems(candidates, 'cape', classLine)),
+    shield: sort(candidates.filter((item) => item.slot === 'shield' && (isClassSpecific(item, classLine) || isAllJob(item)))),
+  };
+
+  if (!shouldUseShield(policy, branch, output.weapon?.[0])) output.shield = [];
+  return output;
+}
+
+export function applyGearOverrides(baseGear, overrides = {}) {
+  const bySlot = Object.fromEntries((baseGear ?? []).map((item) => [item.slot, item]));
+  Object.entries(overrides ?? {}).forEach(([slot, item]) => {
+    if (item) bySlot[slot] = item;
+  });
+  if (bySlot.overall) {
+    delete bySlot.top;
+    delete bySlot.bottom;
+  }
+  if (bySlot.top || bySlot.bottom) delete bySlot.overall;
+  return ['cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'cape', 'shield', 'weapon']
+    .map((slot) => bySlot[slot])
+    .filter(Boolean);
+}
+
+function getBaseCandidates({ classLine, level, gender, statPlan, items }) {
+  return items
     .filter((item) => item.category === 'Equipment')
     .map((item) => ({ ...item, slot: detectSlot(item), visualGender: detectVisualGender(item) }))
     .filter((item) => item.slot)
@@ -60,56 +106,14 @@ export function selectGear({ classLine, branch, level, budget, gender, statPlan,
     .filter((item) => jobMatches(item, classLine))
     .filter((item) => statRequirementsMet(item, statPlan))
     .filter((item) => genderMatches(item, gender));
+}
 
-  const weapon = pickWeapon(candidates, classLine, branch, policy, budget, level);
-  const cap = pickClassGear(candidates, 'cap', classLine, budget, level);
-  const overall = pickClassGear(candidates, 'overall', classLine, budget, level);
-  const top = pickClassGear(candidates, 'top', classLine, budget, level);
-  const bottom = pickClassGear(candidates, 'bottom', classLine, budget, level);
-  const shoes = pickClassGear(candidates, 'shoes', classLine, budget, level);
-  const glove = pickClassGear(candidates, 'glove', classLine, budget, level);
-  const cape = pickClassGear(candidates, 'cape', classLine, budget, level);
-  const shield = shouldUseShield(policy, branch, weapon)
-    ? pickShield(candidates, classLine, budget, level)
-    : undefined;
-
-  const ordered = [cap, overall || top, overall ? null : bottom, shoes, glove, cape, shield, weapon].filter(Boolean);
-  return ordered.map((item) => toGear(item, classLine));
+function slotClassItems(candidates, slot, classLine) {
+  return candidates.filter((item) => item.slot === slot && isClassSpecific(item, classLine));
 }
 
 function getPolicy(classLine, branch) {
   return BRANCH_POLICIES[branch?.id] ?? BRANCH_POLICIES[classLine?.id] ?? CLASS_POLICIES[classLine?.id] ?? CLASS_POLICIES.warrior;
-}
-
-function pickWeapon(candidates, classLine, branch, policy, budget, level) {
-  const weaponCandidates = candidates.filter((item) => item.slot === 'weapon' && weaponMatchesPolicy(item, policy));
-  const classSpecific = weaponCandidates.filter((item) => isClassSpecific(item, classLine));
-  if (classSpecific.length) return pickBest(classSpecific, classLine, budget, level);
-
-  const earlyLevelAllJob = weaponCandidates.filter((item) => isAllJob(item) && Number(item.reqLevel ?? 0) <= 12 && !isBannedWeaponName(item));
-  if (earlyLevelAllJob.length) return pickBest(earlyLevelAllJob, classLine, budget, level);
-
-  const classPolicy = CLASS_POLICIES[classLine?.id] ?? policy;
-  const fallbackClassSpecific = candidates.filter((item) => item.slot === 'weapon' && weaponMatchesPolicy(item, classPolicy) && isClassSpecific(item, classLine));
-  return pickBest(fallbackClassSpecific, classLine, budget, level);
-}
-
-function pickClassGear(candidates, slot, classLine, budget, level) {
-  const slotItems = candidates.filter((item) => item.slot === slot && isClassSpecific(item, classLine));
-  return pickBest(slotItems, classLine, budget, level);
-}
-
-function pickShield(candidates, classLine, budget, level) {
-  const shields = candidates.filter((item) => item.slot === 'shield');
-  const classSpecific = shields.filter((item) => isClassSpecific(item, classLine));
-  if (classSpecific.length) return pickBest(classSpecific, classLine, budget, level);
-
-  const allJobNormal = shields.filter((item) => isAllJob(item) && !isBannedOrSpecial(item));
-  return pickBest(allJobNormal, classLine, budget, level);
-}
-
-function pickBest(list, classLine, budget, level) {
-  return [...list].sort((a, b) => gearScore(b, classLine, budget, level) - gearScore(a, classLine, budget, level))[0];
 }
 
 function detectSlot(item) {
@@ -123,6 +127,7 @@ function detectSlot(item) {
   if (id.startsWith('0108')) return 'glove';
   if (id.startsWith('0109')) return 'shield';
   if (id.startsWith('0110')) return 'cape';
+  if (id.startsWith('0103')) return 'earring';
   return null;
 }
 
@@ -145,8 +150,7 @@ function isBannedOrSpecial(item) {
 }
 
 function isBannedWeaponName(item) {
-  const name = String(item.name ?? item.title ?? '');
-  return BANNED_WEAPON_NAMES.test(name);
+  return BANNED_WEAPON_NAMES.test(String(item.name ?? item.title ?? ''));
 }
 
 function hasAnyStatOrAttack(item) {
@@ -172,7 +176,7 @@ function getReqJob(item) {
 
 function isAllJob(item) {
   const reqJob = getReqJob(item);
-  const label = String(item.req_job_label ?? '');
+  const label = String(item.reqJobLabel ?? item.req_job_label ?? '');
   return !reqJob || !label || label === 'All';
 }
 
@@ -180,7 +184,7 @@ function isClassSpecific(item, classLine) {
   const reqJob = getReqJob(item);
   const bit = JOB_BITS[classLine.id] ?? 0;
   if (bit && (reqJob & bit)) return true;
-  const label = String(item.req_job_label ?? '').toLowerCase();
+  const label = String(item.reqJobLabel ?? item.req_job_label ?? '').toLowerCase();
   return Boolean(label && label !== 'all' && label.includes(String(JOB_LABEL[classLine.id] ?? '').toLowerCase()));
 }
 
@@ -189,7 +193,7 @@ function jobMatches(item, classLine) {
 }
 
 function weaponMatchesPolicy(item, policy) {
-  const type = String(item.weapon_type ?? '').toLowerCase();
+  const type = String(item.weaponType ?? item.weapon_type ?? '').toLowerCase();
   return (policy.weapons ?? []).some((word) => type.includes(word));
 }
 
@@ -197,7 +201,7 @@ function shouldUseShield(policy, branch, weapon) {
   if (!weapon) return false;
   if (policy.shield === 'never') return false;
   if (policy.shield === 'required') return true;
-  const type = String(weapon.weapon_type ?? '').toLowerCase();
+  const type = String(weapon.weaponType ?? weapon.weapon_type ?? '').toLowerCase();
   if (policy.shield === 'oneHandOnly') return type.includes('wand') || type.includes('1h') || type.includes('dagger');
   if (branch?.id === 'bandit') return type.includes('dagger');
   return false;
@@ -222,24 +226,19 @@ function toGear(item, classLine) {
     : `攻击 ${item.incPAD || 0}${item.incMAD ? ` / 魔攻 ${item.incMAD}` : ''}`;
   return {
     ...item,
-    label: SLOT_LABEL[item.slot] ?? '装备',
-    title: item.name,
+    label: SLOT_LABELS[item.slot] ?? '装备',
+    title: item.name ?? item.title,
     desc: `${attack} · 需求 ${formatReq(item)}`,
     reqLevel: item.reqLevel,
     thumbnail: item.thumbnail,
-    weaponType: item.weapon_type,
-    attackSpeed: item.attack_speed_label,
-    reqJobLabel: item.req_job_label,
+    weaponType: item.weapon_type ?? item.weaponType,
+    attackSpeed: item.attack_speed_label ?? item.attackSpeed,
+    reqJobLabel: item.req_job_label ?? item.reqJobLabel,
     scoreLabel: item.price ? `${Number(item.price).toLocaleString()} meso` : '无价格数据',
   };
 }
 
 function formatReq(item) {
-  const reqs = [
-    item.reqSTR ? `STR ${item.reqSTR}` : '',
-    item.reqDEX ? `DEX ${item.reqDEX}` : '',
-    item.reqINT ? `INT ${item.reqINT}` : '',
-    item.reqLUK ? `LUK ${item.reqLUK}` : '',
-  ].filter(Boolean);
+  const reqs = [item.reqSTR ? `STR ${item.reqSTR}` : '', item.reqDEX ? `DEX ${item.reqDEX}` : '', item.reqINT ? `INT ${item.reqINT}` : '', item.reqLUK ? `LUK ${item.reqLUK}` : ''].filter(Boolean);
   return reqs.length ? reqs.join(' / ') : '无属性需求';
 }
