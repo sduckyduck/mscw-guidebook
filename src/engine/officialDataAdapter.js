@@ -11,16 +11,20 @@ const BASE_URL = import.meta.env.BASE_URL || '/';
 const appDataPath = (path) => `${BASE_URL}${path.replace(/^\/+/, '')}`;
 
 export async function loadOfficialGuideData() {
-  const [overview, monstersRaw, mapsRaw, craftingRaw] = await Promise.all([
+  const [overview, monstersRaw, mapsRaw, craftingRaw, itemsRaw, skillsRaw] = await Promise.all([
     fetchJson(appDataPath('AppData/overview.json')),
     fetchJson(appDataPath('AppData/monsters.json')),
     fetchJson(appDataPath('AppData/maps.json')),
     fetchJson(appDataPath('AppData/crafting.json')),
+    fetchJson(appDataPath('AppData/items.json')),
+    fetchJson(appDataPath('AppData/skills.json')),
   ]);
 
   const monsters = normalizeMonsters(monstersRaw?.monsters ?? []);
   const maps = normalizeMaps(mapsRaw?.regions ?? [], monsters);
   const { recipes, materials, professions } = normalizeCrafting(craftingRaw?.disciplines ?? []);
+  const items = normalizeItems(itemsRaw?.items ?? []);
+  const skillGroups = normalizeSkillGroups(skillsRaw ?? {});
 
   return {
     source: 'official-appdata',
@@ -30,6 +34,8 @@ export async function loadOfficialGuideData() {
     recipes,
     materials,
     professions,
+    items,
+    skillGroups,
   };
 }
 
@@ -210,6 +216,43 @@ function normalizeCrafting(disciplines) {
     materials: [...materialMap.values()],
     professions,
   };
+}
+
+function normalizeItems(items) {
+  return items.map((item) => ({
+    ...item,
+    id: String(item.id),
+    reqLevel: Number(item.stats?.reqLevel ?? 0),
+    reqJob: Number(item.stats?.reqJob ?? 0),
+    reqSTR: Number(item.stats?.reqSTR ?? 0),
+    reqDEX: Number(item.stats?.reqDEX ?? 0),
+    reqINT: Number(item.stats?.reqINT ?? 0),
+    reqLUK: Number(item.stats?.reqLUK ?? 0),
+    incPAD: Number(item.stats?.incPAD ?? 0),
+    incMAD: Number(item.stats?.incMAD ?? 0),
+    incACC: Number(item.stats?.incACC ?? item.stats?.incACCr ?? 0),
+    incSpeed: Number(item.stats?.incSpeed ?? 0),
+    thumbnail: item.thumbnail ? appDataPath(`AppData/${item.thumbnail}`) : null,
+  }));
+}
+
+function normalizeSkillGroups(rawSkillData) {
+  return Object.entries(rawSkillData).flatMap(([baseClass, groups]) =>
+    (groups ?? []).map((group) => ({
+      baseClass,
+      className: group.class_name,
+      job: group.job,
+      mainClass: group.main_class,
+      baseClassLabel: group.base_class,
+      subclasses: group.subclasses ?? [],
+      skills: (group.skills ?? []).map((skill) => ({
+        ...skill,
+        id: String(skill.id),
+        maxLevel: Number(skill.max_level ?? 0),
+        thumbnail: skill.thumbnail ? appDataPath(`AppData/${skill.thumbnail}`) : null,
+      })),
+    })),
+  );
 }
 
 function parseElements(elements) {
