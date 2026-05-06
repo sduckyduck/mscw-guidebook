@@ -79,6 +79,20 @@ export const CLASS_LINES = [
 ];
 
 export const EDITIONS = [
-  { id: 'global', name: '国际服', classIds: ['warrior', 'magician', 'bowman', 'thief'] },
-  { id: 'china', name: '国服', classIds: ['warrior', 'magician', 'bowman', 'thief', 'pirate'] },
+  {
+    id: 'global',
+    name: '国际服',
+    minLevel: 10,
+    maxLevel: 50,
+    dataMode: 'official-appdata',
+    classIds: ['warrior', 'magician', 'bowman', 'thief'],
+  },
+  {
+    id: 'china',
+    name: '国服',
+    minLevel: 10,
+    maxLevel: 120,
+    dataMode: 'china-placeholder',
+    classIds: ['warrior', 'magician', 'bowman', 'thief', 'pirate'],
+  },
 ];
