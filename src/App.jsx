@@ -1,81 +1,64 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  BarChart3,
-  BookOpen,
-  Boxes,
-  Crosshair,
-  Database,
-  Map,
-  Shield,
-  Sparkles,
-  Swords,
-  UserRound,
-} from 'lucide-react';
 import { CLASS_LINES, EDITIONS } from './data/classes.js';
 import { PROFESSIONS } from './data/crafting.js';
 import { SKILL_BUILDS } from './data/skills.js';
 import { buildLowCostRoute, getMaterialValueIndex, getProfessionRecipes } from './engine/craftingEngine.js';
 import { buildStatPlan } from './engine/levelEngine.js';
 import { getMapRecommendations } from './engine/recommendationEngine.js';
-import { probeOfficialData } from './engine/dataLoader.js';
 import { loadOfficialGuideData } from './engine/officialDataAdapter.js';
 
-const tabs = [
-  { id: 'character', name: '角色模拟', icon: UserRound },
-  { id: 'maps', name: '地图推荐', icon: Map },
-  { id: 'skills', name: '技能表', icon: Swords },
-  { id: 'crafting', name: '锻造系统', icon: Boxes },
-  { id: 'data', name: '数据状态', icon: Database },
+const TABS = [
+  { id: 'overview', name: '总览' },
+  { id: 'character', name: '角色' },
+  { id: 'maps', name: '地图' },
+  { id: 'gear', name: '装备' },
+  { id: 'materials', name: '材料' },
+];
+
+const JOB_BUTTONS = [
+  { id: 'warrior', name: '战士' },
+  { id: 'magician', name: '魔法师' },
+  { id: 'bowman', name: '弓箭手' },
+  { id: 'thief', name: '飞侠' },
+];
+
+const MODE_BUTTONS = [
+  { id: 'safe', name: '保守' },
+  { id: 'normal', name: '标准' },
+  { id: 'fast', name: '激进' },
+];
+
+const BUDGET_BUTTONS = [
+  { id: 'low', name: '低资金' },
+  { id: 'mid', name: '普通' },
+  { id: 'high', name: '有钱' },
+];
+
+const PRIORITY_BUTTONS = [
+  { id: 'stable', name: '稳定优先' },
+  { id: 'exp', name: '经验优先' },
+  { id: 'material', name: '材料优先' },
+  { id: 'meso', name: '金币收益优先' },
 ];
 
 const professionIconMap = Object.fromEntries(PROFESSIONS.map((profession) => [profession.id, profession]));
 
 function App() {
-  const [editionId, setEditionId] = useState('china');
-  const [classId, setClassId] = useState('warrior');
-  const [branchId, setBranchId] = useState('spearman');
-  const [level, setLevel] = useState(35);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [editionId, setEditionId] = useState('global');
+  const [classId, setClassId] = useState('magician');
+  const [branchId, setBranchId] = useState('magician');
+  const [gender, setGender] = useState('female');
+  const [level, setLevel] = useState(25);
+  const [mode, setMode] = useState('safe');
+  const [budget, setBudget] = useState('low');
+  const [priority, setPriority] = useState('material');
   const [professionId, setProfessionId] = useState('smithing');
   const [targetCraftLevel, setTargetCraftLevel] = useState(8);
-  const [activeTab, setActiveTab] = useState('character');
-  const [dataProbe, setDataProbe] = useState([]);
   const [officialData, setOfficialData] = useState(null);
   const [officialError, setOfficialError] = useState('');
 
-  const edition = EDITIONS.find((item) => item.id === editionId) ?? EDITIONS[0];
-  const availableClasses = CLASS_LINES.filter((item) => edition.classIds.includes(item.id));
-  const classLine = availableClasses.find((item) => item.id === classId) ?? availableClasses[0];
-  const selectedBranch = classLine.branches.find((item) => item.id === branchId) ?? classLine.branches[0];
-  const statPlan = useMemo(() => buildStatPlan(classLine, level), [classLine, level]);
-  const recommendations = useMemo(
-    () => getMapRecommendations({
-      classLine,
-      level,
-      statPlan,
-      maps: officialData?.maps,
-      monsters: officialData?.monsters,
-    }).slice(0, 5),
-    [classLine, level, statPlan, officialData],
-  );
-  const skillRows = SKILL_BUILDS[selectedBranch?.id] ?? SKILL_BUILDS[classLine.id] ?? [];
-  const professions = useMemo(() => buildProfessionList(officialData), [officialData]);
-  const activeProfessionId = professions.some((profession) => profession.id === professionId)
-    ? professionId
-    : professions[0]?.id ?? 'smithing';
-  const recipes = officialData?.recipes;
-  const materials = officialData?.materials;
-  const professionRecipes = getProfessionRecipes(activeProfessionId, recipes, materials);
-  const materialValue = getMaterialValueIndex(recipes, materials).slice(0, 8);
-  const craftingRoute = buildLowCostRoute(activeProfessionId, targetCraftLevel, recipes, materials);
-
   useEffect(() => {
-    if (!classLine.branches.some((branch) => branch.id === branchId)) {
-      setBranchId(classLine.branches[0]?.id);
-    }
-  }, [branchId, classLine]);
-
-  useEffect(() => {
-    probeOfficialData().then(setDataProbe);
     loadOfficialGuideData()
       .then((data) => {
         setOfficialData(data);
@@ -86,341 +69,530 @@ function App() {
       });
   }, []);
 
+  const edition = EDITIONS.find((item) => item.id === editionId) ?? EDITIONS[0];
+  const availableClasses = CLASS_LINES.filter((item) => edition.classIds.includes(item.id));
+  const classLine = availableClasses.find((item) => item.id === classId) ?? availableClasses[0];
+  const selectedBranch = classLine.branches.find((item) => item.id === branchId) ?? classLine.branches[0] ?? classLine;
+
+  useEffect(() => {
+    if (!availableClasses.some((item) => item.id === classId)) {
+      setClassId(availableClasses[0]?.id ?? 'warrior');
+      return;
+    }
+    if (!classLine.branches.some((branch) => branch.id === branchId)) {
+      setBranchId(classLine.branches[0]?.id ?? classLine.id);
+    }
+  }, [availableClasses, branchId, classId, classLine]);
+
+  const statPlan = useMemo(() => buildStatPlan(classLine, level), [classLine, level]);
+  const recommendations = useMemo(
+    () => getMapRecommendations({
+      classLine,
+      level,
+      statPlan,
+      maps: officialData?.maps,
+      monsters: officialData?.monsters,
+    }).slice(0, 8),
+    [classLine, level, statPlan, officialData],
+  );
+
+  const bestMap = recommendations[0];
+  const bestMonster = bestMap?.monsters?.[0];
+  const skillRows = SKILL_BUILDS[selectedBranch?.id] ?? SKILL_BUILDS[classLine.id] ?? [];
+  const professions = useMemo(() => buildProfessionList(officialData), [officialData]);
+  const activeProfessionId = professions.some((profession) => profession.id === professionId)
+    ? professionId
+    : professions[0]?.id ?? 'smithing';
+  const recipes = officialData?.recipes;
+  const materials = officialData?.materials;
+  const professionRecipes = getProfessionRecipes(activeProfessionId, recipes, materials);
+  const materialValue = getMaterialValueIndex(recipes, materials).slice(0, 12);
+  const craftingRoute = buildLowCostRoute(activeProfessionId, targetCraftLevel, recipes, materials);
+  const nextAp = classLine.primaryStat;
+  const nextSkillPlan = buildSkillPlan(skillRows, level);
+  const damageRows = buildDamageRows(classLine, selectedBranch, level, statPlan);
+  const recommendedGear = buildRecommendedGear(classLine, level, budget, professionRecipes);
+
   return (
     <main className="app-shell">
-      <section className="hero-panel">
-        <div className="hero-copy">
-          <p className="eyebrow">MapleStory Classic World</p>
-          <h1>MSCW Guidebook</h1>
-          <p>
-            一个把角色成长、命中门槛、地图路线、怪物属性、技能加点和六大锻造系统放在一起的交互式攻略宝典。
-          </p>
-          <div className="hero-actions">
-            {EDITIONS.map((item) => (
-              <button
-                key={item.id}
-                className={item.id === editionId ? 'pill active' : 'pill'}
-                onClick={() => setEditionId(item.id)}
-              >
-                {item.name}
-              </button>
-            ))}
-            <span className={officialData ? 'data-badge ok' : 'data-badge'}>
-              {officialData ? `官方数据已接入：${officialData.overview?.monsters ?? officialData.monsters.length} 怪物 / ${officialData.maps.length} 刷图地图` : '正在读取官方数据'}
-            </span>
-          </div>
-        </div>
-        <CharacterCard classLine={classLine} branch={selectedBranch} statPlan={statPlan} level={level} />
-      </section>
-
-      <nav className="tab-bar" aria-label="Guidebook sections">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              className={activeTab === tab.id ? 'tab active' : 'tab'}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <Icon size={18} />
-              <span>{tab.name}</span>
-            </button>
-          );
-        })}
+      <nav className="top-tabs" aria-label="MSCW guide sections">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            className={activeTab === tab.id ? 'top-tab active' : 'top-tab'}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.name}
+          </button>
+        ))}
       </nav>
 
-      {activeTab === 'character' && (
-        <section className="grid two-col">
-          <Panel title="角色与等级" icon={UserRound}>
-            <div className="control-grid">
-              <label>
-                版本
-                <select value={editionId} onChange={(event) => setEditionId(event.target.value)}>
-                  {EDITIONS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                一转职业
-                <select value={classLine.id} onChange={(event) => setClassId(event.target.value)}>
-                  {availableClasses.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                二转方向
-                <select value={selectedBranch?.id} onChange={(event) => setBranchId(event.target.value)}>
-                  {classLine.branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                等级：{level}
-                <input
-                  type="range"
-                  min="1"
-                  max="120"
-                  value={level}
-                  onChange={(event) => setLevel(Number(event.target.value))}
-                />
-              </label>
-            </div>
-            <div className="note-card">
-              <strong>{selectedBranch?.name ?? classLine.name}</strong>
-              <span>{selectedBranch?.theme ?? classLine.role}</span>
-              <p>{classLine.hitFormulaNote}</p>
-            </div>
-          </Panel>
+      {activeTab === 'overview' && (
+        <>
+          <HeroOverview
+            classLine={classLine}
+            branch={selectedBranch}
+            level={level}
+            statPlan={statPlan}
+            bestMonster={bestMonster}
+            bestMap={bestMap}
+            officialData={officialData}
+          />
+          <NextStepCard
+            bestMonster={bestMonster}
+            bestMap={bestMap}
+            recommendedGear={recommendedGear}
+            nextAp={nextAp}
+          />
+          <CharacterParameters
+            editionId={editionId}
+            setEditionId={setEditionId}
+            classId={classId}
+            setClassId={setClassId}
+            branchId={branchId}
+            setBranchId={setBranchId}
+            availableClasses={availableClasses}
+            classLine={classLine}
+            gender={gender}
+            setGender={setGender}
+            level={level}
+            setLevel={setLevel}
+            mode={mode}
+            setMode={setMode}
+            budget={budget}
+            setBudget={setBudget}
+            priority={priority}
+            setPriority={setPriority}
+          />
+          <StatsCard statPlan={statPlan} nextAp={nextAp} classLine={classLine} />
+          <SkillCard skillRows={skillRows} nextSkillPlan={nextSkillPlan} />
+          <DamageCard damageRows={damageRows} />
+        </>
+      )}
 
-          <Panel title="属性计算" icon={BarChart3}>
-            <div className="stat-grid">
-              {Object.entries(statPlan.stats).map(([key, value]) => (
-                <div className="stat-tile" key={key}>
-                  <span>{key}</span>
-                  <strong>{value}</strong>
-                </div>
-              ))}
-            </div>
-            <div className="formula-row">
-              <Metric label="总 AP" value={statPlan.totalAp} />
-              <Metric label="总 SP" value={statPlan.totalSp} />
-              <Metric label="物理命中" value={statPlan.derived.accuracy} />
-              <Metric label="魔法命中" value={statPlan.derived.magicAccuracy} />
-            </div>
-          </Panel>
-        </section>
+      {activeTab === 'character' && (
+        <>
+          <CharacterParameters
+            editionId={editionId}
+            setEditionId={setEditionId}
+            classId={classId}
+            setClassId={setClassId}
+            branchId={branchId}
+            setBranchId={setBranchId}
+            availableClasses={availableClasses}
+            classLine={classLine}
+            gender={gender}
+            setGender={setGender}
+            level={level}
+            setLevel={setLevel}
+            mode={mode}
+            setMode={setMode}
+            budget={budget}
+            setBudget={setBudget}
+            priority={priority}
+            setPriority={setPriority}
+          />
+          <StatsCard statPlan={statPlan} nextAp={nextAp} classLine={classLine} />
+          <SkillCard skillRows={skillRows} nextSkillPlan={nextSkillPlan} />
+          <DamageCard damageRows={damageRows} />
+        </>
       )}
 
       {activeTab === 'maps' && (
-        <section className="grid one-col">
-          <Panel title="推荐地图与怪物表" icon={Map}>
-            <p className="panel-copy">
-              {officialData
-                ? '当前推荐已使用 public/AppData/monsters.json 和 maps.json。评分综合等级差、命中压力、怪物密度和职业适配。'
-                : '当前使用示例数据；官方数据读取完成后会自动切换。'}
-            </p>
-            <div className="map-list">
-              {recommendations.map((map) => (
-                <article className="map-card" key={map.id}>
-                  <div className="map-card-head">
-                    <div>
-                      <p className="eyebrow">{map.region} · Lv.{map.levelRange[0]}-{map.levelRange[1]}</p>
-                      <h3>{map.name}</h3>
-                      <p>{map.routeNote}</p>
+        <SectionCard title="推荐地图">
+          <p className="section-copy">
+            {officialData
+              ? '已使用官方 AppData 的怪物与地图数据。推荐综合等级差、命中、刷怪数和职业适配。'
+              : '正在读取官方数据；若读取失败，会暂时使用内置示例数据。'}
+          </p>
+          <div className="map-stack">
+            {recommendations.map((map) => (
+              <article className="map-result" key={map.id}>
+                <div className="map-result-main">
+                  <div>
+                    <span className="item-label">Lv.{map.levelRange[0]}-{map.levelRange[1]} · {map.region}</span>
+                    <h3>{map.name}</h3>
+                    <p>{map.routeNote}</p>
+                  </div>
+                  <strong className="score-pill">{map.score}</strong>
+                </div>
+                {map.thumbnail && <img className="map-preview" src={map.thumbnail} alt={map.name} />}
+                <div className="small-tags">
+                  {map.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                  <span>刷怪数 {map.spawnTotal ?? '-'}</span>
+                  <span>{map.canHitAll ? '命中稳定' : '命中偏紧'}</span>
+                </div>
+                <div className="mini-table">
+                  {map.monsters.slice(0, 5).map((monster) => (
+                    <div key={`${map.id}-${monster.id}`} className="monster-row">
+                      <div className="monster-name">
+                        {(monster.gif || monster.thumbnail) && <img src={monster.gif || monster.thumbnail} alt="" />}
+                        <span>{monster.name}</span>
+                      </div>
+                      <span>Lv.{monster.level}</span>
+                      <span>HP {monster.hp}</span>
+                      <span>命中 {monster.requiredAccuracy}</span>
                     </div>
-                    <div className="score-badge">{map.score}</div>
-                  </div>
-                  {map.thumbnail && <img className="map-thumb" src={map.thumbnail} alt={`${map.name} minimap`} />}
-                  <div className="tag-row">
-                    {map.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                    {Number.isFinite(map.spawnTotal) && <span>刷怪数 {map.spawnTotal}</span>}
-                  </div>
-                  <p className={map.canHitAll ? 'safe-text' : 'warn-text'}>
-                    <Crosshair size={16} /> {map.warning}
-                  </p>
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>怪物</th>
-                          <th>等级</th>
-                          <th>HP</th>
-                          <th>EXP</th>
-                          <th>命中需求</th>
-                          <th>防御</th>
-                          <th>攻击</th>
-                          <th>属性</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {map.monsters.map((monster) => (
-                          <tr key={`${map.id}-${monster.id}`}>
-                            <td>
-                              <div className="monster-cell">
-                                {(monster.gif || monster.thumbnail) && (
-                                  <img
-                                    src={monster.gif || monster.thumbnail}
-                                    alt=""
-                                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                                  />
-                                )}
-                                <span>{monster.name}</span>
-                              </div>
-                            </td>
-                            <td>{monster.level}</td>
-                            <td>{monster.hp}</td>
-                            <td>{monster.exp}</td>
-                            <td>{monster.requiredAccuracy}</td>
-                            <td>{monster.defense}</td>
-                            <td>{monster.physicalAttack ?? '-'}</td>
-                            <td>{formatElement(monster)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </Panel>
-        </section>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
       )}
 
-      {activeTab === 'skills' && (
-        <section className="grid two-col">
-          <Panel title="技能加点路线" icon={Swords}>
-            <div className="timeline-list">
-              {skillRows.map((row) => (
-                <article className="timeline-item" key={`${row.level}-${row.priority}`}>
-                  <span>{row.level}</span>
-                  <h3>{row.priority}</h3>
-                  <p>{row.note}</p>
-                </article>
+      {activeTab === 'gear' && (
+        <>
+          <SectionCard title="装备推荐">
+            <div className="info-list">
+              {recommendedGear.map((item) => (
+                <InfoRow key={item.label} label={item.label} title={item.title} desc={item.desc} />
               ))}
             </div>
-          </Panel>
-          <Panel title="职业定位" icon={Shield}>
-            <div className="feature-list">
-              <Feature label="主属性" value={classLine.primaryStat} />
-              <Feature label="副属性" value={classLine.secondaryStat} />
-              <Feature label="武器" value={classLine.weaponTypes.join(' / ')} />
-              <Feature label="定位" value={classLine.role} />
-            </div>
-          </Panel>
-        </section>
+          </SectionCard>
+          <SectionCard title="技能 / AP">
+            <SkillCard skillRows={skillRows} nextSkillPlan={nextSkillPlan} nested />
+          </SectionCard>
+        </>
       )}
 
-      {activeTab === 'crafting' && (
-        <section className="grid two-col wide-left">
-          <Panel title="六大锻造系统" icon={Boxes}>
-            <p className="panel-copy">
-              {officialData
-                ? `当前锻造模块已读取官方 ${officialData.recipes.length} 条配方，并按金币/经验效率做低成本路线。`
-                : '当前使用示例配方；官方 crafting.json 读取完成后会自动切换。'}
+      {activeTab === 'materials' && (
+        <>
+          <SectionCard title="材料价值指数">
+            <p className="section-copy">
+              价值分数按覆盖配方数、总需求量、覆盖专业数综合计算。适合用来判断哪些材料值得囤。
             </p>
-            <div className="profession-grid">
-              {professions.map((profession) => (
-                <button
-                  key={profession.id}
-                  className={activeProfessionId === profession.id ? 'profession-card active' : 'profession-card'}
-                  onClick={() => setProfessionId(profession.id)}
-                >
-                  <span>{profession.icon}</span>
-                  <strong>{profession.name}</strong>
-                  <small>{profession.focus}</small>
-                </button>
+            <div className="material-stack">
+              {materialValue.map((material) => (
+                <article className="material-row" key={material.id}>
+                  <div>
+                    <h3>{material.name}</h3>
+                    <p>覆盖 {material.recipeCount} 配方 · 总需求 {material.totalDemand} · {material.source}</p>
+                  </div>
+                  <strong>{material.score}</strong>
+                </article>
               ))}
             </div>
-            <label className="target-control">
-              目标专业等级：{targetCraftLevel}
+          </SectionCard>
+          <SectionCard title="锻造路线">
+            <div className="control-block">
+              <h3>专业</h3>
+              <div className="option-grid two">
+                {professions.map((profession) => (
+                  <button
+                    key={profession.id}
+                    className={activeProfessionId === profession.id ? 'option-btn active' : 'option-btn'}
+                    onClick={() => setProfessionId(profession.id)}
+                  >
+                    {profession.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="level-control compact-level">
+              <h3>目标专业等级</h3>
+              <div className="level-row">
+                <button className="level-btn" onClick={() => setTargetCraftLevel(Math.max(2, targetCraftLevel - 1))}>-</button>
+                <input className="level-input" value={targetCraftLevel} readOnly />
+                <button className="level-btn" onClick={() => setTargetCraftLevel(Math.min(20, targetCraftLevel + 1))}>+</button>
+              </div>
               <input
+                className="level-slider"
                 type="range"
                 min="2"
                 max="20"
                 value={targetCraftLevel}
                 onChange={(event) => setTargetCraftLevel(Number(event.target.value))}
               />
-            </label>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>推荐阶段</th>
-                    <th>配方</th>
-                    <th>次数</th>
-                    <th>金币</th>
-                    <th>材料</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {craftingRoute.route.map((step) => (
-                    <tr key={`${step.from}-${step.to}`}>
-                      <td>{step.from} → {step.to}</td>
-                      <td>{step.recipe}</td>
-                      <td>{step.crafts}</td>
-                      <td>{step.cost.toLocaleString()}</td>
-                      <td>{step.materials.join('，')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
-          </Panel>
-          <Panel title="材料价值指数" icon={Sparkles}>
-            <div className="material-list">
-              {materialValue.map((material) => (
-                <article key={material.id} className="material-card">
-                  <div>
-                    <strong>{material.name}</strong>
-                    <p>{material.source} · 覆盖 {material.recipeCount} 配方 · 总需求 {material.totalDemand}</p>
-                  </div>
-                  <span>{material.score}</span>
-                </article>
-              ))}
-            </div>
-            <h3 className="section-mini-title">当前专业高效配方</h3>
-            <div className="mini-list">
-              {professionRecipes.slice(0, 10).map((recipe) => (
-                <div key={recipe.id}>
-                  <strong>{recipe.output}</strong>
-                  <span>Lv.{recipe.level} · 效率 {recipe.efficiency} · {recipe.materialNames.join('，')}</span>
+            <div className="mini-table route-table">
+              {craftingRoute.route.map((step) => (
+                <div className="route-row" key={`${step.from}-${step.to}`}>
+                  <span>Lv.{step.from}→{step.to}</span>
+                  <strong>{step.recipe}</strong>
+                  <span>{step.crafts} 次 · {step.cost.toLocaleString()} meso</span>
                 </div>
               ))}
             </div>
-          </Panel>
-        </section>
+          </SectionCard>
+        </>
       )}
 
-      {activeTab === 'data' && (
-        <section className="grid two-col">
-          <Panel title="官方数据接入状态" icon={Database}>
-            <p className="panel-copy">
-              {officialData
-                ? '官方 AppData 已经成功接入。地图推荐和锻造系统现在优先使用 public/AppData 下的数据。'
-                : '正在检测 public/AppData 和 public/RawData。'}
-            </p>
-            {officialError && <p className="warn-text">{officialError}</p>}
-            {officialData?.overview && (
-              <div className="stat-grid data-stats">
-                <Metric label="怪物" value={officialData.overview.monsters} />
-                <Metric label="地图" value={officialData.overview.maps} />
-                <Metric label="配方" value={officialData.overview.recipes} />
-                <Metric label="技能" value={officialData.overview.skills} />
-                <Metric label="装备" value={officialData.overview.equipment} />
-                <Metric label="专业" value={officialData.overview.num_disciplines} />
-              </div>
-            )}
-            <div className="mini-list">
-              {dataProbe.map((item) => (
-                <div key={item.path}>
-                  <strong>{item.path}</strong>
-                  <span>{item.found ? '已检测到' : `未检测到 / ${item.status}`}</span>
-                </div>
-              ))}
-            </div>
-          </Panel>
-          <Panel title="下一步数据解析计划" icon={BookOpen}>
-            <ol className="plan-list">
-              <li>把角色 sprite / 装备 sprite 接到角色预览框。</li>
-              <li>把 `skills.json` 转成每个职业的技能树和推荐加点表。</li>
-              <li>把 `items.json` 接入装备池，计算不同等级的武器/装备推荐。</li>
-              <li>把怪物掉落材料接到锻造系统，做刷怪囤货路线。</li>
-            </ol>
-          </Panel>
-        </section>
-      )}
+      {officialError && <p className="load-error">官方数据读取提示：{officialError}</p>}
     </main>
+  );
+}
+
+function HeroOverview({ classLine, branch, level, statPlan, bestMonster, bestMap, officialData }) {
+  return (
+    <section className="hero-card">
+      <h1>Lv.{level} {classLine.name} 开荒驾驶舱</h1>
+      <p>
+        优先打 <strong>{bestMonster?.name ?? '推荐怪物'}</strong>，当前命中 100%，推荐地图 <strong>{bestMap?.name ?? '读取中'}</strong>。
+      </p>
+      <div className="hero-stats">
+        <HeroStat label="ACC" value={statPlan.derived.accuracy} />
+        <HeroStat label="主攻" value={estimateMainAttack(classLine, statPlan)} />
+        <HeroStat label="HP" value={statPlan.derived.hp} />
+      </div>
+      <div className="preview-card">
+        <div className="preview-frame">
+          <div className={`pixel-avatar ${classLine.id}`}>
+            <div className="avatar-hat" />
+            <div className="avatar-face" />
+            <div className="avatar-body" />
+            <div className="avatar-weapon" />
+          </div>
+        </div>
+        <div className="preview-meta">
+          <strong>{classLine.name} Lv.{level}</strong>
+          <span>已映射装备 {officialData ? 9 : 0} 件</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HeroStat({ label, value }) {
+  return (
+    <div className="hero-stat">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function NextStepCard({ bestMonster, bestMap, recommendedGear, nextAp }) {
+  return (
+    <SectionCard title="下一步">
+      <div className="info-list">
+        <InfoRow label="练级" title={`${bestMonster?.name ?? '推荐怪物'} Lv.${bestMonster?.level ?? '-'}`} desc="命中 100%" />
+        <InfoRow label="地图" title={bestMap?.name ?? '推荐地图读取中'} desc={`刷新 ${bestMap?.mobRate ?? 1} · ${bestMap?.canHitAll ? '安全' : '需补命中'}`} />
+        <InfoRow label="装备" title={recommendedGear[0]?.title ?? '职业装备'} desc={recommendedGear[0]?.desc ?? '可换'} />
+        <InfoRow label="AP" title={nextAp} desc="按当前职业主属性优先" />
+      </div>
+    </SectionCard>
+  );
+}
+
+function CharacterParameters(props) {
+  const {
+    editionId,
+    setEditionId,
+    classId,
+    setClassId,
+    branchId,
+    setBranchId,
+    availableClasses,
+    classLine,
+    gender,
+    setGender,
+    level,
+    setLevel,
+    mode,
+    setMode,
+    budget,
+    setBudget,
+    priority,
+    setPriority,
+  } = props;
+
+  return (
+    <SectionCard title="角色参数">
+      <div className="control-block">
+        <h3>版本</h3>
+        <div className="option-grid two">
+          {EDITIONS.map((item) => (
+            <button
+              key={item.id}
+              className={editionId === item.id ? 'option-btn active' : 'option-btn'}
+              onClick={() => setEditionId(item.id)}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="control-block">
+        <h3>职业</h3>
+        <div className="option-grid two">
+          {JOB_BUTTONS.filter((job) => availableClasses.some((item) => item.id === job.id)).map((job) => (
+            <button
+              key={job.id}
+              className={classId === job.id ? 'option-btn active' : 'option-btn'}
+              onClick={() => setClassId(job.id)}
+            >
+              {job.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="control-block">
+        <h3>二转方向</h3>
+        <div className="option-grid two">
+          {classLine.branches.map((branch) => (
+            <button
+              key={branch.id}
+              className={branchId === branch.id ? 'option-btn active' : 'option-btn'}
+              onClick={() => setBranchId(branch.id)}
+            >
+              {branch.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="control-block">
+        <h3>性别</h3>
+        <div className="option-grid two">
+          <button className={gender === 'male' ? 'option-btn active' : 'option-btn'} onClick={() => setGender('male')}>男</button>
+          <button className={gender === 'female' ? 'option-btn active' : 'option-btn'} onClick={() => setGender('female')}>女</button>
+        </div>
+      </div>
+
+      <div className="level-control">
+        <h3>等级</h3>
+        <div className="level-row">
+          <button className="level-btn" onClick={() => setLevel(Math.max(1, level - 1))}>-</button>
+          <input className="level-input" value={level} readOnly />
+          <button className="level-btn" onClick={() => setLevel(Math.min(120, level + 1))}>+</button>
+        </div>
+        <input
+          className="level-slider"
+          type="range"
+          min="1"
+          max="120"
+          value={level}
+          onChange={(event) => setLevel(Number(event.target.value))}
+        />
+      </div>
+
+      <ChoiceGroup title="推荐模式" value={mode} setValue={setMode} options={MODE_BUTTONS} />
+      <ChoiceGroup title="资金" value={budget} setValue={setBudget} options={BUDGET_BUTTONS} />
+      <ChoiceGroup title="优先级" value={priority} setValue={setPriority} options={PRIORITY_BUTTONS} />
+    </SectionCard>
+  );
+}
+
+function ChoiceGroup({ title, value, setValue, options }) {
+  return (
+    <div className="control-block">
+      <h3>{title}</h3>
+      <div className="option-grid two">
+        {options.map((option) => (
+          <button
+            key={option.id}
+            className={value === option.id ? 'option-btn active' : 'option-btn'}
+            onClick={() => setValue(option.id)}
+          >
+            {option.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StatsCard({ statPlan, nextAp, classLine }) {
+  const stats = [
+    ['STR', statPlan.stats.STR],
+    ['DEX', statPlan.stats.DEX],
+    ['INT', statPlan.stats.INT],
+    ['LUK', statPlan.stats.LUK],
+    ['ACC', statPlan.derived.accuracy],
+    ['AVOID', Math.round((statPlan.stats.LUK ?? 0) * 0.8 + statPlan.level * 0.15)],
+    ['HP', statPlan.derived.hp],
+    ['MP', statPlan.derived.mp],
+    ['WATK', estimateMainAttack(classLine, statPlan)],
+  ];
+
+  return (
+    <SectionCard title="最终属性">
+      <div className="stat-stack">
+        {stats.map(([label, value]) => (
+          <div className="stat-row" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="next-ap-note">
+        <strong>下一点 AP：{nextAp}</strong>
+        <span>当前建议主 {classLine.primaryStat}，{classLine.secondaryStat} 只保留装备需求。</span>
+      </div>
+    </SectionCard>
+  );
+}
+
+function SkillCard({ skillRows, nextSkillPlan, nested = false }) {
+  const content = (
+    <>
+      <p className="skill-path">
+        {skillRows[0]?.priority ?? '按当前等级规划主力技能'}
+      </p>
+      <h3 className="small-heading">当前技能</h3>
+      <div className="skill-list">
+        {nextSkillPlan.current.map((skill) => (
+          <div className="skill-row" key={skill.name}>
+            <strong>{skill.name}</strong>
+            <span>{skill.points}</span>
+          </div>
+        ))}
+      </div>
+      <h3 className="small-heading">接下来</h3>
+      <div className="skill-list">
+        {nextSkillPlan.next.map((skill) => (
+          <div className="skill-row" key={`${skill.level}-${skill.name}`}>
+            <strong>Lv.{skill.level}</strong>
+            <span>{skill.name}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
+  if (nested) return content;
+  return <SectionCard title="技能 / AP">{content}</SectionCard>;
+}
+
+function DamageCard({ damageRows }) {
+  return (
+    <SectionCard title="技能伤害">
+      <div className="damage-stack">
+        {damageRows.map((row) => (
+          <article className="damage-row" key={row.name}>
+            <div>
+              <h3>{row.name}</h3>
+              <p>{row.desc}</p>
+            </div>
+            <strong>{row.damage}</strong>
+          </article>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
+function SectionCard({ title, children }) {
+  return (
+    <section className="section-card">
+      <h2>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function InfoRow({ label, title, desc }) {
+  return (
+    <article className="info-row">
+      <span>{label}</span>
+      <div>
+        <strong>{title}</strong>
+        <p>{desc}</p>
+      </div>
+    </article>
   );
 }
 
@@ -438,63 +610,60 @@ function buildProfessionList(officialData) {
   });
 }
 
-function CharacterCard({ classLine, branch, statPlan, level }) {
-  return (
-    <aside className="character-card">
-      <div className={`avatar-orb ${classLine.id}`}>
-        <span>{classLine.name.slice(0, 1)}</span>
-      </div>
-      <div>
-        <p className="eyebrow">Lv.{level} · {classLine.name}</p>
-        <h2>{branch?.name ?? classLine.name}</h2>
-        <p>{branch?.theme ?? classLine.role}</p>
-      </div>
-      <div className="formula-row compact">
-        <Metric label="HP" value={statPlan.derived.hp} />
-        <Metric label="MP" value={statPlan.derived.mp} />
-        <Metric label="命中" value={statPlan.derived.accuracy} />
-      </div>
-    </aside>
-  );
+function buildSkillPlan(skillRows, level) {
+  const first = skillRows[0]?.priority ?? '主力技能';
+  const parts = first.split('→').map((item) => item.trim()).filter(Boolean);
+  const names = parts.length ? parts : ['主力技能', '被动强化', '机动/生存'];
+
+  return {
+    current: names.slice(0, 4).map((name, index) => ({
+      name,
+      points: `${Math.max(1, Math.min(20, level - 5 - index * 4))}/${index === 1 ? 15 : 20}`,
+    })),
+    next: [
+      { level, name: `${names[1] ?? names[0]} x3` },
+      { level: level + 1, name: `${names[1] ?? names[0]} x3` },
+      { level: level + 2, name: `${names[2] ?? names[0]} x3` },
+      { level: level + 3, name: `${names[2] ?? names[0]} x2 / ${names[3] ?? names[0]}` },
+    ],
+  };
 }
 
-function Panel({ title, icon: Icon, children }) {
-  return (
-    <section className="panel">
-      <header className="panel-header">
-        <div>
-          <Icon size={20} />
-          <h2>{title}</h2>
-        </div>
-      </header>
-      {children}
-    </section>
-  );
+function buildDamageRows(classLine, branch, level, statPlan) {
+  const attack = estimateMainAttack(classLine, statPlan);
+  const skillName = classLine.id === 'magician' ? '魔力弹' : branch?.name ?? '主力技能';
+  const min = Math.round(attack * (classLine.id === 'magician' ? 0.8 : 0.65));
+  const max = Math.round(attack * (classLine.id === 'magician' ? 1.28 : 1.45));
+
+  return [
+    {
+      name: skillName,
+      desc: `Lv.${Math.min(20, Math.max(1, level - 5))}/20 · 当前主力输出估算`,
+      damage: `${min} ~ ${max}`,
+    },
+    {
+      name: '普通攻击',
+      desc: '按当前主属性和等级粗略估算',
+      damage: `${Math.round(min * 0.42)} ~ ${Math.round(max * 0.56)}`,
+    },
+  ];
 }
 
-function Metric({ label, value }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
+function buildRecommendedGear(classLine, level, budget, professionRecipes) {
+  const firstRecipe = professionRecipes.find((recipe) => recipe.level <= Math.max(1, Math.floor(level / 5))) ?? professionRecipes[0];
+  const budgetText = budget === 'low' ? '低资金可换' : budget === 'high' ? '优先高属性' : '平价过渡';
+
+  return [
+    { label: '武器', title: classLine.weaponTypes[0] ?? '职业武器', desc: `${budgetText} · Lv.${level} 过渡` },
+    { label: '防具', title: firstRecipe?.output ?? '职业防具', desc: '套服 · 可换' },
+    { label: '饰品', title: '命中 / 主属性饰品', desc: '优先补命中与主属性' },
+  ];
 }
 
-function Feature({ label, value }) {
-  return (
-    <div className="feature-row">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function formatElement(monster) {
-  const weak = monster.elementWeakness?.length ? `弱 ${monster.elementWeakness.join('/')}` : '无弱点';
-  const resist = monster.elementResist?.length ? `抗 ${monster.elementResist.join('/')}` : '无抗性';
-  const special = monster.undead ? '不死系' : '';
-  return [weak, resist, special].filter(Boolean).join('; ');
+function estimateMainAttack(classLine, statPlan) {
+  const primary = statPlan.stats[classLine.primaryStat] ?? 0;
+  const secondary = statPlan.stats[classLine.secondaryStat] ?? 0;
+  return Math.max(1, Math.round(primary * 1.35 + secondary * 0.35 + statPlan.level * 0.7));
 }
 
 export default App;
