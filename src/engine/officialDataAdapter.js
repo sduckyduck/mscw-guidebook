@@ -9,6 +9,10 @@ const PROFESSION_ID_BY_NAME = {
 
 const BASE_URL = import.meta.env.BASE_URL || '/';
 const appDataPath = (path) => `${BASE_URL}${path.replace(/^\/+/, '')}`;
+const padItemId = (id) => String(id ?? '').padStart(8, '0');
+const padSkillId = (id) => String(id ?? '').padStart(7, '0');
+const itemIconPath = (id) => appDataPath(`AppData/images/items/${padItemId(id)}.png`);
+const skillIconPath = (id) => appDataPath(`AppData/images/skills/${padSkillId(id)}.png`);
 
 export async function loadOfficialGuideData() {
   const [overview, monstersRaw, mapsRaw, craftingRaw, itemsRaw, skillsRaw] = await Promise.all([
@@ -48,7 +52,7 @@ async function fetchJson(path) {
 }
 
 function normalizeMonsters(monsters) {
-  return monsters.map((monster) => {
+  return safeArray(monsters).map((monster) => {
     const level = Number(monster.level ?? 1);
     const eva = Number(monster.eva ?? monster.avoid ?? 0);
     const requiredAccuracy = Math.max(1, Math.round(level * 2 + eva * 1.5));
@@ -77,7 +81,7 @@ function normalizeMonsters(monsters) {
       undead: Boolean(monster.undead),
       thumbnail: monster.thumbnail ? appDataPath(`AppData/${monster.thumbnail}`) : null,
       gif: monster.gif ? appDataPath(`AppData/${monster.gif}`) : null,
-      maps: (monster.maps ?? []).map((map) => ({
+      maps: safeArray(monster.maps).map((map) => ({
         id: Number(map.id),
         name: map.name,
         count: Number(map.count ?? 0),
@@ -90,8 +94,8 @@ function normalizeMonsters(monsters) {
 function normalizeMaps(regions, monsters) {
   const metadataById = new Map();
 
-  for (const region of regions) {
-    for (const map of region.maps ?? []) {
+  for (const region of safeArray(regions)) {
+    for (const map of safeArray(region.maps)) {
       metadataById.set(Number(map.id), {
         id: String(map.id),
         rawId: Number(map.id),
@@ -109,7 +113,7 @@ function normalizeMaps(regions, monsters) {
 
   const monstersByMap = new Map();
   for (const monster of monsters) {
-    for (const mapRef of monster.maps ?? []) {
+    for (const mapRef of safeArray(monster.maps)) {
       const key = Number(mapRef.id);
       if (!monstersByMap.has(key)) monstersByMap.set(key, []);
       monstersByMap.get(key).push({ ...monster, spawnCount: mapRef.count, mobTime: mapRef.mobTime });
@@ -170,26 +174,17 @@ function normalizeCrafting(disciplines) {
   const materialMap = new Map();
   const professions = [];
 
-  for (const discipline of disciplines) {
+  for (const discipline of safeArray(disciplines)) {
     const professionId = PROFESSION_ID_BY_NAME[discipline.discipline] ?? slugify(discipline.discipline);
-    professions.push({
-      id: professionId,
-      name: discipline.discipline,
-      skillId: discipline.skill_id,
-    });
+    professions.push({ id: professionId, name: discipline.discipline, skillId: discipline.skill_id });
 
-    for (const outputType of discipline.output_types ?? []) {
-      for (const levelGroup of outputType.levels ?? []) {
-        for (const recipe of levelGroup.recipes ?? []) {
-          const materials = (recipe.ingredients ?? []).map((ingredient) => {
+    for (const outputType of safeArray(discipline.output_types)) {
+      for (const levelGroup of safeArray(outputType.levels)) {
+        for (const recipe of safeArray(levelGroup.recipes)) {
+          const materials = safeArray(recipe.ingredients).map((ingredient) => {
             const id = slugify(ingredient.item_name);
             if (!materialMap.has(id)) {
-              materialMap.set(id, {
-                id,
-                name: ingredient.item_name,
-                source: '官方配方材料',
-                valueTags: [],
-              });
+              materialMap.set(id, { id, name: ingredient.item_name, source: '官方配方材料', valueTags: [] });
             }
             return { id, qty: Number(ingredient.count ?? 1) };
           });
@@ -211,15 +206,11 @@ function normalizeCrafting(disciplines) {
     }
   }
 
-  return {
-    recipes,
-    materials: [...materialMap.values()],
-    professions,
-  };
+  return { recipes, materials: [...materialMap.values()], professions };
 }
 
 function normalizeItems(items) {
-  return items.map((item) => ({
+  return safeArray(items).map((item) => ({
     ...item,
     id: String(item.id),
     reqLevel: Number(item.stats?.reqLevel ?? 0),
@@ -232,27 +223,60 @@ function normalizeItems(items) {
     incMAD: Number(item.stats?.incMAD ?? 0),
     incACC: Number(item.stats?.incACC ?? item.stats?.incACCr ?? 0),
     incSpeed: Number(item.stats?.incSpeed ?? 0),
-    thumbnail: item.thumbnail ? appDataPath(`AppData/${item.thumbnail}`) : null,
+    thumbnail: item.thumbnail ? appDataPath(`AppData/${item.thumbnail}`) : itemIconPath(item.id),
   }));
 }
 
 function normalizeSkillGroups(rawSkillData) {
-  return Object.entries(rawSkillData).flatMap(([baseClass, groups]) =>
-    (groups ?? []).map((group) => ({
-      baseClass,
-      className: group.class_name,
-      job: group.job,
-      mainClass: group.main_class,
-      baseClassLabel: group.base_class,
-      subclasses: group.subclasses ?? [],
-      skills: (group.skills ?? []).map((skill) => ({
+  const normalizedGroups = [];
+
+  for (const [baseClass, node] of Object.entries(rawSkillData ?? {})) {
+    for (const group of collectSkillGroups(node)) {
+      const skills = safeArray(group.skills).map((skill) => ({
         ...skill,
         id: String(skill.id),
-        maxLevel: Number(skill.max_level ?? 0),
-        thumbnail: skill.thumbnail ? appDataPath(`AppData/${skill.thumbnail}`) : null,
-      })),
-    })),
-  );
+        maxLevel: Number(skill.max_level ?? skill.maxLevel ?? 0),
+        thumbnail: skill.thumbnail ? appDataPath(`AppData/${skill.thumbnail}`) : skillIconPath(skill.id),
+      }));
+
+      if (!skills.length) continue;
+      normalizedGroups.push({
+        baseClass,
+        className: group.class_name ?? group.className ?? group.name ?? baseClass,
+        job: group.job ?? group.job_name ?? '',
+        mainClass: group.main_class ?? group.mainClass ?? '',
+        baseClassLabel: group.base_class ?? group.baseClass ?? baseClass,
+        subclasses: safeArray(group.subclasses),
+        skills,
+      });
+    }
+  }
+
+  return normalizedGroups;
+}
+
+function collectSkillGroups(node) {
+  if (!node) return [];
+  if (Array.isArray(node)) return node.flatMap(collectSkillGroups);
+  if (typeof node !== 'object') return [];
+  if (Array.isArray(node.skills)) return [node];
+
+  const candidateKeys = ['groups', 'jobs', 'classes', 'data', 'children'];
+  for (const key of candidateKeys) {
+    if (node[key]) {
+      const nested = collectSkillGroups(node[key]);
+      if (nested.length) return nested;
+    }
+  }
+
+  return Object.values(node).flatMap((value) => collectSkillGroups(value));
+}
+
+function safeArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  if (typeof value === 'object') return Object.values(value);
+  return [];
 }
 
 function parseElements(elements) {
@@ -261,10 +285,7 @@ function parseElements(elements) {
   if (typeof elements === 'string') {
     return { weak: elements.split(/[;,/|]/).map((item) => item.trim()).filter(Boolean), resist: [] };
   }
-  return {
-    weak: elements.weak ?? elements.weakness ?? [],
-    resist: elements.resist ?? elements.resistance ?? [],
-  };
+  return { weak: elements.weak ?? elements.weakness ?? [], resist: elements.resist ?? elements.resistance ?? [] };
 }
 
 function slugify(value) {
