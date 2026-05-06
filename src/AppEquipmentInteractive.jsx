@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import CharacterPreview from './components/CharacterPreview.jsx';
+import MsioItemIcon from './components/MsioItemIcon.jsx';
 import { CLASS_LINES, EDITIONS } from './data/classes.js';
 import { PROFESSIONS } from './data/crafting.js';
 import { buildLowCostRoute, getMaterialValueIndex } from './engine/craftingEngine.js';
@@ -114,17 +115,10 @@ function EquipmentFrame({ gear, candidatesBySlot, onPickSlot }) {
 function EquipSlot({ slot, label, item, count, onClick }) {
   const clickable = count > 0;
   return <button onClick={clickable ? onClick : undefined} disabled={!clickable} style={{ textAlign: 'left', minHeight: 76, border: '1px solid var(--border)', borderRadius: 13, background: item ? '#f8fbf9' : '#f1f4f2', padding: 7, overflow: 'hidden', opacity: clickable ? 1 : .62 }}>
-    <ItemIcon item={item} />
+    <MsioItemIcon item={item} />
     <span style={{ display: 'block', color: 'var(--muted)', fontSize: 11, fontWeight: 1000 }}>{label}{count ? ` · ${count}` : ''}</span>
     <strong style={{ display: 'block', color: item ? 'var(--blue)' : '#9aa4b2', fontSize: 12, lineHeight: 1.18, fontWeight: 1000, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item?.title ?? '未装备'}</strong>
   </button>;
-}
-
-function ItemIcon({ item, size = 32 }) {
-  const sources = [item?.thumbnail, item?.id ? `https://maplestory.io/api/GMS/83/item/${Number(item.id)}/icon` : null].filter(Boolean);
-  const [index, setIndex] = useState(0);
-  useEffect(() => setIndex(0), [item?.id, item?.thumbnail]);
-  return <div style={{ width: size + 8, height: size + 8, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', marginBottom: 5 }}>{sources[index] ? <img src={sources[index]} alt="" onError={() => setIndex((value) => value + 1)} style={{ width: size, height: size, objectFit: 'contain', imageRendering: 'pixelated' }} /> : <span style={{ color: '#b8c2cc', fontWeight: 1000 }}>—</span>}</div>;
 }
 
 function GearPicker({ slot, items, current, onChoose, onClose }) {
@@ -132,7 +126,7 @@ function GearPicker({ slot, items, current, onChoose, onClose }) {
   return <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(17,24,39,.38)', display: 'grid', alignItems: 'end' }} onClick={onClose}>
     <div style={{ maxHeight: '72vh', overflow: 'auto', background: '#fff', borderRadius: '24px 24px 0 0', padding: '18px 16px calc(18px + env(safe-area-inset-bottom))', boxShadow: '0 -18px 50px rgba(0,0,0,.22)' }} onClick={(event) => event.stopPropagation()}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}><h2 style={{ margin: 0, fontSize: 24 }}>选择{label}</h2><button onClick={onClose} style={{ border: '1px solid var(--border)', borderRadius: 999, background: '#f8fbf9', padding: '8px 12px', fontWeight: 1000 }}>关闭</button></div>
-      <div style={{ display: 'grid', gap: 10 }}>{items.length ? items.map((item) => <button key={`${slot}-${item.id}`} onClick={() => onChoose(item)} style={{ display: 'grid', gridTemplateColumns: '52px minmax(0,1fr) auto', gap: 12, alignItems: 'center', border: current?.id === item.id ? '2px solid var(--green)' : '1px solid var(--border)', borderRadius: 16, background: current?.id === item.id ? 'var(--green-soft)' : '#fff', padding: 12, textAlign: 'left' }}><ItemIcon item={item} size={36} /><div style={{ minWidth: 0 }}><strong style={{ display: 'block', color: 'var(--blue)', fontSize: 17, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</strong><span style={{ color: 'var(--muted)', fontWeight: 850, fontSize: 13 }}>Lv.{item.reqLevel ?? '-'} · {item.weaponType ?? item.reqJobLabel ?? item.label}</span></div><span style={{ color: 'var(--green-dark)', fontWeight: 1000 }}>{current?.id === item.id ? '当前' : '替换'}</span></button>) : <p style={{ color: 'var(--muted)', fontWeight: 850 }}>当前等级和职业没有可替换装备。</p>}</div>
+      <div style={{ display: 'grid', gap: 10 }}>{items.length ? items.map((item) => <button key={`${slot}-${item.id}`} onClick={() => onChoose(item)} style={{ display: 'grid', gridTemplateColumns: '52px minmax(0,1fr) auto', gap: 12, alignItems: 'center', border: current?.id === item.id ? '2px solid var(--green)' : '1px solid var(--border)', borderRadius: 16, background: current?.id === item.id ? 'var(--green-soft)' : '#fff', padding: 12, textAlign: 'left' }}><MsioItemIcon item={item} size={36} /><div style={{ minWidth: 0 }}><strong style={{ display: 'block', color: 'var(--blue)', fontSize: 17, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</strong><span style={{ color: 'var(--muted)', fontWeight: 850, fontSize: 13 }}>Lv.{item.reqLevel ?? '-'} · {item.weaponType ?? item.reqJobLabel ?? item.label}</span></div><span style={{ color: 'var(--green-dark)', fontWeight: 1000 }}>{current?.id === item.id ? '当前' : '替换'}</span></button>) : <p style={{ color: 'var(--muted)', fontWeight: 850 }}>当前等级和职业没有可替换装备。</p>}</div>
     </div>
   </div>;
 }
