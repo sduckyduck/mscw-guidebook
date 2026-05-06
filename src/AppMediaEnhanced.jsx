@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import CharacterPreview from './components/CharacterPreview.jsx';
 import IconFallback, { baseUrl } from './components/IconFallback.jsx';
 import MonsterIcon from './components/MonsterIcon.jsx';
@@ -25,28 +25,59 @@ const SLOTS = [
 ];
 const emptyData = { items: [], maps: [], monsters: [], recipes: [], materials: [] };
 const tabIds = new Set(TABS.map(([id]) => id));
+const STORAGE_KEY = 'mscw-guidebook-state-v2';
 
-function getInitialTab() {
+function readSavedState() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getInitialTab(saved = readSavedState()) {
   if (typeof window === 'undefined') return 'overview';
   const hashTab = window.location.hash.replace(/^#/, '');
-  return tabIds.has(hashTab) ? hashTab : 'overview';
+  if (tabIds.has(hashTab)) return hashTab;
+  return tabIds.has(saved.tab) ? saved.tab : 'overview';
+}
+
+function getSavedChoice(saved, key, fallback, allowed = null) {
+  const value = saved?.[key];
+  if (allowed && !allowed.includes(value)) return fallback;
+  return value ?? fallback;
+}
+
+function getSavedNumber(saved, key, fallback) {
+  const value = Number(saved?.[key]);
+  return Number.isFinite(value) ? value : fallback;
 }
 
 export default function AppMediaEnhanced() {
-  const [tab, setTab] = useState(getInitialTab);
-  const [editionId, setEditionId] = useState('global');
-  const [classId, setClassId] = useState('magician');
-  const [branchId, setBranchId] = useState('magician');
-  const [gender, setGender] = useState('female');
-  const [level, setLevel] = useState(25);
-  const [budget, setBudget] = useState('low');
-  const [priority, setPriority] = useState('material');
-  const [apAllocation, setApAllocation] = useState(null);
-  const [skillAllocation, setSkillAllocation] = useState(null);
-  const [gearOverrides, setGearOverrides] = useState({});
+  const savedRef = useRef(readSavedState());
+  const saved = savedRef.current;
+  const [tab, setTab] = useState(() => getInitialTab(saved));
+  const [editionId, setEditionId] = useState(() => getSavedChoice(saved, 'editionId', 'global', EDITIONS.map((x) => x.id)));
+  const [classId, setClassId] = useState(() => getSavedChoice(saved, 'classId', 'magician', CLASS_LINES.map((x) => x.id)));
+  const [branchId, setBranchId] = useState(() => getSavedChoice(saved, 'branchId', 'magician'));
+  const [gender, setGender] = useState(() => getSavedChoice(saved, 'gender', 'female', ['male', 'female']));
+  const [level, setLevel] = useState(() => getSavedNumber(saved, 'level', 25));
+  const [budget, setBudget] = useState(() => getSavedChoice(saved, 'budget', 'low', BUDGETS.map((x) => x.id)));
+  const [priority, setPriority] = useState(() => getSavedChoice(saved, 'priority', 'material', PRIORITIES.map((x) => x.id)));
+  const [apAllocation, setApAllocation] = useState(() => saved.apAllocation ?? null);
+  const [skillAllocation, setSkillAllocation] = useState(() => saved.skillAllocation ?? null);
+  const [gearOverrides, setGearOverrides] = useState(() => saved.gearOverrides ?? {});
   const [pickerSlot, setPickerSlot] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const didInitAp = useRef(false);
+  const didInitSkill = useRef(false);
+  const didInitGearReset = useRef(false);
+  const didInitStorage = useRef(false);
 
   useEffect(() => {
     loadOfficialGuideData().then(setData).catch((e) => setError(e.message || '官方数据读取失败'));
@@ -65,16 +96,26 @@ export default function AppMediaEnhanced() {
     if (!classes.some((x) => x.id === classId)) setClassId(classes[0]?.id ?? 'warrior');
     if (!classLine.branches.some((x) => x.id === branchId)) setBranchId(classLine.branches[0]?.id ?? classLine.id);
   }, [classes, classId, branchId, classLine]);
-  useEffect(() => setApAllocation(getRecommendedApAllocation(classLine, level, { budget })), [classLine, level, budget]);
-  useEffect(() => setSkillAllocation(getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level })), [classLine, branch, level]);
-  useEffect(() => { setGearOverrides({}); setPickerSlot(null); }, [editionId, classId, branchId, gender, level, budget]);
+  useEffect(() => {
+    if (!didInitAp.current) { didInitAp.current = true; return; }
+    setApAllocation(getRecommendedApAllocation(classLine, level, { budget }));
+  }, [classLine, level, budget]);
+  useEffect(() => {
+    if (!didInitSkill.current) { didInitSkill.current = true; return; }
+    setSkillAllocation(getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level }));
+  }, [classLine, branch, level]);
+  useEffect(() => {
+    if (!didInitGearReset.current) { didInitGearReset.current = true; return; }
+    setGearOverrides({});
+    setPickerSlot(null);
+  }, [editionId, classId, branchId, gender, level, budget]);
 
   const recommendedApAllocation = useMemo(() => getRecommendedApAllocation(classLine, level, { budget }), [classLine, level, budget]);
   const effectiveApAllocation = apAllocation ?? recommendedApAllocation;
   const statPlan = useMemo(() => buildStatPlan(classLine, level, { budget, apAllocation: effectiveApAllocation }), [classLine, level, budget, effectiveApAllocation]);
   const maps = useMemo(() => getMapRecommendations({ classLine, level, statPlan, budget, priority, maps: activeData.maps, monsters: activeData.monsters }).slice(0, 8), [classLine, level, statPlan, budget, priority, activeData]);
   const recommendedGear = useMemo(() => selectGear({ classLine, branch, level, budget, gender, statPlan, items: activeData.items }), [classLine, branch, level, budget, gender, statPlan, activeData]);
-  const candidatesBySlot = useMemo(() => getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items: activeData.items }), [classLine, branch, level, budget, gender, statPlan, activeData]);
+  const candidatesBySlot = useMemo(() => getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items: activeData.items, manualMode: true }), [classLine, branch, level, budget, gender, statPlan, activeData]);
   const gear = useMemo(() => applyGearOverrides(recommendedGear, gearOverrides), [recommendedGear, gearOverrides]);
   const weapon = gear.find((x) => x.slot === 'weapon');
   const mainAttack = calcMainAttack(classLine, statPlan, weapon);
@@ -86,6 +127,13 @@ export default function AppMediaEnhanced() {
   const skillPlan = useMemo(() => getSkillPlan({ classId: classLine.id, branchId: branch.id, level, mainAttack, customSkills: effectiveSkillAllocation }), [classLine, branch, level, mainAttack, effectiveSkillAllocation]);
   const apNote = useMemo(() => getApNote({ classLine, statPlan, budget }), [classLine, statPlan, budget]);
   const controls = { edition, editionId, setEditionId, classId, setClassId, branchId, setBranchId, gender, setGender, level, setLevel, budget, setBudget, priority, setPriority, classes, classLine, minLevel, maxLevel };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!didInitStorage.current) { didInitStorage.current = true; }
+    const next = { tab, editionId, classId, branchId, gender, level, budget, priority, apAllocation, skillAllocation, gearOverrides };
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore storage failures */ }
+  }, [tab, editionId, classId, branchId, gender, level, budget, priority, apAllocation, skillAllocation, gearOverrides]);
 
   const chooseGear = (slot, item) => {
     setGearOverrides((old) => {
