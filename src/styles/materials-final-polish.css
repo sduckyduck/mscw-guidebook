@@ -54,6 +54,48 @@
   background-image: url('/mscw-guidebook/icons/crafting/arcforge_icon.png');
 }
 
+.craft-final-page .craft-profession-emoji {
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  flex: 0 0 32px !important;
+  border: 1px solid #d8e1dc !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #176d5b !important;
+  overflow: hidden !important;
+  line-height: 1 !important;
+  transform: none !important;
+}
+
+.craft-final-page .craft-prof-title-img {
+  display: block !important;
+  width: 24px !important;
+  height: 24px !important;
+  object-fit: contain !important;
+  image-rendering: pixelated !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+.craft-final-page .craft-all-title-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: #176d5b;
+  font-size: .75rem;
+  font-weight: 1000;
+}
+
+.craft-final-page .craft-summary-panel .craft-panel-title h2 {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
 .craft-special-icon {
   display: grid;
   place-items: center;
@@ -78,6 +120,20 @@
 
   .craft-final-page .craft-prof-tab:nth-child(7) strong {
     font-size: .46rem;
+  }
+
+  .craft-final-page .craft-profession-emoji {
+    width: 27px !important;
+    height: 27px !important;
+    min-width: 27px !important;
+    flex-basis: 27px !important;
+    border-radius: 8px !important;
+  }
+
+  .craft-final-page .craft-prof-title-img,
+  .craft-final-page .craft-all-title-mark {
+    width: 20px !important;
+    height: 20px !important;
   }
 
   .craft-special-icon {
