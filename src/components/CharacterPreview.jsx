@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getMappedMsioItemId } from './MsioItemIcon.jsx';
 
 const API_REGION = 'GMS';
 const API_VERSION = '83';
 const SKIN = 2000;
-const MAP_URL = 'https://raw.githubusercontent.com/sduckyduck/osms-classic-guidebook/main/public/data/character_item_id_map.csv?v=mscw-preview-v2';
+const MAP_URL = 'https://raw.githubusercontent.com/sduckyduck/osms-classic-guidebook/main/public/data/character_item_id_map.csv?v=mscw-preview-v3-name-first';
 
 const HAIR = {
   male: [30000, 30060, 30100, 30120, 30140, 30200, 30210, 30260, 30300],
@@ -75,7 +76,9 @@ function buildMap(text) {
     if (!target) continue;
     const source = idNum(r.osms_item_id ?? r.source_item_id ?? r.item_id ?? r.id);
     if (source) byId.set(String(source), target);
-    [r.osms_item_name, r.source_item_name, r.item_name, r.name, ...namesFromNote(r.note)].filter(Boolean).forEach((name) => byName.set(norm(name), target));
+    [r.osms_item_name, r.source_item_name, r.item_name, r.name, ...namesFromNote(r.note)]
+      .filter(Boolean)
+      .forEach((name) => byName.set(norm(name), target));
   }
   return { byId, byName };
 }
@@ -94,21 +97,10 @@ async function loadIdMap() {
   return loadingMap;
 }
 
-function mapOne(item, idMap) {
-  const local = idNum(item?.id);
-  const mapped = local ? idMap?.byId?.get(String(local)) : null;
-  if (mapped) return mapped;
-  for (const name of [item?.name, item?.title].filter(Boolean).map(norm)) {
-    const hit = idMap?.byName?.get(name);
-    if (hit) return hit;
-  }
-  return local;
-}
-
 function mappedGear(gear, idMap) {
   const slots = {};
   for (const item of gear ?? []) {
-    const id = mapOne(item, idMap);
+    const id = getMappedMsioItemId(item, idMap);
     if (!id) continue;
     const slot = item.slot || 'other';
     if (slot === 'overall') {
