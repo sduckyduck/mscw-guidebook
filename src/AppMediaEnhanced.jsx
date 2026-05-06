@@ -65,14 +65,14 @@ export default function AppMediaEnhanced() {
     if (!classes.some((x) => x.id === classId)) setClassId(classes[0]?.id ?? 'warrior');
     if (!classLine.branches.some((x) => x.id === branchId)) setBranchId(classLine.branches[0]?.id ?? classLine.id);
   }, [classes, classId, branchId, classLine]);
-  useEffect(() => setApAllocation(getRecommendedApAllocation(classLine, level)), [classLine, level]);
+  useEffect(() => setApAllocation(getRecommendedApAllocation(classLine, level, { budget })), [classLine, level, budget]);
   useEffect(() => setSkillAllocation(getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level })), [classLine, branch, level]);
   useEffect(() => { setGearOverrides({}); setPickerSlot(null); }, [editionId, classId, branchId, gender, level, budget]);
 
-  const recommendedApAllocation = useMemo(() => getRecommendedApAllocation(classLine, level), [classLine, level]);
+  const recommendedApAllocation = useMemo(() => getRecommendedApAllocation(classLine, level, { budget }), [classLine, level, budget]);
   const effectiveApAllocation = apAllocation ?? recommendedApAllocation;
-  const statPlan = useMemo(() => buildStatPlan(classLine, level, { apAllocation: effectiveApAllocation }), [classLine, level, effectiveApAllocation]);
-  const maps = useMemo(() => getMapRecommendations({ classLine, level, statPlan, maps: activeData.maps, monsters: activeData.monsters }).slice(0, 8), [classLine, level, statPlan, activeData]);
+  const statPlan = useMemo(() => buildStatPlan(classLine, level, { budget, apAllocation: effectiveApAllocation }), [classLine, level, budget, effectiveApAllocation]);
+  const maps = useMemo(() => getMapRecommendations({ classLine, level, statPlan, budget, priority, maps: activeData.maps, monsters: activeData.monsters }).slice(0, 8), [classLine, level, statPlan, budget, priority, activeData]);
   const recommendedGear = useMemo(() => selectGear({ classLine, branch, level, budget, gender, statPlan, items: activeData.items }), [classLine, branch, level, budget, gender, statPlan, activeData]);
   const candidatesBySlot = useMemo(() => getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items: activeData.items }), [classLine, branch, level, budget, gender, statPlan, activeData]);
   const gear = useMemo(() => applyGearOverrides(recommendedGear, gearOverrides), [recommendedGear, gearOverrides]);
@@ -84,7 +84,7 @@ export default function AppMediaEnhanced() {
   const recommendedSkillAllocation = useMemo(() => getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level }), [classLine, branch, level]);
   const effectiveSkillAllocation = skillAllocation ?? recommendedSkillAllocation;
   const skillPlan = useMemo(() => getSkillPlan({ classId: classLine.id, branchId: branch.id, level, mainAttack, customSkills: effectiveSkillAllocation }), [classLine, branch, level, mainAttack, effectiveSkillAllocation]);
-  const apNote = useMemo(() => getApNote({ classLine, statPlan }), [classLine, statPlan]);
+  const apNote = useMemo(() => getApNote({ classLine, statPlan, budget }), [classLine, statPlan, budget]);
   const controls = { edition, editionId, setEditionId, classId, setClassId, branchId, setBranchId, gender, setGender, level, setLevel, budget, setBudget, priority, setPriority, classes, classLine, minLevel, maxLevel };
 
   const chooseGear = (slot, item) => {
