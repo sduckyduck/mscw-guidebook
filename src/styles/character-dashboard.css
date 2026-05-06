@@ -195,12 +195,12 @@
   height: 42px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
-  border: 1px solid #d9e2de;
-  background: #ffffff !important;
+  border-radius: 8px;
+  border: 0 !important;
+  background: transparent !important;
   color: #0f172a;
-  box-shadow: none;
-  overflow: hidden;
+  box-shadow: none !important;
+  overflow: visible;
 }
 
 .mg-skill-icon-img {
@@ -208,14 +208,28 @@
   height: 34px;
   object-fit: contain;
   image-rendering: pixelated;
-  background: transparent;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 .mg-skill-badge span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d9e2de;
+  border-radius: 8px;
+  background: #fff;
   color: #6b7280;
   font-size: .72rem;
   font-weight: 1000;
   text-shadow: none;
+}
+
+.mg-skill-badge.neutral span {
+  background: transparent;
+  border-color: transparent;
 }
 
 .mg-skill-badge.badge-1,
@@ -225,7 +239,28 @@
 .mg-skill-badge.magician,
 .mg-skill-badge.bowman,
 .mg-skill-badge.thief {
-  background: #ffffff !important;
+  background: transparent !important;
+}
+
+.mg-monster-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+
+.mg-monster-icon img {
+  display: block;
+  background: transparent !important;
+}
+
+.mg-monster-icon-empty {
+  color: #b8c2cc;
+  font-weight: 1000;
 }
 
 .mg-character-preview-card,
@@ -361,13 +396,15 @@
   .mg-skill-badge {
     width: 30px;
     height: 30px;
-    border-radius: 8px;
+    border-radius: 7px;
   }
   .mg-skill-icon-img {
     width: 26px;
     height: 26px;
   }
   .mg-skill-badge span {
+    width: 24px;
+    height: 24px;
     font-size: .5rem;
   }
   .mg-skill-main strong,
