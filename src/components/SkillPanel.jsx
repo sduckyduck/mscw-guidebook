@@ -262,11 +262,11 @@ function getSkillSources(name) {
   return iconSourcesFromNames(names, SKILL_ICON_FOLDERS);
 }
 
-function SkillBadge({ name, index = 0, className = '' }) {
+function SkillBadge({ name }) {
   const letters = String(name || '?').replace(/\s+/g, '').slice(0, 2);
   const names = getSkillNames(name);
   return (
-    <div className={`mg-skill-badge ${className} badge-${index % 4}`}>
+    <div className="mg-skill-badge">
       <IconFallback
         className="mg-skill-icon-img"
         names={names}
