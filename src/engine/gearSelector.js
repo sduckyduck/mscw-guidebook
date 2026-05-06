@@ -67,7 +67,8 @@ const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|ballo
 const BANNED_WEAPON_NAMES = /\b(umbrella|snowboard|surfboard|flag|balloon|rose|bouquet|lollipop|fan|tube|briefcase|purse|shovel|plunger|sake bottle|red whip)\b/i;
 
 export function selectGear({ classLine, branch, level, budget, gender, statPlan, items }) {
-  const bySlot = getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items });
+  // Auto recommendation keeps the budget profile restrictions. Manual picker does not.
+  const bySlot = getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items, manualMode: false });
   const weapon = bySlot.weapon?.[0];
   const policy = getPolicy(classLine, branch);
   const ordered = [
@@ -84,19 +85,21 @@ export function selectGear({ classLine, branch, level, budget, gender, statPlan,
   return ordered.map((item) => toGear(item, classLine));
 }
 
-export function getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items }) {
+export function getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items, manualMode = false }) {
   if (!items?.length) return {};
   const policy = getPolicy(classLine, branch);
   const profile = getBudgetGearProfile(budget);
-  const candidates = getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items });
+  const candidates = getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items, manualMode });
+  const scoreBudget = manualMode ? 'high' : budget;
   const sort = (list) => list
     .map((item) => toGear(item, classLine))
-    .sort((a, b) => gearScore(b, classLine, budget, level) - gearScore(a, classLine, budget, level));
+    .sort((a, b) => gearScore(b, classLine, scoreBudget, level) - gearScore(a, classLine, scoreBudget, level));
 
   const weaponCandidates = candidates.filter((item) => item.slot === 'weapon' && weaponMatchesPolicy(item, policy));
   const classWeapon = weaponCandidates.filter((item) => isClassSpecific(item, classLine));
+  const manualAllJobWeapon = manualMode ? weaponCandidates.filter((item) => isAllJob(item) && !isBannedWeaponName(item)) : [];
   const earlyAllJobWeapon = weaponCandidates.filter((item) => isAllJob(item) && Number(item.reqLevel ?? 0) <= maxReqLevelForBudget('weapon', level, profile) && !isBannedWeaponName(item));
-  const weapon = classWeapon.length ? classWeapon : earlyAllJobWeapon;
+  const weapon = classWeapon.length ? classWeapon : (manualMode ? manualAllJobWeapon : earlyAllJobWeapon);
 
   const output = {
     weapon: sort(weapon),
@@ -146,15 +149,16 @@ export function applyGearOverrides(baseGear, overrides = {}) {
     .filter(Boolean);
 }
 
-function getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items }) {
+function getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items, manualMode = false }) {
   const policy = getPolicy(classLine, branch);
   const profile = getBudgetGearProfile(budget);
+  const maxReqLevel = manualMode ? Number(level || 1) : null;
   return items
     .filter((item) => item.category === 'Equipment')
     .map((item) => ({ ...item, slot: detectSlot(item), visualGender: detectVisualGender(item) }))
     .filter((item) => item.slot)
-    .filter((item) => budgetAllowsSlot(item.slot, profile, level, policy))
-    .filter((item) => Number(item.reqLevel ?? 0) <= maxReqLevelForBudget(item.slot, level, profile))
+    .filter((item) => manualMode || budgetAllowsSlot(item.slot, profile, level, policy))
+    .filter((item) => Number(item.reqLevel ?? 0) <= (manualMode ? maxReqLevel : maxReqLevelForBudget(item.slot, level, profile)))
     .filter((item) => !isBannedOrSpecial(item))
     .filter((item) => Number(item.reqLevel ?? 0) > 0)
     .filter((item) => jobMatches(item, classLine))
