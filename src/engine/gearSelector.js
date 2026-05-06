@@ -143,10 +143,10 @@ export function selectGear(args) {
 }
 
 export function getGearCandidatesBySlot(args) {
-  if (isLowBudgetStarter(args)) return getLowBudgetStarterBySlot(args);
-  if (!args.items?.length) return getStarterFallbackBySlot(args);
-
   const { classLine, branch, level, budget, gender, statPlan, items, manualMode = false } = args;
+  if (isLowBudgetStarter(args) && !manualMode) return getLowBudgetStarterBySlot(args);
+  if (!items?.length) return getStarterFallbackBySlot(args);
+
   const policy = getPolicy(classLine, branch);
   const profile = getBudgetGearProfile(budget);
   const candidates = getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items, manualMode });
@@ -254,7 +254,8 @@ function pickStarter(pool, names, fallback, slot, classLine) {
   }
   const levelZero = (pool || []).filter((item) => Number(item.reqLevel ?? 999) <= 0);
   const lowLevel = (pool || []).filter((item) => Number(item.reqLevel ?? 999) <= STARTER_REQ_LEVEL_MAX);
-  const unique = dedupeGear([...ranked, ...levelZero, ...lowLevel, fallback].filter(Boolean));
+  const safeFallback = fallback && !isHardBanned({ ...fallback, slot }) ? fallback : null;
+  const unique = dedupeGear([...ranked, ...levelZero, ...lowLevel, safeFallback].filter(Boolean));
   return unique.slice(0, 8).map((item) => toGear({ ...item, slot }, classLine));
 }
 
