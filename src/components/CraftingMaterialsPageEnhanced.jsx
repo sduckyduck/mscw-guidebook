@@ -1,320 +1,672 @@
 import { useEffect, useMemo, useState } from 'react';
-import CraftingMaterialsPage from './CraftingMaterialsPage.jsx';
 import '../styles/materials-advanced.css';
 
-const ICON_BASE = `${import.meta.env.BASE_URL}icons/crafting/`;
+const BASE_URL = import.meta.env?.BASE_URL || '/';
+const appPath = (path) => `${BASE_URL}${String(path).replace(/^\/+/, '')}`;
+const iconPath = (id) => appPath(`AppData/images/items/${String(id).padStart(8, '0')}.png`);
+const monsterImagePath = (path) => path ? appPath(`AppData/${path}`) : '';
+
+const PROFESSION_ID_BY_NAME = {
+  Smithing: 'smithing',
+  Weaponcrafting: 'weaponcrafting',
+  Tailoring: 'tailoring',
+  Woodcrafting: 'woodcrafting',
+  Leatherworking: 'leatherworking',
+  Arcforge: 'arcforge',
+};
 
 const PROFESSIONS = [
-  ['smithing', '锻造', 'Smithing', 'smithing_icon.png'],
-  ['weaponcrafting', '武器制作', 'Weaponcrafting', 'weapon_crafting_icon.png'],
-  ['tailoring', '裁缝', 'Tailoring', 'tailoring_icon.png'],
-  ['woodcrafting', '木工', 'Woodcrafting', 'woodcrafting_icon.png'],
-  ['leatherworking', '皮革', 'Leatherworking', 'leatherworking_icon.png'],
-  ['arcforge', '融合机体', 'Arcforge', 'arcforge_icon.png'],
-].map(([id, zh, en, icon]) => ({ id, zh, en, icon }));
-
-const MODES = [
-  ['cheapest', '最低成本', '优先低金币/低材料负担'],
-  ['balanced', '均衡路线', '成本、经验和材料压力折中'],
-  ['farm', '刷怪友好', '优先怪物掉落和自给材料'],
-  ['fastest', '最快升级', '优先单位制作经验'],
-].map(([id, zh, desc]) => ({ id, zh, desc }));
-
-const MASTERY = [50, 115, 200, 308, 450, 635, 882, 1190, 1587];
-
-const ITEMS = Object.fromEntries([
-  ['iron_ore', '铁矿石', 'Iron Ore', 'drop', 1, 120, ''],
-  ['bronze_ore', '青铜矿石', 'Bronze Ore', 'drop', 1, 90, ''],
-  ['steel_ore', '钢铁矿石', 'Steel Ore', 'drop', 2, 210, ''],
-  ['mithril_ore', '秘银矿石', 'Mithril Ore', 'drop', 3, 450, ''],
-  ['adamantium_ore', '锂矿石', 'Adamantium Ore', 'drop', 4, 850, ''],
-  ['coal', '煤炭', 'Coal', 'npc', 1, 80, ''],
-  ['screw', '螺丝钉', 'Screw', 'crafted', 2, 250, ''],
-  ['stiff_feather', '硬羽毛', 'Stiff Feather', 'drop', 1, 70, ''],
-  ['animal_skin', '动物皮', 'Animal Skin', 'drop', 1, 100, 'animal_fur_bundle.png'],
-  ['leather', '加工皮革', 'Processed Leather', 'crafted', 2, 300, 'processed_leather.png'],
-  ['processed_wood', '加工木材', 'Processed Wood', 'crafted', 1, 180, 'processed_wood_04003001.png'],
-  ['firewood', '木柴', 'Firewood', 'drop', 1, 60, 'processed_wood_04003001.png'],
-  ['branch', '树枝', 'Branch', 'drop', 1, 45, 'processed_wood_04003001.png'],
-  ['magic_powder', '魔法粉末', 'Magic Powder', 'drop', 3, 600, ''],
-  ['crystal_shard', '水晶碎片', 'Crystal Shard', 'drop', 3, 700, ''],
-  ['dark_crystal', '黑水晶', 'Dark Crystal', 'drop', 5, 1500, ''],
-  ['silk_thread', '丝线', 'Silk Thread', 'drop', 2, 240, 'spool_of_thread.png'],
-  ['linen_cloth', '亚麻布', 'Linen Cloth', 'drop', 1, 120, ''],
-  ['enchanted_thread', '魔化丝线', 'Enchanted Thread', 'crafted', 3, 650, 'spool_of_thread.png'],
-  ['parchment', '加工羊皮纸', 'Processed Parchment', 'crafted', 2, 320, 'processed_parchment.png'],
-  ['catalyst', '催化剂', 'Catalyst', 'npc', 3, 900, ''],
-  ['monster_crystal', '怪物结晶', 'Monster Crystal', 'drop', 4, 1200, ''],
-].map(([id, zh, en, source, rarity, price, icon]) => [id, { id, zh, en, source, rarity, price, icon }]));
-
-const RAW_RECIPES = [
-  ['iron_plate', 'smithing', '铁板', 'Iron Plate', 'Material', 1, 20, 30, 80, [['iron_ore', 2], ['coal', 1]]],
-  ['bronze_plate', 'smithing', '青铜板', 'Bronze Plate', 'Material', 2, 28, 35, 90, [['bronze_ore', 3], ['coal', 1]]],
-  ['steel_plate', 'smithing', '钢板', 'Steel Plate', 'Material', 4, 50, 70, 160, [['steel_ore', 3], ['coal', 2], ['screw', 1]]],
-  ['mithril_plate', 'smithing', '秘银板', 'Mithril Plate', 'Material', 6, 82, 120, 280, [['mithril_ore', 3], ['coal', 2], ['screw', 1]]],
-  ['adamantium_frame', 'smithing', '锂矿框架', 'Adamantium Frame', 'Material', 8, 120, 220, 480, [['adamantium_ore', 3], ['dark_crystal', 1], ['screw', 2]]],
-  ['training_sword', 'weaponcrafting', '练习剑', 'Training Sword', 'Equipment', 1, 22, 25, 95, [['iron_ore', 2], ['processed_wood', 1]]],
-  ['bronze_spear', 'weaponcrafting', '青铜枪', 'Bronze Spear', 'Equipment', 2, 32, 45, 120, [['bronze_ore', 3], ['processed_wood', 2]]],
-  ['steel_blade', 'weaponcrafting', '钢制刀刃', 'Steel Blade', 'Equipment', 4, 58, 80, 210, [['steel_ore', 4], ['screw', 1], ['leather', 1]]],
-  ['mithril_halberd', 'weaponcrafting', '秘银戟', 'Mithril Halberd', 'Equipment', 6, 95, 140, 360, [['mithril_ore', 4], ['processed_wood', 3], ['monster_crystal', 1]]],
-  ['dark_edge', 'weaponcrafting', '黑暗刃', 'Dark Edge', 'Equipment', 8, 145, 260, 650, [['adamantium_ore', 4], ['dark_crystal', 2], ['monster_crystal', 1]]],
-  ['linen_patch', 'tailoring', '亚麻补片', 'Linen Patch', 'Material', 1, 18, 20, 70, [['linen_cloth', 3]]],
-  ['silk_wrap', 'tailoring', '丝绸卷', 'Silk Wrap', 'Material', 3, 38, 50, 130, [['silk_thread', 3], ['linen_cloth', 2]]],
-  ['enchanted_lining', 'tailoring', '魔化内衬', 'Enchanted Lining', 'Material', 5, 70, 95, 240, [['enchanted_thread', 2], ['magic_powder', 1]]],
-  ['mystic_robe_base', 'tailoring', '秘法长袍底材', 'Mystic Robe Base', 'Equipment', 7, 110, 160, 420, [['silk_thread', 5], ['crystal_shard', 1], ['enchanted_thread', 2]]],
-  ['darkweave_panel', 'tailoring', '暗纹布板', 'Darkweave Panel', 'Material', 8, 142, 260, 620, [['dark_crystal', 1], ['enchanted_thread', 4], ['monster_crystal', 1]]],
-  ['wooden_handle', 'woodcrafting', '木柄', 'Wooden Handle', 'Material', 1, 19, 15, 65, [['branch', 4]]],
-  ['processed_wood_recipe', 'woodcrafting', '加工木材', 'Processed Wood', 'Material', 2, 30, 30, 120, [['firewood', 4], ['branch', 2]]],
-  ['bow_frame', 'woodcrafting', '弓身', 'Bow Frame', 'Equipment', 4, 55, 65, 190, [['processed_wood', 3], ['stiff_feather', 2], ['screw', 1]]],
-  ['staff_core', 'woodcrafting', '法杖核心', 'Staff Core', 'Equipment', 6, 88, 130, 330, [['processed_wood', 4], ['magic_powder', 2], ['crystal_shard', 1]]],
-  ['ancient_bow_limb', 'woodcrafting', '古木弓臂', 'Ancient Bow Limb', 'Equipment', 8, 132, 210, 560, [['processed_wood', 6], ['stiff_feather', 4], ['monster_crystal', 1]]],
-  ['animal_fur_bundle', 'leatherworking', '动物皮毛包', 'Animal Fur Bundle', 'Material', 1, 18, 20, 70, [['animal_skin', 3]]],
-  ['processed_leather', 'leatherworking', '加工皮革', 'Processed Leather', 'Material', 3, 36, 45, 130, [['animal_skin', 5], ['stiff_feather', 1]]],
-  ['leather_guard', 'leatherworking', '皮革护具', 'Leather Guard', 'Equipment', 5, 72, 100, 245, [['leather', 3], ['screw', 1]]],
-  ['shadow_glove_lining', 'leatherworking', '暗影手套衬里', 'Shadow Glove Lining', 'Equipment', 7, 108, 170, 410, [['leather', 4], ['dark_crystal', 1], ['magic_powder', 1]]],
-  ['monster_hide_guard', 'leatherworking', '怪物皮护具', 'Monster Hide Guard', 'Equipment', 8, 138, 240, 590, [['leather', 5], ['monster_crystal', 1], ['stiff_feather', 3]]],
-  ['minor_catalyst', 'arcforge', '小型催化剂', 'Minor Catalyst', 'Material', 1, 24, 90, 100, [['magic_powder', 1], ['coal', 1]]],
-  ['parchment_refine', 'arcforge', '加工羊皮纸', 'Processed Parchment', 'Material', 2, 32, 80, 120, [['parchment', 1], ['magic_powder', 1]]],
-  ['crystal_focus', 'arcforge', '水晶核心', 'Crystal Focus', 'Material', 3, 48, 130, 180, [['crystal_shard', 1], ['magic_powder', 1], ['catalyst', 1]]],
-  ['monster_crystal_refine', 'arcforge', '怪物结晶精炼', 'Monster Crystal Refine', 'Material', 5, 76, 180, 300, [['monster_crystal', 1], ['catalyst', 1], ['magic_powder', 2]]],
-  ['dark_crystal_focus', 'arcforge', '黑水晶焦点', 'Dark Crystal Focus', 'Material', 8, 150, 320, 700, [['dark_crystal', 2], ['monster_crystal', 1], ['catalyst', 2]]],
+  { id: 'smithing', zh: '锻造', en: 'Smithing', icon: 'smithing_icon.png', note: '金属板材、矿石精炼和重装材料。' },
+  { id: 'weaponcrafting', zh: '武器制作', en: 'Weaponcrafting', icon: 'weapon_crafting_icon.png', note: '武器底材、攻击路线和高价值装备。' },
+  { id: 'tailoring', zh: '裁缝', en: 'Tailoring', icon: 'tailoring_icon.png', note: '布料、法师装备和轻甲路线。' },
+  { id: 'woodcrafting', zh: '木工', en: 'Woodcrafting', icon: 'woodcrafting_icon.png', note: '木料、弓弩、法杖和把手材料。' },
+  { id: 'leatherworking', zh: '皮革', en: 'Leatherworking', icon: 'leatherworking_icon.png', note: '皮革、手套、飞侠/弓手相关材料。' },
+  { id: 'arcforge', zh: '融合机体', en: 'Arcforge', icon: 'arcforge_icon.png', note: '魔法催化、结晶和后期高价值节点。' },
 ];
 
-const RECIPES = RAW_RECIPES.map(([id, profession, zh, en, type, level, exp, meso, resale, ingredients]) => ({
-  id,
+const MODES = [
+  { id: 'cheapest', zh: '最低成本', desc: '优先金币/材料成本最低' },
+  { id: 'farm', zh: '刷怪友好', desc: '优先自刷材料，少买 NPC 材料' },
+  { id: 'balanced', zh: '均衡路线', desc: '成本、经验和瓶颈材料折中' },
+  { id: 'fastest', zh: '最快升级', desc: '优先单位制作经验' },
+];
+
+const MASTERY = [
+  { level: 1, exp: 50 },
+  { level: 2, exp: 115 },
+  { level: 3, exp: 200 },
+  { level: 4, exp: 308 },
+  { level: 5, exp: 450 },
+  { level: 6, exp: 635 },
+  { level: 7, exp: 882 },
+  { level: 8, exp: 1190 },
+  { level: 9, exp: 1587 },
+];
+
+const TRANSLATIONS = {
+  'Bronze Ore': '青铜矿石',
+  'Iron Ore': '铁矿石',
+  'Steel Ore': '钢铁矿石',
+  'Mithril Ore': '秘银矿石',
+  'Adamantium Ore': '金刚矿石',
+  'Silver Ore': '银矿石',
+  'Orihalcon Ore': '奥利哈钢矿石',
+  'Gold Ore': '黄金矿石',
+  'Bronze Ingot': '青铜锭',
+  'Iron Ingot': '铁锭',
+  'Steel Ingot': '钢铁锭',
+  'Mithril Ingot': '秘银锭',
+  'Adamantium Ingot': '金刚锭',
+  'Silver Ingot': '银锭',
+  'Orihalcon Ingot': '奥利哈钢锭',
+  'Gold Ingot': '黄金锭',
+  'Garnet': '石榴石',
+  'Amethyst': '紫水晶',
+  'Aquamarine': '海蓝石',
+  'Emerald': '祖母绿',
+  'Opal': '蛋白石',
+  'Sapphire': '蓝宝石',
+  'Topaz': '黄晶',
+  'Diamond': '钻石',
+  'Black Crystal': '黑水晶',
+  'Garnet Ore': '石榴石母矿',
+  'Amethyst Ore': '紫水晶母矿',
+  'Aquamarine Ore': '海蓝石母矿',
+  'Emerald Ore': '祖母绿母矿',
+  'Opal Ore': '蛋白石母矿',
+  'Sapphire Ore': '蓝宝石母矿',
+  'Topaz Ore': '黄晶母矿',
+  'Diamond Ore': '钻石母矿',
+  'Black Crystal Ore': '黑水晶母矿',
+  'Screw': '螺丝钉',
+  'Processed Wood': '加工木材',
+  'Firewood': '木柴',
+  'Tree Branch': '树枝',
+  'Branch': '树枝',
+  'Stiff Feather': '硬羽毛',
+  'Leather': '皮革',
+  'Processed Leather': '加工皮革',
+  'Animal Skin': '动物皮',
+  'Spool of Thread': '线轴',
+  'Silk Thread': '丝线',
+  'Linen Cloth': '亚麻布',
+  'Enchanted Thread': '魔化丝线',
+  'Parchment': '羊皮纸',
+  'Processed Parchment': '加工羊皮纸',
+  'Catalyst': '催化剂',
+  'Magic Powder': '魔法粉末',
+  'Crystal Shard': '水晶碎片',
+  'Monster Crystal': '怪物结晶',
+  'Snail Shell': '蜗牛壳',
+  'Blue Snail Shell': '蓝蜗牛壳',
+  'Red Snail Shell': '红蜗牛壳',
+  'Orange Mushroom Cap': '橙蘑菇盖',
+  'Green Mushroom Cap': '绿蘑菇盖',
+  'Blue Mushroom Cap': '蓝蘑菇盖',
+  'Jr. Necki Skin': '小青蛇皮',
+  'Curse Eye Tail': '诅咒眼尾巴',
+  'Drake Skull': '幼龙头骨',
+  'Clang Claw': '机械章鱼爪',
+  'Stirge Wing': '蝙蝠翅膀',
+};
+
+const ICON_IDS = {
+  'Bronze Ore': '4010000',
+  'Iron Ore': '4010001',
+  'Steel Ore': '4010001',
+  'Mithril Ore': '4010002',
+  'Adamantium Ore': '4010003',
+  'Silver Ore': '4010004',
+  'Orihalcon Ore': '4010005',
+  'Gold Ore': '4010006',
+  'Bronze Ingot': '4011000',
+  'Iron Ingot': '4011001',
+  'Steel Ingot': '4011001',
+  'Mithril Ingot': '4011002',
+  'Adamantium Ingot': '4011003',
+  'Silver Ingot': '4011004',
+  'Orihalcon Ingot': '4011005',
+  'Gold Ingot': '4011006',
+  'Garnet': '4021000',
+  'Amethyst': '4021001',
+  'Aquamarine': '4021002',
+  'Emerald': '4021003',
+  'Opal': '4021004',
+  'Sapphire': '4021005',
+  'Topaz': '4021006',
+  'Diamond': '4021007',
+  'Black Crystal': '4021008',
+  'Garnet Ore': '4020000',
+  'Amethyst Ore': '4020001',
+  'Aquamarine Ore': '4020002',
+  'Emerald Ore': '4020003',
+  'Opal Ore': '4020004',
+  'Sapphire Ore': '4020005',
+  'Topaz Ore': '4020006',
+  'Diamond Ore': '4020007',
+  'Black Crystal Ore': '4020008',
+  'Screw': '4003000',
+  'Processed Wood': '4003001',
+  'Firewood': '4003004',
+  'Stiff Feather': '4003005',
+  'Leather': '4000021',
+  'Animal Skin': '4000021',
+  'Snail Shell': '4000000',
+  'Blue Snail Shell': '4000001',
+  'Red Snail Shell': '4000002',
+  'Orange Mushroom Cap': '4000009',
+  'Green Mushroom Cap': '4000013',
+  'Blue Mushroom Cap': '4000016',
+  'Jr. Necki Skin': '4000018',
+  'Curse Eye Tail': '4000027',
+  'Drake Skull': '4000030',
+  'Clang Claw': '4000040',
+  'Stirge Wing': '4000052',
+};
+
+const DROP_GUIDES = [
+  { material: 'Processed Wood', monsters: ['Stump', 'Dark Stump', 'Axe Stump'], source: '制作/采集', note: '优先刷树妖系材料，再转成加工木材。' },
+  { material: 'Firewood', monsters: ['Stump', 'Dark Stump', 'Axe Stump'], source: '怪物掉落', note: '木工路线常见前置材料。' },
+  { material: 'Tree Branch', monsters: ['Stump', 'Dark Stump', 'Axe Stump'], source: '怪物掉落', note: '木工低级路线核心材料。' },
+  { material: 'Branch', monsters: ['Stump', 'Dark Stump', 'Axe Stump'], source: '怪物掉落', note: '木工低级路线核心材料。' },
+  { material: 'Leather', monsters: ['Pig', 'Ribbon Pig', 'Wild Boar'], source: '怪物掉落/加工', note: '皮革系与武器握把常用。' },
+  { material: 'Animal Skin', monsters: ['Pig', 'Ribbon Pig', 'Wild Boar'], source: '怪物掉落', note: '皮革路线原材料。' },
+  { material: 'Stiff Feather', monsters: ['Jr. Sentinel', 'Sentinel'], source: '怪物掉落', note: '弓身、箭矢和部分轻甲材料。' },
+  { material: 'Snail Shell', monsters: ['Snail'], source: '怪物掉落', note: '新手岛与低级图密度高。' },
+  { material: 'Blue Snail Shell', monsters: ['Blue Snail'], source: '怪物掉落', note: '低级地图密度高，适合顺手囤。' },
+  { material: 'Red Snail Shell', monsters: ['Red Snail'], source: '怪物掉落', note: '低级地图密度高，适合顺手囤。' },
+  { material: 'Orange Mushroom Cap', monsters: ['Orange Mushroom'], source: '怪物掉落', note: '蘑菇系材料，适合早期顺手刷。' },
+  { material: 'Green Mushroom Cap', monsters: ['Green Mushroom'], source: '怪物掉落', note: '蘑菇系材料，覆盖部分低级配方。' },
+  { material: 'Blue Mushroom Cap', monsters: ['Blue Mushroom'], source: '怪物掉落', note: '蘑菇系材料，覆盖部分低级配方。' },
+  { material: 'Jr. Necki Skin', monsters: ['Jr. Necki'], source: '怪物掉落', note: '蛇皮类材料，通常需要专门刷。' },
+  { material: 'Curse Eye Tail', monsters: ['Curse Eye'], source: '怪物掉落', note: '地下城路线材料。' },
+  { material: 'Drake Skull', monsters: ['Drake', 'Copper Drake', 'Dark Drake'], source: '怪物掉落', note: '中后期地图材料。' },
+  { material: 'Clang Claw', monsters: ['Clang'], source: '怪物掉落', note: '岛屿怪物材料，建议按需刷。' },
+  { material: 'Stirge Wing', monsters: ['Stirge'], source: '怪物掉落', note: '低中级材料，适合按配方需求补。' },
+  { material: 'Coal', monsters: [], source: 'NPC/市场', note: '这类材料优先商店/市场处理，不建议占用刷怪时间。' },
+  { material: 'Catalyst', monsters: [], source: 'NPC/市场', note: 'NPC/市场材料，规划时单独算金币压力。' },
+];
+
+const FALLBACK_RECIPES = [
+  ['smithing', 'Iron Plate', 'Material', 1, 20, 30, [['Iron Ore', 2], ['Coal', 1]]],
+  ['smithing', 'Bronze Plate', 'Material', 2, 28, 35, [['Bronze Ore', 3], ['Coal', 1]]],
+  ['smithing', 'Steel Plate', 'Material', 4, 50, 70, [['Steel Ore', 3], ['Coal', 2], ['Screw', 1]]],
+  ['smithing', 'Mithril Plate', 'Material', 6, 82, 120, [['Mithril Ore', 3], ['Coal', 2], ['Screw', 1]]],
+  ['weaponcrafting', 'Training Sword', 'Equipment', 1, 22, 25, [['Iron Ore', 2], ['Processed Wood', 1]]],
+  ['weaponcrafting', 'Bronze Spear', 'Equipment', 2, 32, 45, [['Bronze Ore', 3], ['Processed Wood', 2]]],
+  ['weaponcrafting', 'Steel Blade', 'Equipment', 4, 58, 80, [['Steel Ore', 4], ['Screw', 1], ['Leather', 1]]],
+  ['tailoring', 'Linen Patch', 'Material', 1, 18, 20, [['Linen Cloth', 3]]],
+  ['tailoring', 'Silk Wrap', 'Material', 3, 38, 50, [['Silk Thread', 3], ['Linen Cloth', 2]]],
+  ['tailoring', 'Enchanted Lining', 'Material', 5, 70, 95, [['Enchanted Thread', 2], ['Magic Powder', 1]]],
+  ['woodcrafting', 'Wooden Handle', 'Material', 1, 19, 15, [['Branch', 4]]],
+  ['woodcrafting', 'Processed Wood', 'Material', 2, 30, 30, [['Firewood', 4], ['Branch', 2]]],
+  ['woodcrafting', 'Bow Frame', 'Equipment', 4, 55, 65, [['Processed Wood', 3], ['Stiff Feather', 2], ['Screw', 1]]],
+  ['woodcrafting', 'Staff Core', 'Equipment', 6, 88, 130, [['Processed Wood', 4], ['Magic Powder', 2], ['Crystal Shard', 1]]],
+  ['leatherworking', 'Animal Fur Bundle', 'Material', 1, 18, 20, [['Animal Skin', 3]]],
+  ['leatherworking', 'Processed Leather', 'Material', 3, 36, 45, [['Animal Skin', 5], ['Stiff Feather', 1]]],
+  ['leatherworking', 'Leather Guard', 'Equipment', 5, 72, 100, [['Leather', 3], ['Screw', 1]]],
+  ['arcforge', 'Minor Catalyst', 'Material', 1, 24, 90, [['Magic Powder', 1], ['Coal', 1]]],
+  ['arcforge', 'Processed Parchment', 'Material', 2, 32, 80, [['Parchment', 1], ['Magic Powder', 1]]],
+  ['arcforge', 'Crystal Focus', 'Material', 3, 48, 130, [['Crystal Shard', 1], ['Magic Powder', 1], ['Catalyst', 1]]],
+  ['arcforge', 'Monster Crystal Refine', 'Material', 5, 76, 180, [['Monster Crystal', 1], ['Catalyst', 1], ['Magic Powder', 2]]],
+].map(([profession, output, outputType, level, exp, meso, materials], index) => ({
+  id: `fallback-${index}`,
   profession,
-  zh,
-  en,
-  type,
+  output,
+  outputZh: translate(output),
+  outputType,
   level,
   exp,
   meso,
-  resale,
-  ingredients: ingredients.map(([itemId, qty]) => ({ itemId, qty })),
+  materials: materials.map(([name, qty]) => ({ name, zh: translate(name), qty })),
 }));
 
-function item(id) {
-  return ITEMS[id] || { id, zh: id, en: id, source: 'unknown', rarity: 1, price: 999, icon: '' };
+function normalizeText(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-function profession(id) {
-  return PROFESSIONS.find((p) => p.id === id) || PROFESSIONS[0];
+function translate(name) {
+  if (!name) return '';
+  if (TRANSLATIONS[name]) return TRANSLATIONS[name];
+  const clean = String(name).replace(/\s+/g, ' ').trim();
+  if (TRANSLATIONS[clean]) return TRANSLATIONS[clean];
+  return clean;
 }
 
-function sourceZh(source) {
-  return { drop: '怪物掉落', crafted: '制作中间件', npc: 'NPC/消耗', unknown: '未知' }[source] || '未知';
+function professionMeta(id) {
+  return PROFESSIONS.find((profession) => profession.id === id) || PROFESSIONS[0];
 }
 
-function meso(value) {
-  return `${Math.round(value || 0).toLocaleString()} meso`;
+function sourceForMaterial(name) {
+  const guide = DROP_GUIDES.find((row) => normalizeText(row.material) === normalizeText(name));
+  if (guide) return guide.source;
+  const lower = normalizeText(name);
+  if (lower.includes('catalyst') || lower.includes('coal')) return 'NPC/市场';
+  if (lower.includes('processed') || lower.includes('ingot') || lower.includes('plate')) return '制作中间件';
+  return '掉落/采集待补充';
 }
 
-function costOfItem(itemId, mode) {
-  const row = item(itemId);
+function materialBaseValue(name) {
+  const lower = normalizeText(name);
+  if (lower.includes('dark crystal') || lower.includes('monster crystal')) return 1500;
+  if (lower.includes('crystal') || lower.includes('magic powder')) return 700;
+  if (lower.includes('mithril') || lower.includes('adamantium')) return 480;
+  if (lower.includes('steel') || lower.includes('screw') || lower.includes('leather')) return 260;
+  if (lower.includes('wood') || lower.includes('branch') || lower.includes('feather')) return 110;
+  if (lower.includes('coal')) return 80;
+  return 160;
+}
+
+function estimateMaterialCost(name, mode) {
+  const source = sourceForMaterial(name);
   const factor = {
-    cheapest: { drop: 1, crafted: 1.1, npc: 1, unknown: 1.4 },
-    balanced: { drop: .9, crafted: 1, npc: 1.35, unknown: 1.8 },
-    farm: { drop: .55, crafted: .75, npc: 4, unknown: 3 },
-    fastest: { drop: 1.15, crafted: 1.05, npc: .95, unknown: 1.5 },
-  }[mode]?.[row.source] || 1.4;
-  return row.price * factor * (1 + row.rarity * .08);
+    cheapest: source.includes('NPC') ? 1 : source.includes('中间件') ? 1.05 : .9,
+    farm: source.includes('NPC') ? 4 : source.includes('中间件') ? .8 : .45,
+    balanced: source.includes('NPC') ? 1.4 : source.includes('中间件') ? 1 : .75,
+    fastest: source.includes('NPC') ? .9 : source.includes('中间件') ? 1.05 : 1.15,
+  }[mode] || 1;
+  return materialBaseValue(name) * factor;
 }
 
 function recipeCost(recipe, mode) {
-  const materialCost = recipe.ingredients.reduce((sum, ing) => sum + costOfItem(ing.itemId, mode) * ing.qty, 0);
-  const rarity = recipe.ingredients.reduce((sum, ing) => sum + item(ing.itemId).rarity * ing.qty * (mode === 'farm' ? 30 : 12), 0);
-  const resaleCredit = (mode === 'cheapest' || mode === 'balanced') ? recipe.resale * .6 : recipe.resale * .25;
-  return Math.max(1, recipe.meso + materialCost + rarity - resaleCredit);
+  const materialCost = recipe.materials.reduce((sum, material) => sum + estimateMaterialCost(material.name, mode) * material.qty, 0);
+  return Math.max(1, recipe.meso + materialCost);
 }
 
-function materialBurden(recipe) {
-  return recipe.ingredients.reduce((sum, ing) => {
-    const row = item(ing.itemId);
-    const sourceWeight = row.source === 'npc' ? 7 : row.source === 'crafted' ? 4 : 1;
-    return sum + ing.qty * (row.rarity + sourceWeight);
-  }, 0);
-}
-
-function recipeScore(recipe, mode) {
+function recipeRank(recipe, mode, bottleneckByName) {
   const cost = recipeCost(recipe, mode);
-  if (mode === 'fastest') return recipe.exp * 1000 - cost * .15;
-  if (mode === 'farm') return recipe.exp / cost - recipe.ingredients.filter((ing) => item(ing.itemId).source === 'npc').length * .02;
-  return recipe.exp / cost;
+  const bottleneckPenalty = recipe.materials.reduce((sum, material) => sum + (bottleneckByName.get(normalizeText(material.name))?.score || 0) * material.qty, 0);
+  if (mode === 'fastest') return recipe.exp * 1000 - cost * .1;
+  if (mode === 'farm') return recipe.exp / Math.max(1, cost) - recipe.materials.filter((material) => sourceForMaterial(material.name).includes('NPC')).length * .04;
+  if (mode === 'balanced') return recipe.exp / Math.max(1, cost + bottleneckPenalty * 3);
+  return recipe.exp / Math.max(1, cost);
 }
 
-function addMaterials(target, recipe, crafts) {
-  recipe.ingredients.forEach((ing) => {
-    const row = item(ing.itemId);
-    target[ing.itemId] ||= { id: ing.itemId, zh: row.zh, en: row.en, qty: 0 };
-    target[ing.itemId].qty += ing.qty * crafts;
+function simulateLeveling(recipes, professionId, mode, targetLevel, bottleneckByName, noBuy = false) {
+  const steps = [];
+  const totalMaterials = new Map();
+  let totalCost = 0;
+  let totalCrafts = 0;
+
+  for (let level = 1; level < targetLevel; level += 1) {
+    const need = MASTERY.find((row) => row.level === level)?.exp || 1000;
+    const pool = recipes.filter((recipe) => {
+      if (recipe.profession !== professionId || recipe.level > level || recipe.exp <= 0) return false;
+      if (noBuy && recipe.materials.some((material) => sourceForMaterial(material.name).includes('NPC'))) return false;
+      return true;
+    });
+    if (!pool.length) break;
+    const best = [...pool].sort((a, b) => recipeRank(b, mode, bottleneckByName) - recipeRank(a, mode, bottleneckByName))[0];
+    const crafts = Math.max(1, Math.ceil(need / Math.max(1, best.exp)));
+    best.materials.forEach((material) => {
+      const key = normalizeText(material.name);
+      const existing = totalMaterials.get(key) || { name: material.name, zh: material.zh, qty: 0 };
+      totalMaterials.set(key, { ...existing, qty: existing.qty + material.qty * crafts });
+    });
+    totalCrafts += crafts;
+    totalCost += crafts * recipeCost(best, mode);
+    steps.push({ level, to: level + 1, need, recipe: best, crafts, cost: recipeCost(best, mode) * crafts });
+  }
+
+  return { steps, totalMaterials: [...totalMaterials.values()].sort((a, b) => b.qty - a.qty), totalCost, totalCrafts };
+}
+
+function buildBottlenecks(recipes) {
+  const rows = new Map();
+  recipes.forEach((recipe) => {
+    recipe.materials.forEach((material) => {
+      const key = normalizeText(material.name);
+      const row = rows.get(key) || {
+        name: material.name,
+        zh: material.zh,
+        qty: 0,
+        recipes: new Set(),
+        professions: new Set(),
+        highLevelUse: 0,
+      };
+      row.qty += material.qty;
+      row.recipes.add(recipe.id);
+      row.professions.add(recipe.profession);
+      row.highLevelUse += material.qty * recipe.level;
+      rows.set(key, row);
+    });
+  });
+
+  const scored = [...rows.values()].map((row) => ({
+    ...row,
+    recipeCount: row.recipes.size,
+    professionCount: row.professions.size,
+    score: row.qty * 4 + row.recipes.size * 14 + row.professions.size * 20 + row.highLevelUse + materialBaseValue(row.name) / 40,
+  })).sort((a, b) => b.score - a.score || b.qty - a.qty);
+
+  const maxScore = Math.max(1, ...scored.map((row) => row.score));
+  return scored.map((row) => ({ ...row, score: Math.round((row.score / maxScore) * 100) }));
+}
+
+function buildMatrixRows(recipes) {
+  return buildBottlenecks(recipes).map((row) => {
+    const byProfession = Object.fromEntries(PROFESSIONS.map((profession) => [profession.id, 0]));
+    recipes.forEach((recipe) => {
+      recipe.materials.forEach((material) => {
+        if (normalizeText(material.name) === normalizeText(row.name)) byProfession[recipe.profession] += material.qty;
+      });
+    });
+    return { ...row, byProfession };
   });
 }
 
-function simulate(professionId, mode, start = 1, target = 10, noBuy = false) {
-  const steps = [];
-  const materials = {};
-  let totalCost = 0;
-  let totalCrafts = 0;
-  for (let level = start; level < target; level += 1) {
-    const expNeed = MASTERY[level - 1] || 1000;
-    const pool = RECIPES.filter((r) => r.profession === professionId && r.level <= level && (!noBuy || r.ingredients.every((ing) => item(ing.itemId).source !== 'npc')));
-    if (!pool.length) break;
-    const best = [...pool].sort((a, b) => noBuy ? (materialBurden(a) / a.exp) - (materialBurden(b) / b.exp) : recipeScore(b, mode) - recipeScore(a, mode))[0];
-    const crafts = Math.ceil(expNeed / best.exp);
-    addMaterials(materials, best, crafts);
-    totalCrafts += crafts;
-    totalCost += crafts * (noBuy ? best.meso : recipeCost(best, mode));
-    steps.push({ level, to: level + 1, recipe: best, crafts, expNeed });
-  }
-  return { steps, materials, totalCost, totalCrafts };
+function normalizeCrafting(raw) {
+  const disciplines = raw?.disciplines || [];
+  const recipes = [];
+  disciplines.forEach((discipline) => {
+    const professionId = PROFESSION_ID_BY_NAME[discipline.discipline] || normalizeText(discipline.discipline).replace(/[^a-z0-9]+/g, '');
+    (discipline.output_types || []).forEach((outputType) => {
+      (outputType.levels || []).forEach((levelGroup) => {
+        (levelGroup.recipes || []).forEach((recipe, index) => {
+          const output = recipe.result_item_name || `Recipe ${recipe.output_id || index}`;
+          recipes.push({
+            id: String(recipe.id || `${professionId}-${recipe.output_id || index}`),
+            profession: professionId,
+            output,
+            outputZh: translate(output),
+            outputType: outputType.output_type || 'Other',
+            level: Number(recipe.req_level || levelGroup.level || 1),
+            exp: Number(recipe.craft_exp || 0),
+            meso: Number(recipe.meso_cost || 0),
+            materials: (recipe.ingredients || []).map((ingredient) => ({
+              name: ingredient.item_name,
+              zh: translate(ingredient.item_name),
+              qty: Number(ingredient.count || 1),
+            })),
+          });
+        });
+      });
+    });
+  });
+  return recipes.length ? recipes : FALLBACK_RECIPES;
 }
 
-function matrixRows() {
-  const rows = {};
-  RECIPES.forEach((recipe) => recipe.ingredients.forEach((ing) => {
-    rows[ing.itemId] ||= { itemId: ing.itemId, by: Object.fromEntries(PROFESSIONS.map((p) => [p.id, 0])), recipes: new Set(), profs: new Set(), total: 0 };
-    rows[ing.itemId].by[recipe.profession] += ing.qty;
-    rows[ing.itemId].recipes.add(recipe.id);
-    rows[ing.itemId].profs.add(recipe.profession);
-    rows[ing.itemId].total += ing.qty;
+function normalizeMonsters(raw) {
+  return (raw?.monsters || []).map((monster) => ({
+    id: String(monster.id),
+    name: monster.name || `Monster ${monster.id}`,
+    level: Number(monster.level || 1),
+    image: monsterImagePath(monster.thumbnail || monster.gif),
+    maps: (monster.maps || []).map((map) => ({
+      id: String(map.id),
+      name: map.name || `Map ${map.id}`,
+      count: Number(map.count || 0),
+      mobTime: Number(map.mob_time || 0),
+    })).sort((a, b) => b.count - a.count),
   }));
-  return Object.values(rows).map((row) => ({
-    ...row,
-    score: row.total * 3 + row.recipes.size * 12 + row.profs.size * 18 + item(row.itemId).rarity * 15,
-  })).sort((a, b) => b.score - a.score || b.total - a.total);
 }
 
-function browserRows(scope, type, query) {
-  const q = query.trim().toLowerCase();
-  return RECIPES.filter((recipe) => {
-    if (scope !== 'all' && recipe.profession !== scope) return false;
-    if (type !== 'all' && recipe.type !== type) return false;
-    if (!q) return true;
-    const haystack = [recipe.zh, recipe.en, recipe.id, profession(recipe.profession).zh, profession(recipe.profession).en, ...recipe.ingredients.flatMap((ing) => [item(ing.itemId).zh, item(ing.itemId).en, ing.itemId])].join(' ').toLowerCase();
-    return haystack.includes(q);
-  }).sort((a, b) => a.level - b.level || a.profession.localeCompare(b.profession));
+function buildDropRoutes(materialName, monsters) {
+  const guide = DROP_GUIDES.find((row) => normalizeText(row.material) === normalizeText(materialName));
+  if (!guide) return { guide: null, monsters: [] };
+  const found = [];
+  guide.monsters.forEach((alias) => {
+    const exact = monsters.filter((monster) => normalizeText(monster.name) === normalizeText(alias));
+    const fuzzy = exact.length ? exact : monsters.filter((monster) => normalizeText(monster.name).includes(normalizeText(alias)));
+    fuzzy.slice(0, 4).forEach((monster) => {
+      if (!found.some((row) => row.id === monster.id)) found.push(monster);
+    });
+  });
+  return { guide, monsters: found.slice(0, 6) };
 }
 
-function MaterialIcon({ row, size = 24 }) {
+function resolveIconId(name) {
+  const exact = Object.entries(ICON_IDS).find(([key]) => normalizeText(key) === normalizeText(name));
+  return exact?.[1] || null;
+}
+
+function fmt(value) {
+  return Number(value || 0).toLocaleString();
+}
+
+function ItemIcon({ name, size = 28 }) {
   const [failed, setFailed] = useState(false);
-  const src = row.icon && !failed ? `${ICON_BASE}${row.icon}` : '';
-  return <span className="mg-craft-icon" style={{ width: size, height: size }}>{src ? <img src={src} alt="" onError={() => setFailed(true)} /> : <span>{row.zh.slice(0, 1)}</span>}</span>;
+  const id = resolveIconId(name);
+  const translated = translate(name);
+  return <span className="craft-icon" style={{ width: size, height: size }}>
+    {id && !failed ? <img src={iconPath(id)} alt="" loading="lazy" onError={() => setFailed(true)} /> : <span>{translated.slice(0, 1)}</span>}
+  </span>;
 }
 
-function ProfessionIcon({ row, size = 26 }) {
+function ProfessionIcon({ profession, size = 30 }) {
+  const meta = professionMeta(profession);
   const [failed, setFailed] = useState(false);
-  const src = !failed ? `${ICON_BASE}${row.icon}` : '';
-  return <span className="mg-craft-icon" style={{ width: size, height: size }}>{src ? <img src={src} alt="" onError={() => setFailed(true)} /> : <span>{row.zh.slice(0, 1)}</span>}</span>;
+  return <span className="craft-icon profession" style={{ width: size, height: size }}>
+    {!failed ? <img src={appPath(`icons/crafting/${meta.icon}`)} alt="" loading="lazy" onError={() => setFailed(true)} /> : <span>{meta.zh.slice(0, 1)}</span>}
+  </span>;
 }
 
-function AdvancedCraftingSections() {
-  const [selectedProfession, setSelectedProfession] = useState('woodcrafting');
-  const [mode, setMode] = useState('farm');
-  const [scope, setScope] = useState('all');
-  const [type, setType] = useState('all');
-  const [query, setQuery] = useState('');
-
-  const strategy = useMemo(() => MODES.map((m) => ({ ...m, route: simulate(selectedProfession, m.id) })), [selectedProfession]);
-  const matrix = useMemo(matrixRows, []);
-  const bottlenecks = matrix.slice(0, 10);
-  const woodPlan = useMemo(() => simulate('woodcrafting', 'farm', 1, 10, true), []);
-  const recipes = useMemo(() => browserRows(scope, type, query), [scope, type, query]);
-  const selected = profession(selectedProfession);
-  const activeRoute = simulate(selectedProfession, mode);
-  const activeMaterials = Object.values(activeRoute.materials).sort((a, b) => b.qty - a.qty).slice(0, 8);
-  const woodMaterials = Object.values(woodPlan.materials).sort((a, b) => b.qty - a.qty);
-
-  return <section className="mg-advanced-crafting">
-    <div className="mg-material-controls mg-glass-panel mg-advanced-controls">
-      <label>策略专业</label>
-      <select className="mg-select" value={selectedProfession} onChange={(e) => setSelectedProfession(e.target.value)}>
-        {PROFESSIONS.map((p) => <option key={p.id} value={p.id}>{p.zh} · {p.en}</option>)}
-      </select>
-      <label>策略路线</label>
-      <select className="mg-select" value={mode} onChange={(e) => setMode(e.target.value)}>
-        {MODES.map((m) => <option key={m.id} value={m.id}>{m.zh}</option>)}
-      </select>
-      <label>参考</label>
-      <span className="mg-advanced-pill"><ProfessionIcon row={selected} />Lv.1 → Lv.10</span>
-    </div>
-
-    <section className="mg-glass-panel mg-material-recipes-panel">
-      <div className="mg-material-panel-head"><h2>专业升级策略</h2><span>{selected.zh} · 四种路线对比</span></div>
-      <div className="mg-strategy-grid">
-        {strategy.map((row) => {
-          const largest = Object.values(row.route.materials).sort((a, b) => b.qty - a.qty)[0];
-          return <article key={row.id} className={row.id === mode ? 'mg-strategy-card active' : 'mg-strategy-card'}>
-            <strong>{row.zh}</strong>
-            <p>{row.desc}</p>
-            <div><span>{row.route.totalCrafts} 次制作</span><span>{meso(row.route.totalCost)}</span><span>最大材料：{largest?.zh || '-'}</span></div>
-            {row.route.steps.slice(0, 4).map((step) => <em key={`${row.id}-${step.level}`}>Lv.{step.level} {step.recipe.zh} ×{step.crafts}</em>)}
-          </article>;
-        })}
-      </div>
-      <div className="mg-material-chip-list mg-advanced-chips">
-        {activeMaterials.map((mat) => <span key={mat.id} className="mg-material-chip"><MaterialIcon row={item(mat.id)} size={20} />{mat.zh} x{mat.qty}</span>)}
-      </div>
-    </section>
-
-    <section className="mg-glass-panel mg-material-recipes-panel">
-      <div className="mg-material-panel-head"><h2>跨专业材料矩阵</h2><span>材料在六大专业的使用量</span></div>
-      <div className="mg-matrix-wrap"><table className="mg-material-matrix"><thead><tr><th>材料</th>{PROFESSIONS.map((p) => <th key={p.id}>{p.zh}</th>)}<th>总量</th><th>覆盖</th></tr></thead><tbody>
-        {matrix.slice(0, 12).map((row) => <tr key={row.itemId}><td><span className="mg-matrix-material"><MaterialIcon row={item(row.itemId)} size={22} />{item(row.itemId).zh}</span></td>{PROFESSIONS.map((p) => <td key={`${row.itemId}-${p.id}`}>{row.by[p.id] || '-'}</td>)}<td>{row.total}</td><td>{row.profs.size}系/{row.recipes.size}配方</td></tr>)}
-      </tbody></table></div>
-    </section>
-
-    <div className="mg-two-column-panels">
-      <section className="mg-glass-panel mg-material-recipes-panel">
-        <div className="mg-material-panel-head"><h2>材料瓶颈排行</h2><span>需求 / 覆盖 / 稀有度综合分</span></div>
-        <div className="mg-bottleneck-list">
-          {bottlenecks.map((row, index) => <article className="mg-bottleneck-row" key={row.itemId}>
-            <strong>#{index + 1}</strong><MaterialIcon row={item(row.itemId)} /><div><b>{item(row.itemId).zh}</b><span>{sourceZh(item(row.itemId).source)} · {row.profs.size}系 · {row.recipes.size}配方</span></div><em>{row.score}</em>
-          </article>)}
-        </div>
-      </section>
-
-      <section className="mg-glass-panel mg-material-recipes-panel">
-        <div className="mg-material-panel-head"><h2>木工零金币升级规划</h2><span>外购金币 0 · 自刷材料路线</span></div>
-        <div className="mg-zero-summary"><div><span>目标</span><strong>Lv.1→Lv.10</strong></div><div><span>制作次数</span><strong>{woodPlan.totalCrafts}</strong></div><div><span>外购金币</span><strong>{meso(0)}</strong></div><div><span>制作手续费</span><strong>{meso(woodPlan.totalCost)}</strong></div></div>
-        <p className="mg-advanced-note">零金币按不购买材料计算，材料优先自刷或前置制作；制作手续费单独列出，避免把市场价混进材料规划。</p>
-        <div className="mg-material-chip-list">{woodMaterials.map((mat) => <span key={mat.id} className="mg-material-chip"><MaterialIcon row={item(mat.id)} size={20} />{mat.zh} x{mat.qty}</span>)}</div>
-        <div className="mg-zero-route">{woodPlan.steps.map((step) => <article key={step.level}>Lv.{step.level}→{step.to} · {step.recipe.zh} ×{step.crafts}</article>)}</div>
-      </section>
-    </div>
-
-    <section className="mg-glass-panel mg-material-recipes-panel">
-      <div className="mg-material-panel-head"><h2>配方浏览器</h2><span>{recipes.length} 条</span></div>
-      <div className="mg-browser-toolbar">
-        <select className="mg-select" value={scope} onChange={(e) => setScope(e.target.value)}><option value="all">全部专业</option>{PROFESSIONS.map((p) => <option key={p.id} value={p.id}>{p.zh} · {p.en}</option>)}</select>
-        <select className="mg-select" value={type} onChange={(e) => setType(e.target.value)}><option value="all">全部类型</option><option value="Material">材料</option><option value="Equipment">装备</option></select>
-        <input className="mg-recipe-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索中文名 / 英文名 / 材料名" />
-      </div>
-      <div className="mg-material-recipe-grid browser">
-        {recipes.map((recipe) => <article className="mg-material-recipe-card" key={recipe.id}>
-          <div className="mg-recipe-title-line"><MaterialIcon row={{ ...item(recipe.id), zh: recipe.zh, en: recipe.en }} size={24} /><strong>{recipe.zh}</strong></div>
-          <span>{profession(recipe.profession).zh} · {recipe.type === 'Material' ? '材料' : '装备'} · Lv.{recipe.level} · EXP {recipe.exp} · {meso(recipe.meso)}</span>
-          <p>{recipe.ingredients.map((ing) => `${item(ing.itemId).zh} x${ing.qty}`).join(' / ')}</p>
-        </article>)}
-      </div>
-    </section>
-  </section>;
+function fallbackState() {
+  return {
+    recipes: FALLBACK_RECIPES,
+    monsters: [],
+    source: 'fallback',
+    error: '',
+  };
 }
 
 export default function CraftingMaterialsPageEnhanced() {
+  const [data, setData] = useState(fallbackState);
+  const [professionId, setProfessionId] = useState('woodcrafting');
+  const [mode, setMode] = useState('farm');
+  const [targetLevel, setTargetLevel] = useState(10);
+  const [recipeScope, setRecipeScope] = useState('all');
+  const [recipeType, setRecipeType] = useState('all');
+  const [query, setQuery] = useState('');
+  const [selectedMaterial, setSelectedMaterial] = useState('Processed Wood');
+
   useEffect(() => {
-    const woodSrc = `${ICON_BASE}processed_wood_04003001.png`;
-    const timer = window.setTimeout(() => {
-      document.querySelectorAll('.mg-material-chip, .mg-material-rank-row, .mg-material-recipe-card').forEach((node) => {
-        if (node.textContent?.includes('加工木材')) {
-          node.querySelectorAll('img[src$="processed_leather.png"]').forEach((img) => { img.onerror = () => { const box = img.closest('.mg-craft-icon'); if (box) box.innerHTML = '<span>木</span>'; }; img.src = woodSrc; });
-        }
+    let alive = true;
+    Promise.all([
+      fetch(appPath('AppData/crafting.json')).then((response) => response.ok ? response.json() : Promise.reject(new Error(`crafting ${response.status}`))),
+      fetch(appPath('AppData/monsters.json')).then((response) => response.ok ? response.json() : Promise.reject(new Error(`monsters ${response.status}`))),
+    ])
+      .then(([crafting, monsters]) => {
+        if (!alive) return;
+        setData({ recipes: normalizeCrafting(crafting), monsters: normalizeMonsters(monsters), source: 'official', error: '' });
+      })
+      .catch((error) => {
+        if (!alive) return;
+        setData({ ...fallbackState(), error: error.message || 'AppData 读取失败，正在使用内置示例。' });
       });
-    }, 0);
-    return () => window.clearTimeout(timer);
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  return <>
-    <CraftingMaterialsPage />
-    <AdvancedCraftingSections />
-  </>;
+  const bottlenecks = useMemo(() => buildBottlenecks(data.recipes), [data.recipes]);
+  const bottleneckByName = useMemo(() => new Map(bottlenecks.map((row) => [normalizeText(row.name), row])), [bottlenecks]);
+  const matrixRows = useMemo(() => buildMatrixRows(data.recipes), [data.recipes]);
+  const route = useMemo(() => simulateLeveling(data.recipes, professionId, mode, targetLevel, bottleneckByName), [data.recipes, professionId, mode, targetLevel, bottleneckByName]);
+  const woodZeroRoute = useMemo(() => {
+    const noBuy = simulateLeveling(data.recipes, 'woodcrafting', 'farm', 10, bottleneckByName, true);
+    return noBuy.steps.length ? noBuy : simulateLeveling(data.recipes, 'woodcrafting', 'farm', 10, bottleneckByName);
+  }, [data.recipes, bottleneckByName]);
+
+  const materialOptions = useMemo(() => {
+    const map = new Map();
+    [...route.totalMaterials, ...bottlenecks.slice(0, 18)].forEach((row) => {
+      const key = normalizeText(row.name);
+      if (!map.has(key)) map.set(key, row);
+    });
+    DROP_GUIDES.forEach((row) => {
+      const key = normalizeText(row.material);
+      if (!map.has(key)) map.set(key, { name: row.material, zh: translate(row.material), qty: 0 });
+    });
+    return [...map.values()];
+  }, [route.totalMaterials, bottlenecks]);
+
+  const activeMaterial = materialOptions.some((row) => normalizeText(row.name) === normalizeText(selectedMaterial))
+    ? selectedMaterial
+    : materialOptions[0]?.name || 'Processed Wood';
+  const dropRoutes = useMemo(() => buildDropRoutes(activeMaterial, data.monsters), [activeMaterial, data.monsters]);
+
+  const filteredRecipes = useMemo(() => {
+    const text = normalizeText(query);
+    return data.recipes.filter((recipe) => {
+      if (recipeScope !== 'all' && recipe.profession !== recipeScope) return false;
+      if (recipeType !== 'all' && normalizeText(recipe.outputType) !== normalizeText(recipeType)) return false;
+      if (!text) return true;
+      const haystack = normalizeText([recipe.output, recipe.outputZh, professionMeta(recipe.profession).zh, professionMeta(recipe.profession).en, ...recipe.materials.flatMap((material) => [material.name, material.zh])].join(' '));
+      return haystack.includes(text);
+    }).sort((a, b) => a.level - b.level || a.output.localeCompare(b.output));
+  }, [data.recipes, recipeScope, recipeType, query]);
+
+  const selectedProfession = professionMeta(professionId);
+  const mainBottleneck = route.totalMaterials[0] || bottlenecks[0];
+
+  return <section className="craft-guide">
+    <header className="craft-hero">
+      <div>
+        <span className="craft-eyebrow">MCW Crafting · Guidebook</span>
+        <h1>材料与锻造路线</h1>
+        <p>页面已合并成一个规划器：先看推荐路线，再看缺什么、去哪刷，最后用配方库查细节。</p>
+      </div>
+      <div className="craft-source-badge">{data.source === 'official' ? `已读取 AppData · ${data.recipes.length} 配方` : '内置示例数据'}</div>
+    </header>
+
+    <nav className="craft-subnav" aria-label="crafting sections">
+      <a href="#craft-plan">路线</a>
+      <a href="#craft-farm">掉落地图</a>
+      <a href="#craft-matrix">材料矩阵</a>
+      <a href="#craft-recipes">配方库</a>
+    </nav>
+
+    <section className="craft-control-card">
+      <label><span>专业</span><select value={professionId} onChange={(event) => setProfessionId(event.target.value)}>{PROFESSIONS.map((profession) => <option key={profession.id} value={profession.id}>{profession.zh} · {profession.en}</option>)}</select></label>
+      <label><span>路线</span><select value={mode} onChange={(event) => setMode(event.target.value)}>{MODES.map((row) => <option key={row.id} value={row.id}>{row.zh}</option>)}</select></label>
+      <label><span>目标</span><select value={targetLevel} onChange={(event) => setTargetLevel(Number(event.target.value))}>{[3, 4, 5, 6, 7, 8, 9, 10].map((level) => <option key={level} value={level}>Lv.{level}</option>)}</select></label>
+    </section>
+
+    <section id="craft-plan" className="craft-main-grid">
+      <article className="craft-panel craft-summary-panel">
+        <div className="craft-panel-title"><h2><ProfessionIcon profession={professionId} />{selectedProfession.zh}升级策略</h2><span>{selectedProfession.en}</span></div>
+        <p className="craft-muted">{selectedProfession.note}</p>
+        <div className="craft-kpis">
+          <div><span>制作次数</span><strong>{fmt(route.totalCrafts)}</strong></div>
+          <div><span>估算成本</span><strong>{fmt(route.totalCost)} meso</strong></div>
+          <div><span>最大瓶颈</span><strong>{mainBottleneck?.zh || '-'}</strong></div>
+        </div>
+        <p className="craft-note">{MODES.find((row) => row.id === mode)?.desc}。如果你只想看最少操作，可以按这个面板从上往下做。</p>
+      </article>
+
+      <article className="craft-panel">
+        <div className="craft-panel-title"><h2>推荐路线</h2><span>Lv.1 → Lv.{targetLevel}</span></div>
+        <div className="craft-route-list">
+          {route.steps.map((step) => <button key={`${step.level}-${step.recipe.id}`} className="craft-route-row" onClick={() => setSelectedMaterial(step.recipe.materials[0]?.name || activeMaterial)}>
+            <strong>Lv.{step.level}→{step.to}</strong>
+            <span>{step.recipe.outputZh || step.recipe.output}</span>
+            <em>x{step.crafts}</em>
+          </button>)}
+        </div>
+      </article>
+
+      <article className="craft-panel">
+        <div className="craft-panel-title"><h2>当前材料清单</h2><span>点击查掉落</span></div>
+        <div className="craft-chip-list">
+          {route.totalMaterials.map((material) => <button key={material.name} className={normalizeText(activeMaterial) === normalizeText(material.name) ? 'craft-chip active' : 'craft-chip'} onClick={() => setSelectedMaterial(material.name)}>
+            <ItemIcon name={material.name} size={22} />{material.zh || translate(material.name)} x{material.qty}
+          </button>)}
+          {!route.totalMaterials.length && <p className="craft-empty">当前专业没有可用路线。</p>}
+        </div>
+      </article>
+    </section>
+
+    <section id="craft-farm" className="craft-panel craft-farm-panel">
+      <div className="craft-panel-title">
+        <h2>怪物掉落与采集地图</h2>
+        <select value={activeMaterial} onChange={(event) => setSelectedMaterial(event.target.value)}>
+          {materialOptions.map((material) => <option key={material.name} value={material.name}>{material.zh || translate(material.name)}</option>)}
+        </select>
+      </div>
+      <div className="craft-farm-layout">
+        <div className="craft-material-focus">
+          <ItemIcon name={activeMaterial} size={42} />
+          <div>
+            <strong>{translate(activeMaterial)}</strong>
+            <span>{activeMaterial}</span>
+            <p>{dropRoutes.guide?.note || '这个材料还没有确认掉落映射，先按配方需求、市场或后续数据补充处理。'}</p>
+          </div>
+        </div>
+
+        <div className="craft-drop-cards">
+          {dropRoutes.monsters.map((monster) => <article key={monster.id} className="craft-drop-card">
+            {monster.image && <img src={monster.image} alt="" loading="lazy" />}
+            <div>
+              <strong>{monster.name}</strong>
+              <span>Lv.{monster.level}</span>
+              <div className="craft-map-lines">
+                {monster.maps.slice(0, 3).map((map) => <em key={`${monster.id}-${map.id}`}>{map.name} · {map.count}只</em>)}
+              </div>
+            </div>
+          </article>)}
+          {!dropRoutes.monsters.length && <article className="craft-drop-card empty"><strong>{dropRoutes.guide?.source || '待补充'}</strong><span>{dropRoutes.guide?.note || '没有匹配到 AppData 怪物；之后可以继续补这个材料的怪物掉落表。'}</span></article>}
+        </div>
+      </div>
+    </section>
+
+    <section id="craft-matrix" className="craft-two-col">
+      <article className="craft-panel">
+        <div className="craft-panel-title"><h2>跨专业材料矩阵</h2><span>只显示最关键 10 个</span></div>
+        <div className="craft-matrix-list">
+          {matrixRows.slice(0, 10).map((row) => <div key={row.name} className="craft-matrix-row">
+            <div className="craft-matrix-name"><ItemIcon name={row.name} size={24} /><strong>{row.zh}</strong><span>{row.professionCount}系 / {row.recipeCount}配方</span></div>
+            <div className="craft-prof-pills">{PROFESSIONS.filter((profession) => row.byProfession[profession.id] > 0).slice(0, 4).map((profession) => <em key={profession.id}>{profession.zh} {row.byProfession[profession.id]}</em>)}</div>
+          </div>)}
+        </div>
+      </article>
+
+      <article className="craft-panel">
+        <div className="craft-panel-title"><h2>材料瓶颈排行</h2><span>需求 / 覆盖 / 稀有度</span></div>
+        <div className="craft-bottleneck-list">
+          {bottlenecks.slice(0, 10).map((row, index) => <button key={row.name} className="craft-bottleneck-row" onClick={() => setSelectedMaterial(row.name)}>
+            <strong>#{index + 1}</strong>
+            <ItemIcon name={row.name} size={24} />
+            <span>{row.zh}<small>{sourceForMaterial(row.name)} · 总需求 {row.qty}</small></span>
+            <em>{row.score}</em>
+          </button>)}
+        </div>
+      </article>
+    </section>
+
+    <section className="craft-panel craft-zero-panel">
+      <div className="craft-panel-title"><h2>木工零金币升级规划</h2><span>自刷材料优先</span></div>
+      <div className="craft-zero-grid">
+        <div className="craft-zero-summary">
+          <div><span>目标</span><strong>Lv.1 → Lv.10</strong></div>
+          <div><span>制作次数</span><strong>{fmt(woodZeroRoute.totalCrafts)}</strong></div>
+          <div><span>外购材料</span><strong>0 meso</strong></div>
+          <div><span>制作手续费</span><strong>{fmt(woodZeroRoute.steps.reduce((sum, step) => sum + step.recipe.meso * step.crafts, 0))} meso</strong></div>
+        </div>
+        <div className="craft-chip-list compact">
+          {woodZeroRoute.totalMaterials.slice(0, 10).map((material) => <button key={material.name} className="craft-chip" onClick={() => setSelectedMaterial(material.name)}><ItemIcon name={material.name} size={20} />{material.zh} x{material.qty}</button>)}
+        </div>
+      </div>
+      <div className="craft-zero-route">{woodZeroRoute.steps.map((step) => <span key={`${step.level}-${step.recipe.id}`}>Lv.{step.level}→{step.to} · {step.recipe.outputZh} ×{step.crafts}</span>)}</div>
+    </section>
+
+    <section id="craft-recipes" className="craft-panel">
+      <div className="craft-panel-title"><h2>配方浏览器</h2><span>{filteredRecipes.length} 条</span></div>
+      <div className="craft-browser-toolbar">
+        <select value={recipeScope} onChange={(event) => setRecipeScope(event.target.value)}><option value="all">全部专业</option>{PROFESSIONS.map((profession) => <option key={profession.id} value={profession.id}>{profession.zh} · {profession.en}</option>)}</select>
+        <select value={recipeType} onChange={(event) => setRecipeType(event.target.value)}><option value="all">全部类型</option><option value="Materials">材料</option><option value="Equipment">装备</option><option value="Material">材料</option></select>
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索中文名 / 英文名 / 材料名" />
+      </div>
+      <div className="craft-recipe-grid">
+        {filteredRecipes.slice(0, 36).map((recipe) => <article key={recipe.id} className="craft-recipe-card">
+          <div className="craft-recipe-head"><ItemIcon name={recipe.output} size={24} /><strong>{recipe.outputZh}</strong></div>
+          <span>{professionMeta(recipe.profession).zh} · Lv.{recipe.level} · EXP {recipe.exp} · {fmt(recipe.meso)} meso</span>
+          <p>{recipe.materials.map((material) => `${material.zh} x${material.qty}`).join(' / ')}</p>
+        </article>)}
+      </div>
+      {filteredRecipes.length > 36 && <p className="craft-muted center">已显示前 36 条，继续缩小专业、类型或搜索词可以更快定位。</p>}
+    </section>
+
+    {data.error && <p className="craft-load-note">读取提示：{data.error}</p>}
+  </section>;
 }
