@@ -172,10 +172,11 @@ function DashboardEquipmentSlots({ gear, candidatesBySlot, onPickSlot }) {
         const item = by[slot];
         const conflict = getSlotConflict(slot, by);
         const hasCandidates = Boolean(candidatesBySlot?.[slot]?.length);
+        const displayTitle = (item?.title ?? conflict) || '未装备';
         return <button className={conflict ? 'mg-equip-tile conflict' : 'mg-equip-tile'} key={slot} onClick={() => onPickSlot(slot)} disabled={!hasCandidates} title={conflict || label}>
           <MsioItemIcon item={item} size={30} />
           <span>{label}</span>
-          <strong>{item?.title ?? conflict || '未装备'}</strong>
+          <strong>{displayTitle}</strong>
         </button>;
       })}
     </div>
@@ -231,13 +232,11 @@ function GearPicker({ slot, items, current, onChoose, onClose }) {
   </div>;
 }
 
-function NextStep({ bestMonster, bestMap, weapon, nextAp }) { return <Section title="下一步"><div className="info-list"><Info label="练级" title={`${bestMonster?.name ?? '推荐怪物'} Lv.${bestMonster?.level ?? '-'}`} desc="按当前命中和等级推荐" media={<MonsterIcon monster={bestMonster} size={38} />} /><Info label="地图" title={bestMap?.name ?? '推荐地图读取中'} desc={`${bestMap?.canHitAll ? '安全' : '需补命中'} · 刷怪数 ${bestMap?.spawnTotal ?? '-'}`} /><Info label="装备" title={weapon?.title ?? '职业武器'} desc={weapon?.desc ?? '按当前等级推荐'} media={<MsioItemIcon item={weapon} size={38} />} /><Info label="AP" title={nextAp} desc="按当前职业主属性优先" /></div></Section>; }
 function MapsPage({ maps, data }) { return <Section title="推荐路线"><p className="section-copy">{data?.maps?.length ? '地图大图、怪物图和刷怪数来自当前版本数据；图片缺失时会 fallback 到 OSMS Guide 的 data 资源。' : '当前版本地图数据未启用。'}</p><div className="map-stack">{maps.map((map) => <article className="map-result" key={map.id}><div className="map-result-main"><div><span className="item-label">Lv.{map.levelRange?.[0]}-{map.levelRange?.[1]} · {map.region}</span><h3>{map.monsters?.[0]?.name ?? map.name}</h3><p>{map.monsters?.[0] ? `Lv.${map.monsters[0].level} · EXP ${map.monsters[0].exp ?? '-'} · ${map.canHitAll ? '命中 100%' : '命中偏紧'}` : map.routeNote}</p></div><button className="option-btn" style={{ minWidth: 110 }}>查看地图</button></div>{map.thumbnail && <OsmsDataImage className="map-preview" src={map.thumbnail} sources={[map.minimap]} alt={map.name} placeholder="No Image" />}<h3 style={{ marginTop: 12 }}>{map.name}</h3><p className="section-copy">{map.spawnTotal ?? '-'} 只 · {map.canHitAll ? '安全' : '需补命中'}</p><div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>{map.monsters?.slice(0, 8).map((monster) => <div key={`${map.id}-${monster.id}`} style={{ minWidth: 82, border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: 8 }}><MonsterIcon monster={monster} size={34} /><strong style={{ display: 'block', fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{monster.name}</strong><span style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 900 }}>Lv.{monster.level}</span></div>)}</div></article>)}</div></Section>; }
 function GearPage({ gear, candidatesBySlot, onPickSlot }) { return <Section title="装备推荐"><p className="section-copy">装备 icon 使用同一套 MapleStory.io 名称映射，点击槽位可替换当前等级可用装备。</p><div className="mg-equipment-grid page-grid">{SLOTS.map(([slot, label]) => { const item = gear.find((g) => g.slot === slot); return <button className="mg-equip-tile" key={slot} onClick={() => onPickSlot(slot)} disabled={!(candidatesBySlot?.[slot]?.length)}><MsioItemIcon item={item} size={34} /><span>{label}</span><strong>{item?.title ?? '未装备'}</strong></button>; })}</div></Section>; }
 function MaterialsPage() { return <Section title="材料 / 锻造"><p className="section-copy">材料价值指数和锻造路线保留在后续国服/国际服数据整理阶段继续接入。</p></Section>; }
 function Parameters(props) { return <Section title="角色参数"><ConfigPanel {...props} /></Section>; }
 function StatsCard({ stats, classLine }) { return <Section title="最终属性"><div className="stat-stack">{stats.map(([label, value]) => <div className="stat-row" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><div className="next-ap-note"><strong>下一点 AP：{classLine.primaryStat}</strong><span>当前建议主 {classLine.primaryStat}，{classLine.secondaryStat} 只保留装备/命中需求。</span></div></Section>; }
 function Section({ title, children }) { return <section className="section-card"><h2>{title}</h2>{children}</section>; }
-function Info({ label, title, desc, media }) { return <article className="info-row"><span>{label}</span><div className="info-row-main">{media}<div><strong>{title}</strong><p>{desc}</p></div></div></article>; }
 function compactStats(statPlan, classLine, mainAttack) { return [['STR', statPlan.stats.STR], ['DEX', statPlan.stats.DEX], ['INT', statPlan.stats.INT], ['LUK', statPlan.stats.LUK], ['ACC', statPlan.derived.accuracy], ['HP', statPlan.derived.hp], ['MP', statPlan.derived.mp], [classLine.id === 'magician' ? 'MATK' : 'WATK', mainAttack]]; }
 function calcMainAttack(classLine, statPlan, weapon) { const primary = statPlan.stats[classLine.primaryStat] ?? 0; const secondary = statPlan.stats[classLine.secondaryStat] ?? 0; const gearAttack = classLine.id === 'magician' ? (weapon?.incMAD ?? 0) : (weapon?.incPAD ?? 0); return Math.max(1, Math.round(primary * 1.35 + secondary * 0.35 + statPlan.level * 0.7 + gearAttack)); }
