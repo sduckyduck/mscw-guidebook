@@ -71,7 +71,8 @@
 
 .mg-detail-kpis div,
 .mg-detail-list div,
-.mg-detail-damage {
+.mg-detail-damage,
+.mg-effect-grid article {
   border: 1px solid #e2ebe8;
   border-radius: 16px;
   background: #f8faf9;
@@ -80,7 +81,9 @@
 
 .mg-detail-kpis span,
 .mg-detail-list span,
-.mg-detail-damage span {
+.mg-detail-damage span,
+.mg-effect-grid span,
+.mg-skill-progress span {
   display: block;
   color: #64748b;
   font-size: .66rem;
@@ -90,12 +93,13 @@
 
 .mg-detail-kpis strong,
 .mg-detail-list strong,
-.mg-detail-damage strong {
+.mg-detail-damage strong,
+.mg-effect-grid strong {
   display: block;
   margin-top: 6px;
   color: #0f172a;
   font-size: .96rem;
-  line-height: 1.2;
+  line-height: 1.28;
   font-weight: 1000;
 }
 
@@ -111,7 +115,8 @@
 }
 
 .mg-detail-damage {
-  margin-bottom: 12px;
+  margin-top: 12px;
+  margin-bottom: 0;
 }
 
 .mg-detail-damage strong {
@@ -128,9 +133,72 @@
   font-weight: 850;
 }
 
-.mg-detail-list {
+.mg-detail-list,
+.mg-effect-grid {
   display: grid;
   gap: 8px;
+}
+
+.mg-effect-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 10px;
+}
+
+.mg-effect-grid article.wide {
+  grid-column: 1 / -1;
+}
+
+.mg-effect-grid article.wide strong {
+  color: #0f766e;
+  font-size: .98rem;
+}
+
+.mg-skill-progress {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mg-skill-progress div {
+  height: 10px;
+  border-radius: 999px;
+  background: #e2ebe8;
+  overflow: hidden;
+}
+
+.mg-skill-progress i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #0f766e;
+}
+
+.mg-skill-progress em {
+  color: #0f766e;
+  font-size: .66rem;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 1000;
+}
+
+.mg-effect-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 4px;
+}
+
+.mg-effect-pills span {
+  border: 1px solid #bdece3;
+  border-radius: 999px;
+  background: #f7fffd;
+  color: #0f766e;
+  padding: 7px 9px;
+  font-size: .72rem;
+  line-height: 1;
+  font-weight: 1000;
 }
 
 .mg-skill-row.clickable {
@@ -182,7 +250,10 @@
   .mg-detail-kpis span,
   .mg-detail-list span,
   .mg-detail-damage span,
-  .mg-detail-damage em {
+  .mg-detail-damage em,
+  .mg-effect-grid span,
+  .mg-skill-progress span,
+  .mg-skill-progress em {
     font-size: .58rem;
   }
 
@@ -191,26 +262,47 @@
     border-radius: 10px;
   }
 
-  .mg-detail-kpis {
+  .mg-detail-kpis,
+  .mg-effect-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
+  }
+
+  .mg-effect-grid article.wide {
+    grid-column: 1 / -1;
   }
 
   .mg-detail-kpis div,
   .mg-detail-list div,
   .mg-detail-damage,
-  .mg-detail-copy {
+  .mg-detail-copy,
+  .mg-effect-grid article {
     border-radius: 12px;
     padding: 8px;
   }
 
   .mg-detail-kpis strong,
-  .mg-detail-list strong {
+  .mg-detail-list strong,
+  .mg-effect-grid strong,
+  .mg-effect-grid article.wide strong {
     font-size: .68rem;
   }
 
   .mg-detail-damage strong {
     font-size: .9rem;
+  }
+
+  .mg-effect-pills {
+    gap: 5px;
+  }
+
+  .mg-effect-pills span {
+    padding: 5px 7px;
+    font-size: .52rem;
+  }
+
+  .mg-skill-progress div {
+    height: 8px;
   }
 
   .mg-skill-row .mg-skill-main small {
