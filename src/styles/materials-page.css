@@ -16,7 +16,7 @@
 
 .mg-material-controls {
   display: grid;
-  grid-template-columns: auto minmax(150px, 1fr) auto minmax(150px, 1fr);
+  grid-template-columns: auto minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(76px, .45fr) auto minmax(76px, .45fr);
   gap: 10px;
   align-items: center;
   margin-bottom: 12px;
@@ -54,13 +54,17 @@
 
 .mg-material-panel-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 10px;
 }
 
 .mg-material-panel-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
   margin: 0;
   color: inherit;
   font-size: 1.02rem;
@@ -80,6 +84,38 @@
   color: rgba(255,255,255,.72);
 }
 
+.mg-craft-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #d8e1dc;
+  border-radius: 9px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.mg-craft-icon img {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.mg-craft-icon span {
+  color: #0f766e;
+  font-size: .72rem;
+  line-height: 1;
+  font-weight: 1000;
+}
+
+.mg-material-copy {
+  margin: 0 0 8px;
+  color: #475569;
+  font-size: .74rem;
+  line-height: 1.32;
+  font-weight: 850;
+}
+
 .mg-material-stat-row,
 .mg-material-route-row,
 .mg-material-rank-row {
@@ -92,6 +128,10 @@
   background: #fff;
   padding: 8px;
   margin-bottom: 7px;
+}
+
+.mg-material-rank-row.with-icon {
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .mg-material-stat-row {
@@ -164,6 +204,7 @@
 .mg-material-chip {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   border: 1px solid #bdece3;
   border-radius: 999px;
   background: #ecfffb;
@@ -250,11 +291,24 @@
   }
 
   .mg-material-panel-head h2 {
+    gap: 4px;
     font-size: .76rem;
   }
 
   .mg-material-panel-head span {
     font-size: .46rem;
+  }
+
+  .mg-craft-icon {
+    border-radius: 7px;
+  }
+
+  .mg-craft-icon span {
+    font-size: .5rem;
+  }
+
+  .mg-material-copy {
+    font-size: .52rem;
   }
 
   .mg-material-stat-row,
