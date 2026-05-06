@@ -244,8 +244,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 @media (max-width: 560px) {
   .app-shell { padding-left: 8px; padding-right: 8px; }
   .hero-card { border-radius: 20px; }
-  .preview-card[style] { grid-template-columns: 1fr !important; }
-  .preview-meta { flex-direction: column; align-items: flex-start; }
+  .preview-card { grid-template-columns: minmax(0, .96fr) minmax(132px, .9fr) !important; gap: 10px !important; }
+  .preview-frame { min-height: clamp(210px, 55vw, 285px); }
+  .preview-meta { flex-direction: row; align-items: center; }
   .top-tabs { border-radius: 17px; }
   .hero-card h1 { font-size: clamp(1.7rem, 8vw, 2.6rem); }
 }
