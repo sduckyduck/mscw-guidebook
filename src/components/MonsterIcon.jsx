@@ -8,10 +8,6 @@ function isRemotePath(value) {
   return text.startsWith('http://') || text.startsWith('https://') || text.startsWith('data:') || text.startsWith('blob:');
 }
 
-function cleanLocalPath(value) {
-  return String(value || '').replace(/^\.\//, '').replace(/^\//, '');
-}
-
 function baseUrl() {
   const base = import.meta.env.BASE_URL || '/';
   return base.endsWith('/') ? base : `${base}/`;
@@ -21,7 +17,10 @@ function assetUrl(path) {
   if (!path) return '';
   const text = String(path);
   if (isRemotePath(text)) return text;
-  return `${baseUrl()}${cleanLocalPath(text)}`;
+  if (text.startsWith('/')) return text;
+  const clean = text.replace(/^\.\//, '');
+  if (clean.startsWith('AppData/')) return `${baseUrl()}${clean}`;
+  return `${baseUrl()}AppData/${clean.replace(/^AppData\//, '')}`;
 }
 
 function getMonsterId(monster) {
