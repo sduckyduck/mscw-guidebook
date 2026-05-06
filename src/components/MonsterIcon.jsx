@@ -12,6 +12,7 @@ const API_VERSION = '83';
 // Put them first so the displayed icon follows the real MapleStory.io mob ID instead of a stale local thumbnail.
 const VERIFIED_MSIO_ID_BY_NAME = {
   'horny mushroom': 2110200,
+  'zombie mushroom': 2230102,
 };
 
 const LAST_RESORT_MSIO_ID_BY_NAME = {
@@ -28,6 +29,8 @@ const LAST_RESORT_MSIO_ID_BY_NAME = {
   'snail': 100100,
   'blue snail': 100101,
   'red snail': 100120,
+  'jr necki': 2230103,
+  'stirge': 2300100,
   'pig': 1210100,
   'ribbon pig': 1210101,
   'octopus': 2230100,
@@ -133,27 +136,23 @@ export function getMonsterIconSources(monster, index) {
   const matched = index?.get(normalizeName(monster?.name));
 
   return unique([
-    // 1) Verified MapleStory.io IDs first for names where local data has mismatched thumbnails.
+    // 1) Known-good MapleStory.io mob IDs first where AppData only carries missing image paths.
     getMapleStoryIoSource(monster, true),
 
-    // 2) PNG first from OSMS Guide by monster name.
+    // 2) OSMS Guide fallback by monster name for missing local images.
     osmsAsset(matched?.thumbnail),
-
-    // 3) PNG first from current MSCW AppData if present.
-    localAsset(monster?.thumbnail),
-
-    // 4) OSMS gif/webp only after PNG fails.
     osmsAsset(matched?.gifs?.stand),
     osmsAsset(matched?.gifs?.move),
     osmsAsset(matched?.gif),
 
-    // 5) Current local gif/webp only after PNG fails.
+    // 3) Last-resort MapleStory.io icon by name, so the cell is not blank.
+    getMapleStoryIoSource(monster),
+
+    // 4) Current local assets if the deployed AppData bundle includes them.
+    localAsset(monster?.thumbnail),
     localAsset(monster?.gifs?.stand),
     localAsset(monster?.gifs?.move),
     localAsset(monster?.gif),
-
-    // 6) Last-resort MapleStory.io icon by name, so the cell is not blank.
-    getMapleStoryIoSource(monster),
   ]);
 }
 

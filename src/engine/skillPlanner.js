@@ -90,13 +90,36 @@ function getBranchPlan(classId, branchId) {
   return PLANS[classId]?.[branchId] ?? PLANS[classId]?.default ?? PLANS.warrior.default;
 }
 
-function distributeSkillPoints(sequence, totalPoints) {
+function getTotalSkillPoints(level) {
+  return Math.max(0, (Number(level) - 10) * 3 + 1);
+}
+
+export function getRecommendedSkillAllocation({ classId, branchId, level }) {
+  const plan = getBranchPlan(classId, branchId);
+  const totalPoints = getTotalSkillPoints(level);
+  return Object.fromEntries(distributeSkillPoints(plan.sequence, totalPoints).map((skill) => [skill.name, skill.level]));
+}
+
+function distributeSkillPoints(sequence, totalPoints, customSkills = null) {
+  if (customSkills) return sanitizeSkillAllocation(sequence, totalPoints, customSkills);
+
   let remaining = Math.max(0, totalPoints);
   return sequence.map(([name, max]) => {
     const level = Math.min(max, remaining);
     remaining -= level;
     return { name, level, max };
-  }).filter((skill) => skill.level > 0 || skill.name === sequence[0]?.[0]);
+  });
+}
+
+function sanitizeSkillAllocation(sequence, totalPoints, customSkills) {
+  let remaining = Math.max(0, Number(totalPoints) || 0);
+
+  return sequence.map(([name, max]) => {
+    const requested = Math.max(0, Math.floor(Number(customSkills?.[name] ?? 0)));
+    const level = Math.min(max, requested, remaining);
+    remaining -= level;
+    return { name, level, max };
+  });
 }
 
 function nextSteps(sequence, totalPoints, level, count = 4) {
@@ -113,19 +136,41 @@ function nextSteps(sequence, totalPoints, level, count = 4) {
   return steps;
 }
 
-export function getSkillPlan({ classId, branchId, level, mainAttack = 0 }) {
+export function getSkillPlan({ classId, branchId, level, mainAttack = 0, customSkills = null }) {
   const plan = getBranchPlan(classId, branchId);
-  const totalPoints = Math.max(0, (Number(level) - 10) * 3 + 1);
-  const current = distributeSkillPoints(plan.sequence, totalPoints);
-  const next = nextSteps(plan.sequence, totalPoints, Number(level));
-  const damageCards = plan.damage.map((card) => {
+  const totalPoints = getTotalSkillPoints(level);
+  const skills = distributeSkillPoints(plan.sequence, totalPoints, customSkills);
+  const usedSp = skills.reduce((sum, skill) => sum + skill.level, 0);
+  const current = skills.filter((skill) => skill.level > 0 || skill.name === plan.sequence[0]?.[0]);
+  const next = nextSteps(plan.sequence, usedSp || totalPoints, Number(level));
+  const baseMin = Math.max(1, Math.round(mainAttack * 0.62));
+  const baseMax = Math.max(baseMin + 1, Math.round(mainAttack * 1.18));
+  const damageCards = [{
+    name: 'Base Attack',
+    role: '普通攻击',
+    level: null,
+    maxLevel: null,
+    min: baseMin,
+    max: baseMax,
+    isBase: true,
+  }, ...plan.damage.map((card) => {
     const skill = current.find((item) => item.name === card.name);
     const skillLevel = skill?.level ?? Math.max(1, Math.min(20, Math.floor((Number(level) - 10) / 2)));
     const min = Math.max(1, Math.round(card.baseMin + mainAttack * card.scale * (skillLevel / 20) * 0.35));
     const max = Math.max(min + 1, Math.round(card.baseMax + mainAttack * card.scale * (skillLevel / 20) * 0.72));
     return { ...card, level: skillLevel, maxLevel: skill?.max ?? 20, min, max };
-  });
-  return { summary: plan.summary, current, next, damageCards };
+  })];
+
+  return {
+    summary: plan.summary,
+    skills,
+    current,
+    next,
+    damageCards,
+    totalSp: totalPoints,
+    usedSp,
+    remainingSp: Math.max(0, totalPoints - usedSp),
+  };
 }
 
 export function getApNote({ classLine, statPlan }) {

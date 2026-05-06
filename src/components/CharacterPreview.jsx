@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getMappedMsioItemId } from './MsioItemIcon.jsx';
 
-const API_REGION = 'GMS';
-const API_VERSION = '83';
+const API_REGION = 'MCW';
+const API_VERSION = '1';
 const SKIN = 2000;
-const MAP_URL = 'https://raw.githubusercontent.com/sduckyduck/osms-classic-guidebook/main/public/data/character_item_id_map.csv?v=mscw-preview-v3-name-first';
 
 const HAIR = {
   male: [30000, 30060, 30100, 30120, 30140, 30200, 30210, 30260, 30300],
@@ -23,84 +22,15 @@ const BACKUP = {
 };
 const EMOTE = { warrior: 'angry', magician: 'bewildered', bowman: 'default', thief: 'wink', pirate: 'wink' };
 
-let cachedMap = null;
-let loadingMap = null;
-
 function idNum(value) {
   const n = Number(String(value ?? '').replace(/^0+/, ''));
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function norm(value) {
-  return String(value ?? '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function csvRows(text) {
-  const rows = [];
-  let row = [];
-  let cell = '';
-  let quoted = false;
-  for (let i = 0; i < text.length; i += 1) {
-    const c = text[i];
-    const n = text[i + 1];
-    if (c === '"' && quoted && n === '"') { cell += '"'; i += 1; continue; }
-    if (c === '"') { quoted = !quoted; continue; }
-    if (c === ',' && !quoted) { row.push(cell); cell = ''; continue; }
-    if ((c === '\n' || c === '\r') && !quoted) {
-      if (c === '\r' && n === '\n') i += 1;
-      row.push(cell); cell = '';
-      if (row.some((v) => v.trim())) rows.push(row);
-      row = [];
-      continue;
-    }
-    cell += c;
-  }
-  row.push(cell);
-  if (row.some((v) => v.trim())) rows.push(row);
-  return rows;
-}
-
-function namesFromNote(note) {
-  const m = String(note ?? '').match(/^\s*([^>-]+?)\s*->\s*([^()]+?)(?:\s*\(|$)/);
-  return m ? [m[1].trim(), m[2].trim()] : [];
-}
-
-function buildMap(text) {
-  const rows = csvRows(text);
-  const heads = rows.shift()?.map((h) => h.replace(/^\uFEFF/, '').trim()) ?? [];
-  const byId = new Map();
-  const byName = new Map();
-  for (const cells of rows) {
-    const r = Object.fromEntries(heads.map((h, i) => [h, cells[i] ?? '']));
-    const target = idNum(r.msio_item_id ?? r.mapped_item_id ?? r.target_item_id ?? r.msio_id);
-    if (!target) continue;
-    const source = idNum(r.osms_item_id ?? r.source_item_id ?? r.item_id ?? r.id);
-    if (source) byId.set(String(source), target);
-    [r.osms_item_name, r.source_item_name, r.item_name, r.name, ...namesFromNote(r.note)]
-      .filter(Boolean)
-      .forEach((name) => byName.set(norm(name), target));
-  }
-  return { byId, byName };
-}
-
-async function loadIdMap() {
-  if (cachedMap) return cachedMap;
-  if (!loadingMap) {
-    loadingMap = fetch(MAP_URL, { cache: 'no-store' }).then((r) => {
-      if (!r.ok) throw new Error(`map csv ${r.status}`);
-      return r.text();
-    }).then((text) => {
-      cachedMap = buildMap(text);
-      return cachedMap;
-    });
-  }
-  return loadingMap;
-}
-
-function mappedGear(gear, idMap) {
+function mappedGear(gear) {
   const slots = {};
   for (const item of gear ?? []) {
-    const id = getMappedMsioItemId(item, idMap);
+    const id = getMappedMsioItemId(item);
     if (!id) continue;
     const slot = item.slot || 'other';
     if (slot === 'overall') {
@@ -153,7 +83,7 @@ function url({ hair, face, emote, ids, action }) {
   return `https://maplestory.io/api/${API_REGION}/${API_VERSION}/Character/${SKIN}/${path}/${encodeURIComponent(action)}/0?resize=3&renderMode=Full&bgColor=0,0,0,0&faceEmote=${encodeURIComponent(emote)}`;
 }
 
-function urlsFor({ classLine, gender, gear, idMap }) {
+function urlsFor({ classLine, gender, gear }) {
   const g = gender === 'male' ? 'male' : 'female';
   const classId = classLine?.id ?? 'warrior';
   const seed = classId.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0) + (g === 'female' ? 11 : 0);
@@ -161,36 +91,26 @@ function urlsFor({ classLine, gender, gear, idMap }) {
   const face = FACE[g][Math.abs(seed) % FACE[g].length];
   const emote = EMOTE[classId] ?? 'default';
   const action = actionFor(gear);
-  const recommended = mappedGear(gear, idMap);
+  const recommended = mappedGear(gear);
   const backup = BACKUP[classId] ?? BACKUP.warrior;
   return [recommended.length ? recommended : null, backup].filter(Boolean).map((ids) => url({ hair, face, emote, ids, action }));
 }
 
-export function buildCharacterImageUrl({ classLine, gender, gear, itemMap }) {
-  return urlsFor({ classLine, gender, gear, idMap: itemMap })[0];
+export function buildCharacterImageUrl({ classLine, gender, gear }) {
+  return urlsFor({ classLine, gender, gear })[0];
 }
 
 export default function CharacterPreview({ classLine, gender = 'female', gear = [] }) {
   const [attempt, setAttempt] = useState(0);
-  const [idMap, setIdMap] = useState(cachedMap);
-  const [mapError, setMapError] = useState('');
 
-  useEffect(() => {
-    let stopped = false;
-    loadIdMap().then((m) => {
-      if (!stopped) { setIdMap(m); setMapError(''); setAttempt(0); }
-    }).catch((e) => { if (!stopped) setMapError(e?.message || '装备映射读取失败'); });
-    return () => { stopped = true; };
-  }, []);
+  useEffect(() => { setAttempt(0); }, [classLine, gender, gear]);
 
-  useEffect(() => { setAttempt(0); }, [classLine, gender, gear, idMap]);
-
-  const urls = useMemo(() => urlsFor({ classLine, gender, gear, idMap }), [classLine, gender, gear, idMap]);
+  const urls = useMemo(() => urlsFor({ classLine, gender, gear }), [classLine, gender, gear]);
   const src = urls[Math.min(attempt, urls.length - 1)];
 
   if (!src || attempt >= urls.length) {
-    return <div className={`pixel-avatar ${classLine?.id ?? ''}`} style={{ transform: 'scale(1.05)' }} title={mapError || '角色预览 fallback'}><div className="avatar-hat" /><div className="avatar-face" /><div className="avatar-body" /><div className="avatar-weapon" /></div>;
+    return <div className={`pixel-avatar ${classLine?.id ?? ''}`} style={{ transform: 'scale(1.05)' }} title="角色预览 fallback"><div className="avatar-hat" /><div className="avatar-face" /><div className="avatar-body" /><div className="avatar-weapon" /></div>;
   }
 
-  return <img key={src} className="real-character-preview" src={src} alt={`${classLine?.name ?? '角色'} preview`} title={mapError || src} onError={() => setAttempt((i) => i + 1)} draggable="false" />;
+  return <img key={src} className="real-character-preview" src={src} alt={`${classLine?.name ?? '角色'} preview`} title={src} onError={() => setAttempt((i) => i + 1)} draggable="false" />;
 }

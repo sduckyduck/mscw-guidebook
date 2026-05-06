@@ -47,7 +47,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
   top: max(10px, env(safe-area-inset-top));
   z-index: 50;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: clamp(4px, 1.5vw, 10px);
   margin: 0 0 18px;
   padding: clamp(7px, 2vw, 12px);

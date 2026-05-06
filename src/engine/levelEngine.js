@@ -1,3 +1,4 @@
+const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
 const clamp = (value, min, max) => Math.min(Math.max(Number(value) || min, min), max);
 
 export function getLevelGains(level) {
@@ -21,6 +22,24 @@ export function getTotalSpFromLevel(level, firstJobLevel = 10, secondJobLevel = 
   return firstJobSp + secondJobSp;
 }
 
+export function getRecommendedApAllocation(classLine, level, custom = {}) {
+  const safeLevel = clamp(level, 1, 200);
+  const totalAp = getTotalApFromLevel(safeLevel);
+  const primary = classLine.primaryStat;
+  const secondary = classLine.secondaryStat;
+  const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel);
+  const baseStats = classLine.baseStats;
+  const allocation = Object.fromEntries(STAT_KEYS.map((key) => [key, 0]));
+
+  const secondaryNeeded = Math.max(0, secondaryTarget - (baseStats[secondary] ?? 0));
+  const secondaryAdded = Math.min(totalAp, secondaryNeeded);
+  const primaryAdded = Math.max(0, totalAp - secondaryAdded);
+
+  allocation[secondary] = secondaryAdded;
+  allocation[primary] = primaryAdded;
+  return allocation;
+}
+
 export function buildStatPlan(classLine, level, custom = {}) {
   const safeLevel = clamp(level, 1, 200);
   const baseStats = classLine.baseStats;
@@ -28,17 +47,20 @@ export function buildStatPlan(classLine, level, custom = {}) {
   const primary = classLine.primaryStat;
   const secondary = classLine.secondaryStat;
   const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel);
+  const allocation = sanitizeApAllocation(
+    custom.apAllocation ?? getRecommendedApAllocation(classLine, safeLevel, custom),
+    totalAp,
+  );
   const stats = { ...baseStats };
 
-  const secondaryNeeded = Math.max(0, secondaryTarget - (stats[secondary] ?? 0));
-  const secondaryAdded = Math.min(totalAp, secondaryNeeded);
-  const primaryAdded = Math.max(0, totalAp - secondaryAdded);
+  for (const key of STAT_KEYS) {
+    stats[key] = (stats[key] ?? 0) + (allocation[key] ?? 0);
+  }
 
-  stats[secondary] = (stats[secondary] ?? 0) + secondaryAdded;
-  stats[primary] = (stats[primary] ?? 0) + primaryAdded;
   stats.HP = Math.round((stats.HP ?? 0) + safeLevel * inferHpGrowth(classLine.id));
   stats.MP = Math.round((stats.MP ?? 0) + safeLevel * inferMpGrowth(classLine.id, stats.INT));
 
+  const allocatedAp = STAT_KEYS.reduce((sum, key) => sum + (allocation[key] ?? 0), 0);
   const accuracy = estimateAccuracy(classLine.id, stats, safeLevel);
   const magicAccuracy = estimateMagicAccuracy(stats, safeLevel);
 
@@ -46,10 +68,11 @@ export function buildStatPlan(classLine, level, custom = {}) {
     level: safeLevel,
     totalAp,
     totalSp: getTotalSpFromLevel(safeLevel, classLine.id === 'magician' ? 8 : 10),
-    remainingAp: 0,
-    primaryAdded,
-    secondaryAdded,
+    remainingAp: Math.max(0, totalAp - allocatedAp),
+    primaryAdded: allocation[primary] ?? 0,
+    secondaryAdded: allocation[secondary] ?? 0,
     secondaryTarget,
+    apAllocation: allocation,
     stats,
     derived: {
       accuracy,
@@ -58,6 +81,19 @@ export function buildStatPlan(classLine, level, custom = {}) {
       mp: stats.MP,
     },
   };
+}
+
+function sanitizeApAllocation(allocation, totalAp) {
+  let remaining = Math.max(0, Number(totalAp) || 0);
+  const next = {};
+
+  for (const key of STAT_KEYS) {
+    const requested = Math.max(0, Math.floor(Number(allocation?.[key] ?? 0)));
+    next[key] = Math.min(requested, remaining);
+    remaining -= next[key];
+  }
+
+  return next;
 }
 
 function inferSecondaryTarget(classId, level) {

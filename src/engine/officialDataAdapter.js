@@ -7,7 +7,7 @@ const PROFESSION_ID_BY_NAME = {
   Arcforge: 'arcforge',
 };
 
-const BASE_URL = import.meta.env.BASE_URL || '/';
+const BASE_URL = import.meta.env?.BASE_URL || '/';
 const appDataPath = (path) => `${BASE_URL}${path.replace(/^\/+/, '')}`;
 const padItemId = (id) => String(id ?? '').padStart(8, '0');
 const padSkillId = (id) => String(id ?? '').padStart(7, '0');
@@ -55,7 +55,7 @@ function normalizeMonsters(monsters) {
   return safeArray(monsters).map((monster) => {
     const level = Number(monster.level ?? 1);
     const eva = Number(monster.eva ?? monster.avoid ?? 0);
-    const requiredAccuracy = Math.max(1, Math.round(level * 2 + eva * 1.5));
+    const requiredAccuracy = Math.max(1, Math.ceil((55 * eva) / 15));
     const elements = parseElements(monster.elements);
 
     return {
