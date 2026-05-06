@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppMediaEnhanced from './AppMediaEnhanced.jsx';
 import CoverIntro from './components/CoverIntro.jsx';
-import CraftingMaterialsPageEnhanced from './components/CraftingMaterialsPageEnhanced.jsx';
+import CraftingMaterialsPageFixed from './components/CraftingMaterialsPageFixed.jsx';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
@@ -40,7 +40,7 @@ function GuidebookRouter() {
       <nav className="top-tabs">
         {TABS.map(([id, name]) => <button key={id} className={id === 'materials' ? 'top-tab active' : 'top-tab'} onClick={() => openTab(id)}>{name}</button>)}
       </nav>
-      <CraftingMaterialsPageEnhanced />
+      <CraftingMaterialsPageFixed />
     </main>;
   }
 
