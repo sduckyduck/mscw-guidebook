@@ -12,104 +12,100 @@ const SKILL_ICON_ALIASES = {
   '提高 HP 恢复': ['improved hp recovery', '1000000_Improved_HP_Recovery'],
   '提高 HP 上限': ['max hp increase', '1000001_Max_HP_Increase'],
   '精准打击': ['precise strikes', '1000002_Precise_Strikes'],
-  '精准剑/斧': ['sword mastery', 'axe mastery', '1100000_Sword_Mastery', '1100001_Axe_Mastery'],
-  '精准钝器/剑': ['sword mastery', 'blunt weapon mastery', '1200000_Sword_Mastery', '1200001_Blunt_Weapon_Mastery'],
-  '精准枪/矛': ['spear mastery', 'polearm mastery', '1300000_Spear_Mastery', '1300001_Polearm_Mastery'],
-  '快速武器': ['weapon booster', 'sword booster', 'axe booster'],
-  '快速枪/矛': ['spear booster', 'polearm booster', '1301002_Spear_Booster', '1301003_Polearm_Booster'],
-  '终极剑/斧': ['final attack', '1101000_Final_Attack_Sword', '1101001_Final_Attack_Axe'],
-  '极限防御': ['iron will', 'hyper body', '1301004_Iron_Will', '1301005_Hyper_Body'],
   '魔力弹': ['energy bolt', '2001002_Energy_Bolt'],
   '提高 MP 恢复': ['improved mp recovery', '2000000_Improved_MP_Recovery'],
   '提高 MP 上限': ['max mp increase', '2000001_Max_MP_Increase'],
   '魔法双击': ['magic claw', '2001003_Magic_Claw'],
   '魔法盾': ['magic guard', '2001000_Magic_Guard'],
   '魔法铠甲': ['magic armor', '2001001_Magic_Armor'],
-  '火箭术': ['fire arrow', '2101003_Fire_Arrow'],
-  '毒雾': ['poison breath', '2101004_Poison_Breath'],
-  '精神力': ['meditation', '2101000_Meditation', '2201000_Meditation'],
-  '冰冻术': ['cold beam', '2201003_Cold_Beam'],
-  '雷电术': ['thunder bolt', '2201004_Thunder_Bolt'],
-  '治愈术': ['heal', '2301001_Heal'],
-  '祝福': ['bless', '2301003_Bless'],
   '精准箭': ['critical shot', '3000000_Critical_Shot'],
   '强力箭': ['critical shot', '3000000_Critical_Shot'],
   '远程箭': ['eye of amazon', '3000002_The_Eye_of_Amazon'],
   '集中术': ['focus', '3001000_Focus'],
   '断魂箭': ['arrow blow', '3001001_Arrow_Blow'],
-  '精准弓': ['bow mastery', '3100000_Bow_Mastery'],
-  '快速弓': ['bow booster', '3101001_Bow_Booster'],
-  '终极弓': ['final attack bow', '3101000_Final_Attack_Bow'],
-  '爆炸箭': ['arrow bomb bow', '3101004_Arrow_Bomb_Bow'],
-  '精准弩': ['crossbow mastery', '3200000_Crossbow_Mastery'],
-  '快速弩': ['crossbow booster', '3201001_Crossbow_Booster'],
-  '终极弩': ['final attack crossbow', '3201000_Final_Attack_Crossbow'],
-  '穿透箭': ['iron arrow crossbow', '3201004_Iron_Arrow_Crossbow'],
   '双飞斩': ['lucky seven', '4001003_Lucky_Seven'],
   '劈空斩': ['double stab', '4001002_Double_Stab'],
   '远程暗器': ['keen eyes', '4000001_Keen_Eyes'],
   '诅咒术': ['disorder', '4001000_Disorder'],
   '隐身': ['dark sight', '4001001_Dark_Sight'],
+  '剑精通': ['sword mastery', '1100000_Sword_Mastery', '1200000_Sword_Mastery'],
+  '斧精通': ['axe mastery', '1100001_Axe_Mastery'],
+  '钝器精通': ['blunt weapon mastery', '1200001_Blunt_Weapon_Mastery'],
+  '枪精通': ['spear mastery', '1300000_Spear_Mastery'],
+  '矛精通': ['polearm mastery', '1300001_Polearm_Mastery'],
+  '终极剑': ['final attack sword', '1101000_Final_Attack_Sword', '1201000_Final_Attack_Sword'],
+  '终极斧': ['final attack axe', '1101001_Final_Attack_Axe'],
+  '终极钝器': ['final attack blunt weapon', '1201001_Final_Attack_Blunt_Weapon'],
+  '终极枪': ['final attack spear', '1301000_Final_Attack_Spear'],
+  '终极矛': ['final attack polearm', '1301001_Final_Attack_Polearm'],
+  '剑加速': ['sword booster', '1101002_Sword_Booster', '1201002_Sword_Booster'],
+  '斧加速': ['axe booster', '1101003_Axe_Booster'],
+  '钝器加速': ['blunt weapon booster', '1201003_Blunt_Weapon_Booster'],
+  '枪加速': ['spear booster', '1301002_Spear_Booster'],
+  '矛加速': ['polearm booster', '1301003_Polearm_Booster'],
+  '愤怒': ['rage', '1101004_Rage'],
+  '伤害反击': ['power guard', '1101005_Power_Guard', '1201005_Power_Guard'],
+  '压制术': ['threaten', '1201004_Threaten'],
+  '钢铁意志': ['iron will', '1301004_Iron_Will'],
+  '神圣之火': ['hyper body', '1301005_Hyper_Body'],
+  'MP 吸收': ['mp eater', '2100000_MP_Eater', '2200000_MP_Eater', '2300000_MP_Eater'],
+  '精神力': ['meditation', '2101000_Meditation', '2201000_Meditation'],
+  '瞬间移动': ['teleport', '2101001_Teleport', '2201001_Teleport', '2301000_Teleport'],
+  '缓速术': ['slow', '2101002_Slow', '2201002_Slow'],
+  '火箭术': ['fire arrow', '2101003_Fire_Arrow'],
+  '毒雾': ['poison breath', '2101004_Poison_Breath'],
+  '冰冻术': ['cold beam', '2201003_Cold_Beam'],
+  '雷电术': ['thunder bolt', '2201004_Thunder_Bolt'],
+  '治愈术': ['heal', '2301001_Heal'],
+  '神之保护': ['invincible', '2301002_Invincible'],
+  '祝福': ['bless', '2301003_Bless'],
+  '圣箭术': ['holy arrow', '2301004_Holy_Arrow'],
+  '弓精通': ['bow mastery', '3100000_Bow_Mastery'],
+  '终极弓': ['final attack bow', '3101000_Final_Attack_Bow'],
+  '弓加速': ['bow booster', '3101001_Bow_Booster'],
+  '强弓': ['power knockback', '3101002_Power_Knockback'],
+  '无形箭': ['soul arrow bow', '3101003_Soul_Arrow_Bow'],
+  '爆炸箭': ['arrow bomb bow', '3101004_Arrow_Bomb_Bow'],
+  '弩精通': ['crossbow mastery', '3200000_Crossbow_Mastery'],
+  '终极弩': ['final attack crossbow', '3201000_Final_Attack_Crossbow'],
+  '弩加速': ['crossbow booster', '3201001_Crossbow_Booster'],
+  '强弩': ['power knockback', '3201002_Power_Knockback'],
+  '无形弩': ['soul arrow crossbow', '3201003_Soul_Arrow_Crossbow'],
+  '穿透箭': ['iron arrow crossbow', '3201004_Iron_Arrow_Crossbow'],
   '精准暗器': ['claw mastery', '4100000_Claw_Mastery'],
   '强力投掷': ['critical throw', '4100001_Critical_Throw'],
+  '恢复术': ['critical recovery', 'nimble recovery', '4100002_Critical_Recovery', '4200001_Nimble_Recovery'],
   '快速暗器': ['claw booster', '4101000_Claw_Booster'],
   '轻功': ['haste', '4101001_Haste', '4201001_Haste'],
+  '吸血': ['drain', '4101002_Drain'],
   '精准短刀': ['dagger mastery', '4200000_Dagger_Mastery'],
   '快速短刀': ['dagger booster', '4201000_Dagger_Booster'],
+  '偷窃': ['steal', '4201002_Steal'],
   '回旋斩': ['savage blow', '4201003_Savage_Blow'],
 };
 
-const LOCAL_SKILL_ICON_BY_NAME = {
+const FALLBACK_ICON_BY_NAME = {
   '强力攻击': 'icons/skill/1st_Job/Warrior/1001001_Power_Strike.png',
   '群体攻击': 'icons/skill/1st_Job/Warrior/1001002_Slash_Blast.png',
   '提高 HP 恢复': 'icons/skill/1st_Job/Warrior/1000000_Improved_HP_Recovery.png',
   '提高 HP 上限': 'icons/skill/1st_Job/Warrior/1000001_Max_HP_Increase.png',
   '精准打击': 'icons/skill/1st_Job/Warrior/1000002_Precise_Strikes.png',
-  '精准剑/斧': ['icons/skill/2nd_Job/Fighter/1100000_Sword_Mastery.png', 'icons/skill/2nd_Job/Fighter/1100001_Axe_Mastery.png'],
-  '精准钝器/剑': ['icons/skill/2nd_Job/Page/1200000_Sword_Mastery.png', 'icons/skill/2nd_Job/Page/1200001_Blunt_Weapon_Mastery.png'],
-  '精准枪/矛': ['icons/skill/2nd_Job/Spearman/1300000_Spear_Mastery.png', 'icons/skill/2nd_Job/Spearman/1300001_Polearm_Mastery.png'],
-  '快速武器': ['icons/skill/2nd_Job/Fighter/1101002_Sword_Booster.png', 'icons/skill/2nd_Job/Fighter/1101003_Axe_Booster.png'],
-  '快速枪/矛': ['icons/skill/2nd_Job/Spearman/1301002_Spear_Booster.png', 'icons/skill/2nd_Job/Spearman/1301003_Polearm_Booster.png'],
-  '终极剑/斧': ['icons/skill/2nd_Job/Fighter/1101000_Final_Attack_Sword.png', 'icons/skill/2nd_Job/Fighter/1101001_Final_Attack_Axe.png'],
-  '极限防御': ['icons/skill/2nd_Job/Spearman/1301004_Iron_Will.png', 'icons/skill/2nd_Job/Spearman/1301005_Hyper_Body.png'],
   '魔力弹': 'icons/skill/1st_Job/Magician/2001002_Energy_Bolt.png',
   '提高 MP 恢复': 'icons/skill/1st_Job/Magician/2000000_Improved_MP_Recovery.png',
   '提高 MP 上限': 'icons/skill/1st_Job/Magician/2000001_Max_MP_Increase.png',
   '魔法双击': 'icons/skill/1st_Job/Magician/2001003_Magic_Claw.png',
   '魔法盾': 'icons/skill/1st_Job/Magician/2001000_Magic_Guard.png',
   '魔法铠甲': 'icons/skill/1st_Job/Magician/2001001_Magic_Armor.png',
-  '火箭术': 'icons/skill/2nd_Job/FP_Wizard/2101003_Fire_Arrow.png',
-  '毒雾': 'icons/skill/2nd_Job/FP_Wizard/2101004_Poison_Breath.png',
-  '精神力': ['icons/skill/2nd_Job/FP_Wizard/2101000_Meditation.png', 'icons/skill/2nd_Job/IL_Wizard/2201000_Meditation.png'],
-  '冰冻术': 'icons/skill/2nd_Job/IL_Wizard/2201003_Cold_Beam.png',
-  '雷电术': 'icons/skill/2nd_Job/IL_Wizard/2201004_Thunder_Bolt.png',
-  '治愈术': 'icons/skill/2nd_Job/Cleric/2301001_Heal.png',
-  '祝福': 'icons/skill/2nd_Job/Cleric/2301003_Bless.png',
   '精准箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
   '强力箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
   '远程箭': 'icons/skill/1st_Job/Archer/3000002_The_Eye_of_Amazon.png',
   '集中术': 'icons/skill/1st_Job/Archer/3001000_Focus.png',
   '断魂箭': 'icons/skill/1st_Job/Archer/3001001_Arrow_Blow.png',
-  '精准弓': 'icons/skill/2nd_Job/Hunter/3100000_Bow_Mastery.png',
-  '快速弓': 'icons/skill/2nd_Job/Hunter/3101001_Bow_Booster.png',
-  '终极弓': 'icons/skill/2nd_Job/Hunter/3101000_Final_Attack_Bow.png',
-  '爆炸箭': 'icons/skill/2nd_Job/Hunter/3101004_Arrow_Bomb_Bow.png',
-  '精准弩': 'icons/skill/2nd_Job/Crossbowman/3200000_Crossbow_Mastery.png',
-  '快速弩': 'icons/skill/2nd_Job/Crossbowman/3201001_Crossbow_Booster.png',
-  '终极弩': 'icons/skill/2nd_Job/Crossbowman/3201000_Final_Attack_Crossbow.png',
-  '穿透箭': 'icons/skill/2nd_Job/Crossbowman/3201004_Iron_Arrow_Crossbow.png',
   '双飞斩': 'icons/skill/1st_Job/Theif/4001003_Lucky_Seven.png',
   '劈空斩': 'icons/skill/1st_Job/Theif/4001002_Double_Stab.png',
   '远程暗器': 'icons/skill/1st_Job/Theif/4000001_Keen_Eyes.png',
   '诅咒术': 'icons/skill/1st_Job/Theif/4001000_Disorder.png',
   '隐身': 'icons/skill/1st_Job/Theif/4001001_Dark_Sight.png',
-  '精准暗器': 'icons/skill/2nd_Job/Assassin/4100000_Claw_Mastery.png',
-  '强力投掷': 'icons/skill/2nd_Job/Assassin/4100001_Critical_Throw.png',
-  '快速暗器': 'icons/skill/2nd_Job/Assassin/4101000_Claw_Booster.png',
-  '轻功': ['icons/skill/2nd_Job/Assassin/4101001_Haste.png', 'icons/skill/2nd_Job/Bandit/4201001_Haste.png'],
-  '精准短刀': 'icons/skill/2nd_Job/Bandit/4200000_Dagger_Mastery.png',
-  '快速短刀': 'icons/skill/2nd_Job/Bandit/4201000_Dagger_Booster.png',
-  '回旋斩': 'icons/skill/2nd_Job/Bandit/4201003_Savage_Blow.png',
 };
 
 function unique(values) {
@@ -125,8 +121,14 @@ function getSkillNames(name) {
   return [name, ...(SKILL_ICON_ALIASES[name] ?? [])].filter(Boolean);
 }
 
-function getLocalSkillSources(name) {
-  return unique([LOCAL_SKILL_ICON_BY_NAME[name]].flat().map(publicIconAsset));
+function getSkillSources(name, iconKey = '') {
+  if (name === 'Base Attack' || name === '基础攻击') return [];
+  const names = getSkillNames(name);
+  return unique([
+    publicIconAsset(iconKey),
+    publicIconAsset(FALLBACK_ICON_BY_NAME[name]),
+    ...iconSourcesFromNames(names, SKILL_ICON_FOLDERS),
+  ]);
 }
 
 export default function SkillPanel({
@@ -203,15 +205,6 @@ export default function SkillPanel({
             </div>
           </section>
 
-          <section className="mg-damage-card">
-            <h2>技能伤害</h2>
-            <div className="mg-damage-list">
-              {plan.damageCards.map((card, index) => (
-                <DamageRow key={card.name} card={card} index={index} className={classLine?.id} />
-              ))}
-            </div>
-          </section>
-
           {secondJobSkills.length > 0 && (
             <SkillGroupCard
               title="二转技能"
@@ -224,6 +217,15 @@ export default function SkillPanel({
               className="mg-second-skill-card"
             />
           )}
+
+          <section className="mg-damage-card mg-damage-bottom-card">
+            <h2>技能伤害</h2>
+            <div className="mg-damage-list">
+              {plan.damageCards.map((card, index) => (
+                <DamageRow key={card.name} card={card} index={index} className={classLine?.id} />
+              ))}
+            </div>
+          </section>
         </div>
       </div>
 
@@ -237,20 +239,7 @@ export default function SkillPanel({
   );
 }
 
-function SkillGroupCard({
-  title,
-  kicker,
-  action,
-  onAction,
-  note,
-  remaining,
-  total,
-  skills,
-  plan,
-  onSkillChange,
-  glass = false,
-  className = '',
-}) {
+function SkillGroupCard({ title, kicker, action, onAction, note, remaining, total, skills, plan, onSkillChange, glass = false, className = '' }) {
   const cardClass = [glass ? 'mg-glass-panel mg-sp-panel' : 'mg-skill-side-card', className].filter(Boolean).join(' ');
 
   return (
@@ -319,7 +308,7 @@ function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus }) {
   const rowClass = ['mg-skill-row', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
   return (
     <article className={rowClass}>
-      <SkillBadge name={skill.name} />
+      <SkillBadge name={skill.name} iconKey={skill.iconKey} />
       <div className="mg-skill-main">
         <strong>{skill.name}</strong>
         <span>{skill.tierLabel} · Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · [+/-]'}</span>
@@ -335,7 +324,7 @@ function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus }) {
 function DamageRow({ card, index, className }) {
   return (
     <article className="mg-damage-row">
-      <SkillBadge name={card.name} index={index} className={className} compact={card.isBase} />
+      <SkillBadge name={card.name} iconKey={card.iconKey} index={index} className={className} compact={card.isBase} />
       <div>
         <strong>{card.name}</strong>
         <span>{card.isBase ? '普通攻击' : `Lv. ${card.level}/${card.maxLevel} · ${card.role}`}</span>
@@ -345,16 +334,7 @@ function DamageRow({ card, index, className }) {
   );
 }
 
-function getSkillSources(name) {
-  if (name === 'Base Attack' || name === '基础攻击') return [];
-  const names = getSkillNames(name);
-  return unique([
-    ...getLocalSkillSources(name),
-    ...iconSourcesFromNames(names, SKILL_ICON_FOLDERS),
-  ]);
-}
-
-function SkillBadge({ name, compact = false }) {
+function SkillBadge({ name, iconKey = '', compact = false }) {
   const letters = String(name || '?').replace(/\s+/g, '').slice(0, 2);
   const names = getSkillNames(name);
   return (
@@ -363,7 +343,7 @@ function SkillBadge({ name, compact = false }) {
         className="mg-skill-icon-img"
         names={names}
         folders={SKILL_ICON_FOLDERS}
-        sources={getSkillSources(name)}
+        sources={getSkillSources(name, iconKey)}
         alt=""
         debugLabel={`skill:${name}`}
         fallback={<span>{letters}</span>}
