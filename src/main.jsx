@@ -1,10 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.jsx';
+import AppDashboard from './AppDashboard.jsx';
 import './styles.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <AppDashboard />
   </React.StrictMode>,
 );
