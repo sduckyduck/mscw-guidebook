@@ -5,6 +5,24 @@ import '../styles/materials-final-polish.css';
 const BASE_URL = import.meta.env?.BASE_URL || '/';
 const publicAsset = (path) => `${BASE_URL}${String(path).replace(/^\/+/, '')}`;
 
+const PROFESSION_ICON_BY_ID = {
+  smithing: publicAsset('icons/crafting/smithing_icon.png'),
+  weaponcrafting: publicAsset('icons/crafting/weapon_crafting_icon.png'),
+  tailoring: publicAsset('icons/crafting/tailoring_icon.png'),
+  woodcrafting: publicAsset('icons/crafting/woodcrafting_icon.png'),
+  leatherworking: publicAsset('icons/crafting/leatherworking_icon.png'),
+  arcforge: publicAsset('icons/crafting/arcforge_icon.png'),
+};
+
+const TITLE_LABEL_TO_PROFESSION = [
+  ['锻造', 'smithing'],
+  ['武器制作', 'weaponcrafting'],
+  ['裁缝', 'tailoring'],
+  ['木工', 'woodcrafting'],
+  ['皮革', 'leatherworking'],
+  ['炼金', 'arcforge'],
+];
+
 const SPECIAL_MATERIAL_ICONS = [
   {
     key: 'animal-fur-bundle',
@@ -47,6 +65,33 @@ function replaceSpecialMaterialIcons(root) {
   });
 }
 
+function replaceProfessionTitleIcon(root) {
+  if (!root) return;
+
+  const title = root.querySelector('.craft-summary-panel .craft-panel-title h2');
+  const slot = title?.querySelector('.craft-profession-emoji');
+  if (!title || !slot) return;
+
+  const titleText = title.textContent || '';
+  const professionId = TITLE_LABEL_TO_PROFESSION.find(([label]) => titleText.includes(label))?.[1];
+  const src = PROFESSION_ICON_BY_ID[professionId];
+
+  if (!professionId || !src) {
+    slot.dataset.professionIcon = '';
+    slot.innerHTML = '<span class="craft-all-title-mark">全</span>';
+    return;
+  }
+
+  if (slot.dataset.professionIcon === professionId) return;
+  slot.dataset.professionIcon = professionId;
+  slot.innerHTML = `<img class="craft-prof-title-img" src="${src}" alt="" loading="lazy" />`;
+}
+
+function refreshCraftingIcons(root) {
+  replaceSpecialMaterialIcons(root);
+  replaceProfessionTitleIcon(root);
+}
+
 export default function CraftingMaterialsPageFinal() {
   const rootRef = useRef(null);
 
@@ -54,8 +99,8 @@ export default function CraftingMaterialsPageFinal() {
     const root = rootRef.current;
     if (!root) return undefined;
 
-    replaceSpecialMaterialIcons(root);
-    const observer = new MutationObserver(() => replaceSpecialMaterialIcons(root));
+    refreshCraftingIcons(root);
+    const observer = new MutationObserver(() => refreshCraftingIcons(root));
     observer.observe(root, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
   }, []);
