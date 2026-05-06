@@ -37,11 +37,11 @@ function mappedGear(gear) {
       slots.overall = id;
       delete slots.top;
       delete slots.bottom;
-    } else if (['cap', 'top', 'bottom', 'shoes', 'glove', 'cape', 'shield', 'weapon'].includes(slot)) {
+    } else if (['cap', 'top', 'bottom', 'shoes', 'glove', 'cape', 'earring', 'shield', 'weapon'].includes(slot)) {
       slots[slot] = id;
     }
   }
-  return [slots.cap, slots.overall, slots.top, slots.bottom, slots.shoes, slots.glove, slots.cape, slots.shield, slots.weapon].filter(Boolean);
+  return [slots.cap, slots.overall, slots.top, slots.bottom, slots.shoes, slots.glove, slots.cape, slots.earring, slots.shield, slots.weapon].filter(Boolean);
 }
 
 function actionFor(gear) {
