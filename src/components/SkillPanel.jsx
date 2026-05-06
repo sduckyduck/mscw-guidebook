@@ -1,5 +1,5 @@
 import CharacterPreview from './CharacterPreview.jsx';
-import IconFallback, { discoverIconSources, iconSourcesFromNames } from './IconFallback.jsx';
+import IconFallback, { baseUrl, discoverIconSources, iconSourcesFromNames } from './IconFallback.jsx';
 
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
 const SKILL_ICON_FOLDERS = ['icons/skill', 'icons/skills', 'icons'];
@@ -62,14 +62,84 @@ const SKILL_ICON_ALIASES = {
   '回旋斩': ['savage blow', 'savage-blow', '4201003_Savage_Blow'],
 };
 
+const LOCAL_SKILL_ICON_BY_NAME = {
+  '强力攻击': 'icons/skill/1st_Job/Warrior/1001001_Power_Strike.png',
+  '群体攻击': 'icons/skill/1st_Job/Warrior/1001002_Slash_Blast.png',
+  '提高 HP 恢复': 'icons/skill/1st_Job/Warrior/1000000_Improved_HP_Recovery.png',
+  '提高 HP 上限': 'icons/skill/1st_Job/Warrior/1000001_Max_HP_Increase.png',
+  '精准打击': 'icons/skill/1st_Job/Warrior/1000002_Precise_Strikes.png',
+  '精准剑/斧': ['icons/skill/2nd_Job/Fighter/1100000_Sword_Mastery.png', 'icons/skill/2nd_Job/Fighter/1100001_Axe_Mastery.png'],
+  '精准钝器/剑': ['icons/skill/2nd_Job/Page/1200000_Sword_Mastery.png', 'icons/skill/2nd_Job/Page/1200001_Blunt_Weapon_Mastery.png'],
+  '精准枪/矛': ['icons/skill/2nd_Job/Spearman/1300000_Spear_Mastery.png', 'icons/skill/2nd_Job/Spearman/1300001_Polearm_Mastery.png'],
+  '快速武器': ['icons/skill/2nd_Job/Fighter/1101002_Sword_Booster.png', 'icons/skill/2nd_Job/Fighter/1101003_Axe_Booster.png'],
+  '快速枪/矛': ['icons/skill/2nd_Job/Spearman/1301002_Spear_Booster.png', 'icons/skill/2nd_Job/Spearman/1301003_Polearm_Booster.png'],
+  '终极剑/斧': ['icons/skill/2nd_Job/Fighter/1101000_Final_Attack_Sword.png', 'icons/skill/2nd_Job/Fighter/1101001_Final_Attack_Axe.png'],
+  '极限防御': ['icons/skill/2nd_Job/Spearman/1301004_Iron_Will.png', 'icons/skill/2nd_Job/Spearman/1301005_Hyper_Body.png'],
+
+  '魔力弹': 'icons/skill/1st_Job/Magician/2001002_Energy_Bolt.png',
+  '提高 MP 恢复': 'icons/skill/1st_Job/Magician/2000000_Improved_MP_Recovery.png',
+  '提高 MP 上限': 'icons/skill/1st_Job/Magician/2000001_Max_MP_Increase.png',
+  '魔法双击': 'icons/skill/1st_Job/Magician/2001003_Magic_Claw.png',
+  '魔法盾': 'icons/skill/1st_Job/Magician/2001000_Magic_Guard.png',
+  '魔法铠甲': 'icons/skill/1st_Job/Magician/2001001_Magic_Armor.png',
+  '火箭术': 'icons/skill/2nd_Job/FP_Wizard/2101003_Fire_Arrow.png',
+  '毒雾': 'icons/skill/2nd_Job/FP_Wizard/2101004_Poison_Breath.png',
+  '精神力': ['icons/skill/2nd_Job/FP_Wizard/2101000_Meditation.png', 'icons/skill/2nd_Job/IL_Wizard/2201000_Meditation.png'],
+  '冰冻术': 'icons/skill/2nd_Job/IL_Wizard/2201003_Cold_Beam.png',
+  '雷电术': 'icons/skill/2nd_Job/IL_Wizard/2201004_Thunder_Bolt.png',
+  '治愈术': 'icons/skill/2nd_Job/Cleric/2301001_Heal.png',
+  '祝福': 'icons/skill/2nd_Job/Cleric/2301003_Bless.png',
+
+  '精准箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
+  '强力箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
+  '远程箭': 'icons/skill/1st_Job/Archer/3000002_The_Eye_of_Amazon.png',
+  '集中术': 'icons/skill/1st_Job/Archer/3001000_Focus.png',
+  '断魂箭': 'icons/skill/1st_Job/Archer/3001001_Arrow_Blow.png',
+  '精准弓': 'icons/skill/2nd_Job/Hunter/3100000_Bow_Mastery.png',
+  '快速弓': 'icons/skill/2nd_Job/Hunter/3101001_Bow_Booster.png',
+  '终极弓': 'icons/skill/2nd_Job/Hunter/3101000_Final_Attack_Bow.png',
+  '爆炸箭': 'icons/skill/2nd_Job/Hunter/3101004_Arrow_Bomb_Bow.png',
+  '精准弩': 'icons/skill/2nd_Job/Crossbowman/3200000_Crossbow_Mastery.png',
+  '快速弩': 'icons/skill/2nd_Job/Crossbowman/3201001_Crossbow_Booster.png',
+  '终极弩': 'icons/skill/2nd_Job/Crossbowman/3201000_Final_Attack_Crossbow.png',
+  '穿透箭': 'icons/skill/2nd_Job/Crossbowman/3201004_Iron_Arrow_Crossbow.png',
+
+  '双飞斩': 'icons/skill/1st_Job/Theif/4001003_Lucky_Seven.png',
+  '劈空斩': 'icons/skill/1st_Job/Theif/4001002_Double_Stab.png',
+  '远程暗器': 'icons/skill/1st_Job/Theif/4000001_Keen_Eyes.png',
+  '诅咒术': 'icons/skill/1st_Job/Theif/4001000_Disorder.png',
+  '隐身': 'icons/skill/1st_Job/Theif/4001001_Dark_Sight.png',
+  '精准暗器': 'icons/skill/2nd_Job/Assassin/4100000_Claw_Mastery.png',
+  '强力投掷': 'icons/skill/2nd_Job/Assassin/4100001_Critical_Throw.png',
+  '快速暗器': 'icons/skill/2nd_Job/Assassin/4101000_Claw_Booster.png',
+  '轻功': ['icons/skill/2nd_Job/Assassin/4101001_Haste.png', 'icons/skill/2nd_Job/Bandit/4201001_Haste.png'],
+  '精准短刀': 'icons/skill/2nd_Job/Bandit/4200000_Dagger_Mastery.png',
+  '快速短刀': 'icons/skill/2nd_Job/Bandit/4201000_Dagger_Booster.png',
+  '回旋斩': 'icons/skill/2nd_Job/Bandit/4201003_Savage_Blow.png',
+};
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function publicIconAsset(path) {
+  if (!path) return '';
+  return `${baseUrl()}${String(path).replace(/^\/+/, '')}`;
+}
+
 function getSkillNames(name) {
   return [name, ...(SKILL_ICON_ALIASES[name] ?? [])].filter(Boolean);
+}
+
+function getLocalSkillSources(name) {
+  return unique([LOCAL_SKILL_ICON_BY_NAME[name]].flat().map(publicIconAsset));
 }
 
 function installSkillIconDebugger() {
   if (typeof window === 'undefined' || window.MSCWSkills) return;
   window.MSCWSkills = {
     aliases: SKILL_ICON_ALIASES,
+    local: LOCAL_SKILL_ICON_BY_NAME,
     names: getSkillNames,
     find: async (name) => {
       const names = getSkillNames(name);
@@ -81,8 +151,9 @@ function installSkillIconDebugger() {
     test: async (name) => {
       const names = getSkillNames(name);
       const guessed = iconSourcesFromNames(names, SKILL_ICON_FOLDERS);
+      const local = getLocalSkillSources(name);
       const discovered = await discoverIconSources(names, SKILL_ICON_FOLDERS, { limit: 20 });
-      const all = [...new Set([...discovered, ...guessed])];
+      const all = unique([...local, ...guessed, ...discovered]);
       const checks = await Promise.all(all.map(async (url) => {
         try {
           const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
@@ -96,7 +167,7 @@ function installSkillIconDebugger() {
       return checks;
     },
   };
-  console.info('MSCW skill debug ready. Try: await MSCWSkills.find("魔法双击"), await MSCWSkills.test("提高 MP 上限")');
+  console.info('MSCW skill debug ready. Try: await MSCWSkills.test("魔法双击"), await MSCWSkills.test("提高 MP 上限")');
 }
 
 installSkillIconDebugger();
@@ -247,7 +318,7 @@ function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus }) {
 function DamageRow({ card, index, className }) {
   return (
     <article className="mg-damage-row">
-      <SkillBadge name={card.name} index={index} className={className} />
+      <SkillBadge name={card.name} index={index} className={className} compact={card.isBase} />
       <div>
         <strong>{card.name}</strong>
         <span>{card.isBase ? '普通攻击' : `Lv. ${card.level}/${card.maxLevel} · ${card.role}`}</span>
@@ -258,15 +329,19 @@ function DamageRow({ card, index, className }) {
 }
 
 function getSkillSources(name) {
+  if (name === 'Base Attack' || name === '基础攻击') return [];
   const names = getSkillNames(name);
-  return iconSourcesFromNames(names, SKILL_ICON_FOLDERS);
+  return unique([
+    ...getLocalSkillSources(name),
+    ...iconSourcesFromNames(names, SKILL_ICON_FOLDERS),
+  ]);
 }
 
-function SkillBadge({ name }) {
+function SkillBadge({ name, compact = false }) {
   const letters = String(name || '?').replace(/\s+/g, '').slice(0, 2);
   const names = getSkillNames(name);
   return (
-    <div className="mg-skill-badge">
+    <div className={compact ? 'mg-skill-badge neutral' : 'mg-skill-badge'}>
       <IconFallback
         className="mg-skill-icon-img"
         names={names}
