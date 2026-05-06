@@ -2,7 +2,7 @@ const JOB_BITS = { warrior: 1, magician: 2, bowman: 4, thief: 8, pirate: 16 };
 const JOB_LABEL = { warrior: 'Warrior', magician: 'Mage', bowman: 'Bowman', thief: 'Thief', pirate: 'Pirate' };
 
 const BRANCH_POLICIES = {
-  fighter: { weapons: ['2h sword', '2h axe'], shield: 'never' },
+  fighter: { weapons: ['2h sword', '2h axe', '1h sword'], shield: 'never' },
   page: { weapons: ['1h sword', '1h blunt weapon'], shield: 'required' },
   spearman: { weapons: ['spear', 'pole arm'], shield: 'never' },
   magician: { weapons: ['wand', 'staff'], shield: 'oneHandOnly' },
@@ -15,14 +15,14 @@ const BRANCH_POLICIES = {
   bandit: { weapons: ['dagger'], shield: 'required' },
   brawler: { weapons: ['knuckle'], shield: 'never' },
   gunslinger: { weapons: ['gun'], shield: 'never' },
-  warrior: { weapons: ['2h sword', '2h axe', 'spear', 'pole arm'], shield: 'never' },
+  warrior: { weapons: ['1h sword', '2h sword', '2h axe', 'spear', 'pole arm'], shield: 'never' },
   bowman: { weapons: ['bow'], shield: 'never' },
   thief: { weapons: ['dagger', 'claw'], shield: 'auto' },
   pirate: { weapons: ['gun', 'knuckle'], shield: 'never' },
 };
 
 const CLASS_POLICIES = {
-  warrior: { weapons: ['2h sword', '2h axe', 'spear', 'pole arm'], shield: 'never' },
+  warrior: { weapons: ['1h sword', '2h sword', '2h axe', 'spear', 'pole arm'], shield: 'never' },
   magician: { weapons: ['wand', 'staff'], shield: 'oneHandOnly' },
   bowman: { weapons: ['bow', 'crossbow'], shield: 'never' },
   thief: { weapons: ['dagger', 'claw'], shield: 'auto' },
@@ -62,19 +62,45 @@ export const SLOT_LABELS = {
   shoes: '鞋子', glove: '手套', shield: '盾牌', cape: '披风', earring: '耳环',
 };
 
+const CORE_EARLY_SLOTS = new Set(['weapon', 'cap', 'overall', 'top', 'bottom', 'shoes']);
+const EARLY_GEAR_LEVEL_CUTOFF = 20;
+const STARTER_REQ_LEVEL_MAX = 10;
 const BANNED_NAME_PATTERN = /\b(gm|admin|administrator|test|tester|beginner gm|maple admin|event|cash|nx|donor|vip|wedding|birthday|anniversary|invincible|wizet|nemi|inkwell|dr\. lim|lim hat|staff|developer|manager)\b/i;
 const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume|transparent|invisible)\b/i;
 const BANNED_WEAPON_NAMES = /\b(umbrella|snowboard|surfboard|flag|balloon|rose|bouquet|lollipop|fan|tube|briefcase|purse|shovel|plunger|sake bottle|red whip)\b/i;
 
+const STARTER_FALLBACKS = {
+  male: {
+    cap: { id: '1002019', name: 'Black Headband', slot: 'cap', reqLevel: 0 },
+    top: { id: '1040002', name: 'White Undershirt', slot: 'top', reqLevel: 0 },
+    bottom: { id: '1060002', name: 'Blue Jean Shorts', slot: 'bottom', reqLevel: 0 },
+    shoes: { id: '1072001', name: 'Brown Hard Leather Boots', slot: 'shoes', reqLevel: 0 },
+  },
+  female: {
+    cap: { id: '1002019', name: 'Black Headband', slot: 'cap', reqLevel: 0 },
+    top: { id: '1041002', name: 'Orange Sporty T-Shirt', slot: 'top', reqLevel: 0 },
+    bottom: { id: '1061002', name: 'Red Mini Skirt', slot: 'bottom', reqLevel: 0 },
+    shoes: { id: '1072001', name: 'Brown Hard Leather Boots', slot: 'shoes', reqLevel: 0 },
+  },
+};
+
+const STARTER_WEAPON_FALLBACKS = {
+  warrior: { id: '1302000', name: "Beginner's Sword", weaponType: '1h sword', weapon_type: '1h Sword', incPAD: 17, reqLevel: 0 },
+  magician: { id: '1372005', name: "Beginner's Wooden Wand", weaponType: 'wand', weapon_type: 'Wand', incMAD: 15, reqLevel: 0 },
+  bowman: { id: '1452002', name: 'War Bow', weaponType: 'bow', weapon_type: 'Bow', incPAD: 20, reqLevel: 10 },
+  thief: { id: '1472000', name: 'Garnier', weaponType: 'claw', weapon_type: 'Claw', incPAD: 12, reqLevel: 10 },
+  pirate: { id: '1492000', name: 'Pistol', weaponType: 'gun', weapon_type: 'Gun', incPAD: 12, reqLevel: 10 },
+};
+
 export function selectGear({ classLine, branch, level, budget, gender, statPlan, items }) {
-  // Auto recommendation keeps the budget profile restrictions. Manual picker does not.
   const bySlot = getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items, manualMode: false });
   const weapon = bySlot.weapon?.[0];
   const policy = getPolicy(classLine, branch);
+  const useOverall = Boolean(bySlot.overall?.[0]) && !(bySlot.top?.[0] && bySlot.bottom?.[0] && Number(level) <= EARLY_GEAR_LEVEL_CUTOFF);
   const ordered = [
     bySlot.cap?.[0],
-    bySlot.overall?.[0] || bySlot.top?.[0],
-    bySlot.overall?.[0] ? null : bySlot.bottom?.[0],
+    useOverall ? bySlot.overall?.[0] : bySlot.top?.[0],
+    useOverall ? null : bySlot.bottom?.[0],
     bySlot.shoes?.[0],
     bySlot.glove?.[0],
     bySlot.cape?.[0],
@@ -86,10 +112,11 @@ export function selectGear({ classLine, branch, level, budget, gender, statPlan,
 }
 
 export function getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items, manualMode = false }) {
-  if (!items?.length) return {};
+  if (!items?.length) return getStarterFallbackBySlot({ classLine, branch, level, gender });
   const policy = getPolicy(classLine, branch);
   const profile = getBudgetGearProfile(budget);
   const candidates = getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items, manualMode });
+  const starterCandidates = getStarterCandidates({ classLine, branch, level, gender, statPlan, items });
   const scoreBudget = manualMode ? 'high' : budget;
   const sort = (list) => list
     .map((item) => toGear(item, classLine))
@@ -114,6 +141,16 @@ export function getGearCandidatesBySlot({ classLine, branch, level, budget, gend
     shield: sort(candidates.filter((item) => item.slot === 'shield' && (isClassSpecific(item, classLine) || isAllJob(item)))),
   };
 
+  if (Number(level) <= EARLY_GEAR_LEVEL_CUTOFF) {
+    const starterFallback = getStarterFallbackBySlot({ classLine, branch, level, gender });
+    for (const slot of CORE_EARLY_SLOTS) {
+      if (!output[slot]?.length) {
+        const starterPool = starterCandidates.filter((item) => item.slot === slot && (slot !== 'weapon' || weaponMatchesPolicy(item, policy)));
+        output[slot] = sort(starterPool.length ? starterPool : (starterFallback[slot] ?? []));
+      }
+    }
+  }
+
   if (!shouldUseShield(policy, branch, output.weapon?.[0])) output.shield = [];
   return output;
 }
@@ -129,9 +166,6 @@ export function applyGearOverrides(baseGear, overrides = {}) {
     }
   });
 
-  // Explicit user selections must win over the auto-recommended base outfit.
-  // Previously, a recommended overall in baseGear deleted a user-selected top/bottom
-  // before the top/bottom override had a chance to remove the overall.
   if (explicitSlots.has('overall')) {
     delete bySlot.top;
     delete bySlot.bottom;
@@ -160,10 +194,36 @@ function getBaseCandidates({ classLine, branch, level, budget, gender, statPlan,
     .filter((item) => manualMode || budgetAllowsSlot(item.slot, profile, level, policy))
     .filter((item) => Number(item.reqLevel ?? 0) <= (manualMode ? maxReqLevel : maxReqLevelForBudget(item.slot, level, profile)))
     .filter((item) => !isBannedOrSpecial(item))
-    .filter((item) => Number(item.reqLevel ?? 0) > 0)
+    .filter((item) => Number(item.reqLevel ?? 0) > 0 || isStarterGear(item))
     .filter((item) => jobMatches(item, classLine))
     .filter((item) => statRequirementsMet(item, statPlan))
     .filter((item) => genderMatches(item, gender));
+}
+
+function getStarterCandidates({ classLine, level, gender, statPlan, items }) {
+  if (Number(level) > EARLY_GEAR_LEVEL_CUTOFF) return [];
+  return items
+    .filter((item) => item.category === 'Equipment')
+    .map((item) => ({ ...item, slot: detectSlot(item), visualGender: detectVisualGender(item) }))
+    .filter((item) => CORE_EARLY_SLOTS.has(item.slot))
+    .filter((item) => Number(item.reqLevel ?? 0) <= STARTER_REQ_LEVEL_MAX)
+    .filter((item) => !isHardBanned(item))
+    .filter((item) => jobMatches(item, classLine))
+    .filter((item) => statRequirementsMet(item, statPlan))
+    .filter((item) => genderMatches(item, gender));
+}
+
+function getStarterFallbackBySlot({ classLine, level, gender }) {
+  if (Number(level) > EARLY_GEAR_LEVEL_CUTOFF) return {};
+  const outfit = STARTER_FALLBACKS[gender] ?? STARTER_FALLBACKS.female;
+  const weapon = STARTER_WEAPON_FALLBACKS[classLine?.id] ?? STARTER_WEAPON_FALLBACKS.warrior;
+  const base = { category: 'Equipment', reqJobLabel: 'All', reqJob: 0, price: 0, stats: {}, visualGender: 'unisex' };
+  const result = {};
+  [...Object.values(outfit), { ...weapon, slot: 'weapon' }].forEach((item) => {
+    const normalized = { ...base, ...item, title: item.name, thumbnail: item.thumbnail, visualGender: item.slot === 'top' || item.slot === 'bottom' ? gender : 'unisex' };
+    result[item.slot] = [normalized];
+  });
+  return result;
 }
 
 function slotClassItems(candidates, slot, classLine) {
@@ -185,7 +245,11 @@ function maxReqLevelForBudget(slot, level, profile) {
   const numericLevel = Number(level) || 1;
   const lag = Number(profile.slotLevelLag?.[slot] ?? 0);
   const minAllowed = Number(profile.minMaxReqLevel?.[slot] ?? 1);
-  return Math.max(1, Math.min(numericLevel + 2, Math.max(minAllowed, numericLevel - lag)));
+  const profileCap = Math.max(1, Math.min(numericLevel + 2, Math.max(minAllowed, numericLevel - lag)));
+  if (numericLevel <= EARLY_GEAR_LEVEL_CUTOFF && CORE_EARLY_SLOTS.has(slot)) {
+    return Math.max(profileCap, Math.min(STARTER_REQ_LEVEL_MAX, numericLevel));
+  }
+  return profileCap;
 }
 
 function getPolicy(classLine, branch) {
@@ -214,15 +278,27 @@ function detectVisualGender(item) {
 }
 
 function isBannedOrSpecial(item) {
+  if (isStarterGear(item)) return false;
+  if (isHardBanned(item)) return true;
+  if (Number(item.reqLevel ?? 0) >= 200) return true;
+  if (Number(item.reqLevel ?? 0) <= 0) return true;
+  if (Number(item.price ?? 0) === 1 && !hasAnyStatOrAttack(item)) return true;
+  return false;
+}
+
+function isStarterGear(item) {
+  return CORE_EARLY_SLOTS.has(item.slot)
+    && Number(item.reqLevel ?? 0) <= STARTER_REQ_LEVEL_MAX
+    && !isHardBanned(item);
+}
+
+function isHardBanned(item) {
   const name = String(item.name ?? item.title ?? '');
   const description = String(item.description ?? '');
   const text = `${name} ${description}`;
   if (BANNED_NAME_PATTERN.test(text)) return true;
   if (item.slot === 'weapon' && isBannedWeaponName(item)) return true;
   if (item.slot !== 'weapon' && BANNED_SLOT_NAMES.test(text)) return true;
-  if (Number(item.reqLevel ?? 0) >= 200) return true;
-  if (Number(item.reqLevel ?? 0) <= 0) return true;
-  if (Number(item.price ?? 0) === 1 && !hasAnyStatOrAttack(item)) return true;
   return false;
 }
 
@@ -291,14 +367,15 @@ function gearScore(item, classLine, budget, level) {
   const attack = classLine.id === 'magician'
     ? Number(item.incMAD ?? 0) * 3 + Number(item.incPAD ?? 0) * 0.25
     : Number(item.incPAD ?? 0) * 3 + Number(item.incMAD ?? 0) * 0.25;
-  const primary = Number(item.stats?.[`inc${classLine.primaryStat}`] ?? 0) * 5;
-  const secondary = Number(item.stats?.[`inc${classLine.secondaryStat}`] ?? 0) * 2;
-  const acc = Number(item.incACC ?? 0) * 2;
+  const primary = Number(item.stats?.[`inc${classLine.primaryStat}`] ?? item[`inc${classLine.primaryStat}`] ?? 0) * 5;
+  const secondary = Number(item.stats?.[`inc${classLine.secondaryStat}`] ?? item[`inc${classLine.secondaryStat}`] ?? 0) * 2;
+  const acc = Number(item.incACC ?? item.stats?.incACC ?? 0) * 2;
   const levelFit = 100 - Math.abs(desiredReqLevel - reqLevel) * 3.8;
   const classBonus = isClassSpecific(item, classLine) ? profile.classBonus : 0;
   const pricePenalty = Math.log10(Math.max(1, Number(item.price ?? 1))) * profile.pricePenalty;
   const overFreshPenalty = Math.max(0, reqLevel - desiredReqLevel) * 8;
-  return attack + primary + secondary + acc + levelFit + classBonus - pricePenalty - overFreshPenalty;
+  const starterBonus = isStarterGear(item) && Number(level) <= EARLY_GEAR_LEVEL_CUTOFF ? 35 : 0;
+  return attack + primary + secondary + acc + levelFit + classBonus + starterBonus - pricePenalty - overFreshPenalty;
 }
 
 function toGear(item, classLine) {
@@ -315,7 +392,7 @@ function toGear(item, classLine) {
     weaponType: item.weapon_type ?? item.weaponType,
     attackSpeed: item.attack_speed_label ?? item.attackSpeed,
     reqJobLabel: item.req_job_label ?? item.reqJobLabel,
-    scoreLabel: item.price ? `${Number(item.price).toLocaleString()} meso` : '无价格数据',
+    scoreLabel: item.price ? `${Number(item.price).toLocaleString()} meso` : '新手/基础装备',
   };
 }
 
