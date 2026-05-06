@@ -34,8 +34,8 @@ export const SLOT_LABELS = {
   shoes: '鞋子', glove: '手套', shield: '盾牌', cape: '披风', earring: '耳环',
 };
 
-const BANNED_NAME_PATTERN = /\b(gm|admin|administrator|test|tester|beginner gm|maple admin|event|cash|nx|donor|vip|wedding|birthday|anniversary)\b/i;
-const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume)\b/i;
+const BANNED_NAME_PATTERN = /\b(gm|admin|administrator|test|tester|beginner gm|maple admin|event|cash|nx|donor|vip|wedding|birthday|anniversary|invincible|wizet|nemi|inkwell|dr\. lim|lim hat|staff|developer|manager)\b/i;
+const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume|transparent|invisible)\b/i;
 const BANNED_WEAPON_NAMES = /\b(umbrella|snowboard|surfboard|flag|balloon|rose|bouquet|lollipop|fan|tube|briefcase|purse|shovel|plunger|sake bottle|red whip)\b/i;
 
 export function selectGear({ classLine, branch, level, budget, gender, statPlan, items }) {
@@ -105,6 +105,7 @@ function getBaseCandidates({ classLine, level, gender, statPlan, items }) {
     .filter((item) => item.slot)
     .filter((item) => !isBannedOrSpecial(item))
     .filter((item) => Number(item.reqLevel ?? 0) <= level + 2)
+    .filter((item) => Number(item.reqLevel ?? 0) > 0)
     .filter((item) => jobMatches(item, classLine))
     .filter((item) => statRequirementsMet(item, statPlan))
     .filter((item) => genderMatches(item, gender));
@@ -147,6 +148,7 @@ function isBannedOrSpecial(item) {
   if (item.slot === 'weapon' && isBannedWeaponName(item)) return true;
   if (item.slot !== 'weapon' && BANNED_SLOT_NAMES.test(text)) return true;
   if (Number(item.reqLevel ?? 0) >= 200) return true;
+  if (Number(item.reqLevel ?? 0) <= 0) return true;
   if (Number(item.price ?? 0) === 1 && !hasAnyStatOrAttack(item)) return true;
   return false;
 }
