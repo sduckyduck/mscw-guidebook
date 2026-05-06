@@ -19,16 +19,8 @@ const JOBS = [['warrior', '战士'], ['magician', '魔法师'], ['bowman', '弓�
 const BUDGETS = [['low', '低资金'], ['mid', '普通'], ['high', '有钱']].map(([id, name]) => ({ id, name }));
 const PRIORITIES = [['stable', '稳定'], ['exp', '经验'], ['material', '材料'], ['meso', '金币']].map(([id, name]) => ({ id, name }));
 const SLOTS = [
-  ['weapon', '武器'],
-  ['cap', '头盔'],
-  ['overall', '套服'],
-  ['top', '上衣'],
-  ['bottom', '下衣'],
-  ['shoes', '鞋子'],
-  ['glove', '手套'],
-  ['shield', '盾牌'],
-  ['cape', '披风'],
-  ['earring', '耳环'],
+  ['weapon', '武器'], ['cap', '头盔'], ['overall', '套服'], ['top', '上衣'], ['bottom', '下衣'],
+  ['shoes', '鞋子'], ['glove', '手套'], ['shield', '盾牌'], ['cape', '披风'], ['earring', '耳环'],
 ];
 const emptyData = { items: [], maps: [], monsters: [], recipes: [], materials: [] };
 const tabIds = new Set(TABS.map(([id]) => id));
@@ -55,7 +47,9 @@ export default function AppMediaEnhanced() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
-  useEffect(() => { loadOfficialGuideData().then(setData).catch((e) => setError(e.message || '官方数据读取失败')); }, []);
+  useEffect(() => {
+    loadOfficialGuideData().then(setData).catch((e) => setError(e.message || '官方数据读取失败'));
+  }, []);
 
   const edition = EDITIONS.find((x) => x.id === editionId) ?? EDITIONS[0];
   const minLevel = edition.minLevel ?? 10;
@@ -95,12 +89,17 @@ export default function AppMediaEnhanced() {
   const chooseGear = (slot, item) => {
     setGearOverrides((old) => {
       const next = { ...old, [slot]: item };
-      if (slot === 'overall') { delete next.top; delete next.bottom; }
+      if (slot === 'overall') {
+        delete next.top;
+        delete next.bottom;
+      }
       if (slot === 'top' || slot === 'bottom') delete next.overall;
       return next;
     });
     setPickerSlot(null);
   };
+
+  const openGearPicker = (slot) => setPickerSlot(slot);
 
   const changeTab = (nextTab) => {
     setTab(nextTab);
@@ -114,17 +113,13 @@ export default function AppMediaEnhanced() {
   const changeAp = (stat, delta) => {
     setApAllocation((current) => adjustPointAllocation(current ?? recommendedApAllocation, stat, delta, statPlan.totalAp));
   };
-
   const resetAp = () => setApAllocation(recommendedApAllocation);
 
   const changeSkill = (name, delta) => {
     const skill = skillPlan.skills.find((item) => item.name === name);
     if (!skill || skill.locked) return;
     const tierTotal = skillPlan.totalSpByTier?.[skill.tier] ?? skillPlan.totalSp;
-    const tierUsed = skillPlan.skills
-      .filter((item) => item.tier === skill.tier)
-      .reduce((sum, item) => sum + item.level, 0);
-
+    const tierUsed = skillPlan.skills.filter((item) => item.tier === skill.tier).reduce((sum, item) => sum + item.level, 0);
     setSkillAllocation((current) => {
       const next = { ...(current ?? recommendedSkillAllocation) };
       const currentValue = Math.max(0, Number(next[name] ?? 0));
@@ -138,13 +133,12 @@ export default function AppMediaEnhanced() {
       return next;
     });
   };
-
   const resetSkills = () => setSkillAllocation(recommendedSkillAllocation);
 
   return <main className="app-shell">
     <nav className="top-tabs">{TABS.map(([id, name]) => <button key={id} className={tab === id ? 'top-tab active' : 'top-tab'} onClick={() => changeTab(id)}>{name}</button>)}</nav>
     {edition.dataMode !== 'official-appdata' && <p className="load-error">国服数据/公式已预留，当前暂不启用真实推荐。</p>}
-    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} weapon={weapon} gear={gear} stats={stats} candidatesBySlot={candidatesBySlot} onPickSlot={setPickerSlot} onOpenMaps={() => changeTab('maps')} />}
+    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} weapon={weapon} gear={gear} stats={stats} candidatesBySlot={candidatesBySlot} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} />}
     {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
     {tab === 'materials' && <MaterialsPage data={activeData} />}
@@ -215,6 +209,13 @@ function getSlotConflict(slot, by) {
   return '';
 }
 
+function getSlotSwapHint(slot, by, hasCandidates) {
+  if (!hasCandidates) return '';
+  if ((slot === 'top' || slot === 'bottom') && by.overall) return `点击换${slot === 'top' ? '上衣' : '下衣'}`;
+  if (slot === 'overall' && (by.top || by.bottom)) return '点击换套服';
+  return '';
+}
+
 function DashboardEquipmentSlots({ gear, candidatesBySlot, onPickSlot }) {
   const by = Object.fromEntries((gear ?? []).map((item) => [item.slot, item]));
   return <section className="mg-equipment-board">
@@ -227,8 +228,10 @@ function DashboardEquipmentSlots({ gear, candidatesBySlot, onPickSlot }) {
         const item = by[slot];
         const conflict = getSlotConflict(slot, by);
         const hasCandidates = Boolean(candidatesBySlot?.[slot]?.length);
-        const displayTitle = (item?.title ?? conflict) || '未装备';
-        return <button className={conflict ? 'mg-equip-tile conflict' : 'mg-equip-tile'} key={slot} onClick={() => onPickSlot(slot)} disabled={!hasCandidates} title={conflict || label}>
+        const swapHint = getSlotSwapHint(slot, by, hasCandidates);
+        const displayTitle = item?.title ?? swapHint ?? conflict ?? '未装备';
+        const className = ['mg-equip-tile', conflict ? 'conflict' : '', swapHint ? 'smart-swap' : ''].filter(Boolean).join(' ');
+        return <button className={className} key={slot} onClick={() => onPickSlot(slot)} disabled={!hasCandidates} title={swapHint || conflict || label}>
           <MsioItemIcon item={item} size={30} />
           <span>{label}</span>
           <strong>{displayTitle}</strong>
@@ -267,12 +270,18 @@ function PreviewPanel({ classLine, gender, level, weapon, gear, stats }) {
 
 function GearPicker({ slot, items, current, onChoose, onClose }) {
   const label = SLOTS.find(([id]) => id === slot)?.[1] ?? slot;
+  const hint = slot === 'overall'
+    ? '选择套服后，会自动脱下当前上衣和下衣。'
+    : (slot === 'top' || slot === 'bottom')
+      ? `选择${label}后，会自动脱下当前套服。`
+      : '';
   return <div className="mg-picker-backdrop" onClick={onClose}>
     <div className="mg-picker-sheet" onClick={(event) => event.stopPropagation()}>
       <div className="mg-picker-head">
         <h2>选择{label}</h2>
         <button onClick={onClose}>关闭</button>
       </div>
+      {hint && <p className="mg-picker-hint">{hint}</p>}
       <div className="mg-picker-list">
         {items.length ? items.map((item) => <button key={`${slot}-${item.id}`} className={current?.id === item.id ? 'mg-picker-item active' : 'mg-picker-item'} onClick={() => onChoose(item)}>
           <MsioItemIcon item={item} size={36} />
@@ -322,13 +331,11 @@ function adjustPointAllocation(current, key, delta, totalPoints, maxForKey = Inf
   const next = { ...(current ?? {}) };
   const used = Object.values(next).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
   const currentValue = Math.max(0, Number(next[key] ?? 0));
-
   if (delta > 0) {
     if (used >= totalPoints || currentValue >= maxForKey) return next;
     next[key] = currentValue + 1;
     return next;
   }
-
   if (currentValue <= 0) return next;
   next[key] = currentValue - 1;
   return next;
