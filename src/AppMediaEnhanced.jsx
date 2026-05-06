@@ -16,8 +16,18 @@ const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'
 const JOBS = [['warrior', '战士'], ['magician', '魔法师'], ['bowman', '弓箭手'], ['thief', '飞侠'], ['pirate', '海盗']].map(([id, name]) => ({ id, name }));
 const BUDGETS = [['low', '低资金'], ['mid', '普通'], ['high', '有钱']].map(([id, name]) => ({ id, name }));
 const PRIORITIES = [['stable', '稳定'], ['exp', '经验'], ['material', '材料'], ['meso', '金币']].map(([id, name]) => ({ id, name }));
-const SLOTS = [['weapon', '武器'], ['cap', '头盔'], ['overall', '套服'], ['top', '上衣'], ['bottom', '裤子'], ['shoes', '鞋子'], ['glove', '手套'], ['shield', '盾牌']];
-const BASE_DASHBOARD_SLOTS = [['weapon', '武器'], ['cap', '头盔'], ['overall', '套服'], ['shoes', '鞋子']];
+const SLOTS = [
+  ['weapon', '武器'],
+  ['cap', '头盔'],
+  ['overall', '套服'],
+  ['top', '上衣'],
+  ['bottom', '下衣'],
+  ['shoes', '鞋子'],
+  ['glove', '手套'],
+  ['shield', '盾牌'],
+  ['cape', '披风'],
+  ['earring', '耳环'],
+];
 const emptyData = { items: [], maps: [], monsters: [], recipes: [], materials: [] };
 
 export default function AppMediaEnhanced() {
@@ -144,26 +154,30 @@ function SelectField({ label, value, onChange, options }) {
   </div>;
 }
 
-function dashboardSlots(gear, candidatesBySlot) {
-  const by = Object.fromEntries((gear ?? []).map((item) => [item.slot, item]));
-  const lastSlot = by.shield || (candidatesBySlot?.shield?.length ?? 0) ? ['shield', '盾牌'] : ['glove', '手套'];
-  return [...BASE_DASHBOARD_SLOTS, lastSlot];
+function getSlotConflict(slot, by) {
+  if ((slot === 'top' || slot === 'bottom') && by.overall) return '套服占用';
+  if (slot === 'overall' && (by.top || by.bottom)) return '上下衣占用';
+  return '';
 }
 
 function DashboardEquipmentSlots({ gear, candidatesBySlot, onPickSlot }) {
   const by = Object.fromEntries((gear ?? []).map((item) => [item.slot, item]));
-  const slots = dashboardSlots(gear, candidatesBySlot);
   return <section className="mg-equipment-board">
     <div className="mg-equipment-head">
       <h2 className="mg-panel-title">装备快捷栏</h2>
       <span>点击更换</span>
     </div>
     <div className="mg-equipment-grid">
-      {slots.map(([slot, label]) => <button className="mg-equip-tile" key={slot} onClick={() => onPickSlot(slot)} disabled={!(candidatesBySlot?.[slot]?.length)}>
-        <MsioItemIcon item={by[slot]} size={30} />
-        <span>{label}</span>
-        <strong>{by[slot]?.title ?? '未装备'}</strong>
-      </button>)}
+      {SLOTS.map(([slot, label]) => {
+        const item = by[slot];
+        const conflict = getSlotConflict(slot, by);
+        const hasCandidates = Boolean(candidatesBySlot?.[slot]?.length);
+        return <button className={conflict ? 'mg-equip-tile conflict' : 'mg-equip-tile'} key={slot} onClick={() => onPickSlot(slot)} disabled={!hasCandidates} title={conflict || label}>
+          <MsioItemIcon item={item} size={30} />
+          <span>{label}</span>
+          <strong>{item?.title ?? conflict || '未装备'}</strong>
+        </button>;
+      })}
     </div>
   </section>;
 }
