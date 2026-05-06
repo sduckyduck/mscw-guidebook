@@ -12,6 +12,7 @@ import { loadOfficialGuideData } from './engine/officialDataAdapter.js';
 import { getApNote, getRecommendedSkillAllocation, getSkillPlan } from './engine/skillPlanner.js';
 import './styles/dashboard.css';
 import './styles/character-dashboard.css';
+import './styles/skill-gating.css';
 
 const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['materials', '材料']];
 const JOBS = [['warrior', '战士'], ['magician', '魔法师'], ['bowman', '弓箭手'], ['thief', '飞侠'], ['pirate', '海盗']].map(([id, name]) => ({ id, name }));
@@ -117,8 +118,25 @@ export default function AppMediaEnhanced() {
   const resetAp = () => setApAllocation(recommendedApAllocation);
 
   const changeSkill = (name, delta) => {
-    const max = skillPlan.skills.find((skill) => skill.name === name)?.max ?? 0;
-    setSkillAllocation((current) => adjustPointAllocation(current ?? recommendedSkillAllocation, name, delta, skillPlan.totalSp, max));
+    const skill = skillPlan.skills.find((item) => item.name === name);
+    if (!skill || skill.locked) return;
+    const tierTotal = skillPlan.totalSpByTier?.[skill.tier] ?? skillPlan.totalSp;
+    const tierUsed = skillPlan.skills
+      .filter((item) => item.tier === skill.tier)
+      .reduce((sum, item) => sum + item.level, 0);
+
+    setSkillAllocation((current) => {
+      const next = { ...(current ?? recommendedSkillAllocation) };
+      const currentValue = Math.max(0, Number(next[name] ?? 0));
+      if (delta > 0) {
+        if (tierUsed >= tierTotal || currentValue >= skill.max) return next;
+        next[name] = currentValue + 1;
+        return next;
+      }
+      if (currentValue <= 0) return next;
+      next[name] = currentValue - 1;
+      return next;
+    });
   };
 
   const resetSkills = () => setSkillAllocation(recommendedSkillAllocation);
