@@ -1,6 +1,62 @@
 import CharacterPreview from './CharacterPreview.jsx';
+import IconFallback, { iconSourcesFromNames } from './IconFallback.jsx';
 
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
+
+const SKILL_ICON_ALIASES = {
+  'Base Attack': ['base attack', 'basic attack', 'attack', 'normal attack', 'sword', 'slash'],
+  '基础攻击': ['base attack', 'basic attack', 'attack', 'normal attack'],
+  '强力攻击': ['power strike', 'power-strike', 'power_strike', 'powerstrike'],
+  '群体攻击': ['slash blast', 'slash-blast', 'slash_blast', 'slashblast'],
+  '提高 HP 恢复': ['improving hp recovery', 'hp recovery', 'hp-recovery'],
+  '提高 HP 上限': ['improving max hp increase', 'max hp', 'max-hp'],
+  '精准打击': ['accuracy', 'precision', 'mastery'],
+  '精准剑/斧': ['sword mastery', 'axe mastery', 'mastery'],
+  '精准钝器/剑': ['sword mastery', 'blunt weapon mastery', 'mastery'],
+  '精准枪/矛': ['spear mastery', 'pole arm mastery', 'mastery'],
+  '快速武器': ['booster', 'weapon booster'],
+  '快速枪/矛': ['spear booster', 'pole arm booster', 'booster'],
+  '终极剑/斧': ['final attack', 'final-attack'],
+  '极限防御': ['iron will', 'hyper body', 'defense'],
+  '魔力弹': ['energy bolt', 'energy-bolt', 'magic bolt'],
+  '提高 MP 恢复': ['improving mp recovery', 'mp recovery', 'mp-recovery'],
+  '提高 MP 上限': ['improving max mp increase', 'max mp', 'max-mp'],
+  '魔法双击': ['magic claw', 'magic-claw'],
+  '魔法盾': ['magic guard', 'magic-guard'],
+  '魔法铠甲': ['magic armor', 'magic-armor'],
+  '火箭术': ['fire arrow', 'fire-arrow', 'fire_arrow'],
+  '毒雾': ['poison brace', 'poison mist', 'poison'],
+  '精神力': ['meditation', 'spell booster', 'focus'],
+  '冰冻术': ['cold beam', 'cold-beam', 'ice strike', 'ice'],
+  '雷电术': ['thunder bolt', 'thunder-bolt', 'thunderbolt', 'lightning'],
+  '治愈术': ['heal', 'healing'],
+  '祝福': ['bless'],
+  '精准箭': ['blessing of amazon', 'amazon eye', 'arrow mastery'],
+  '强力箭': ['critical shot', 'critical-shot', 'powerful arrow'],
+  '远程箭': ['eye of amazon', 'range'],
+  '集中术': ['focus'],
+  '断魂箭': ['arrow blow', 'arrow-blow'],
+  '精准弓': ['bow mastery', 'bow-mastery'],
+  '快速弓': ['bow booster', 'bow-booster'],
+  '终极弓': ['final attack bow', 'final-attack-bow'],
+  '爆炸箭': ['explosion arrow', 'explosive arrow', 'arrow bomb'],
+  '精准弩': ['crossbow mastery', 'crossbow-mastery'],
+  '快速弩': ['crossbow booster', 'crossbow-booster'],
+  '终极弩': ['final attack crossbow', 'final-attack-crossbow'],
+  '穿透箭': ['iron arrow', 'piercing arrow'],
+  '双飞斩': ['lucky seven', 'lucky-seven', 'luckyseven'],
+  '劈空斩': ['double stab', 'double-stab'],
+  '远程暗器': ['keen eyes', 'keen-eyes'],
+  '诅咒术': ['disorder', 'curse'],
+  '隐身': ['dark sight', 'dark-sight'],
+  '精准暗器': ['claw mastery', 'claw-mastery'],
+  '强力投掷': ['critical throw', 'critical-throw'],
+  '快速暗器': ['claw booster', 'claw-booster'],
+  '轻功': ['haste'],
+  '精准短刀': ['dagger mastery', 'dagger-mastery'],
+  '快速短刀': ['dagger booster', 'dagger-booster'],
+  '回旋斩': ['savage blow', 'savage-blow'],
+};
 
 export default function SkillPanel({
   plan,
@@ -158,7 +214,21 @@ function DamageRow({ card, index, className }) {
   );
 }
 
+function getSkillSources(name) {
+  const aliases = SKILL_ICON_ALIASES[name] ?? [];
+  return iconSourcesFromNames([name, ...aliases], ['icons/skills', 'icons/skill', 'icons']);
+}
+
 function SkillBadge({ name, index = 0, className = '' }) {
   const letters = String(name || '?').replace(/\s+/g, '').slice(0, 2);
-  return <div className={`mg-skill-badge ${className} badge-${index % 4}`}><span>{letters}</span></div>;
+  return (
+    <div className={`mg-skill-badge ${className} badge-${index % 4}`}>
+      <IconFallback
+        className="mg-skill-icon-img"
+        sources={getSkillSources(name)}
+        alt=""
+        fallback={<span>{letters}</span>}
+      />
+    </div>
+  );
 }
