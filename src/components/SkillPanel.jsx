@@ -302,7 +302,7 @@ function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus }) {
       <SkillBadge name={skill.name} iconKey={skill.iconKey} />
       <div className="mg-skill-main">
         <strong>{skill.name}</strong>
-        <span>{skill.tierLabel} · Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · [+/-]'}</span>
+        <span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · [+/-]'}</span>
       </div>
       <div className="mg-mini-controls">
         <button onClick={onMinus} disabled={!canMinus}>-</button>
