@@ -264,6 +264,108 @@
   font-weight: 1000;
 }
 
+.mg-overview-damage-card {
+  border-radius: 18px;
+  background: rgba(255,255,255,.96);
+  color: #0f172a;
+  padding: 12px;
+  box-shadow: 0 12px 24px rgba(0,0,0,.1);
+}
+
+.mg-overview-damage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mg-overview-damage-head h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.05;
+  font-weight: 1000;
+}
+
+.mg-overview-damage-head span {
+  color: #667085;
+  font-size: .68rem;
+  font-weight: 1000;
+  white-space: nowrap;
+}
+
+.mg-overview-damage-list {
+  display: grid;
+  gap: 7px;
+}
+
+.mg-overview-damage-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid #e0e5e2;
+  border-radius: 12px;
+  background: #fff;
+  padding: 7px;
+}
+
+.mg-overview-damage-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  overflow: visible;
+}
+
+.mg-overview-damage-img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.mg-overview-damage-icon span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #f8faf9;
+  color: #667085;
+  font-size: .66rem;
+  font-weight: 1000;
+}
+
+.mg-overview-damage-row strong {
+  display: block;
+  color: #0f172a;
+  font-size: .82rem;
+  line-height: 1.08;
+  font-weight: 1000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mg-overview-damage-row span {
+  display: block;
+  margin-top: 1px;
+  color: #667085;
+  font-size: .58rem;
+  font-weight: 900;
+}
+
+.mg-overview-damage-row em {
+  color: #0f172a;
+  font-size: .84rem;
+  font-style: normal;
+  font-weight: 1000;
+  white-space: nowrap;
+}
+
 .mg-equipment-head {
   display: flex;
   align-items: baseline;
@@ -309,6 +411,13 @@
   border-style: dashed;
 }
 
+.mg-equip-tile.smart-swap {
+  opacity: 1;
+  cursor: pointer;
+  background: rgba(218, 247, 240, .86);
+  border-color: rgba(105, 220, 196, .8);
+}
+
 .mg-equip-tile:disabled {
   opacity: .6;
   cursor: default;
@@ -338,6 +447,10 @@
 
 .mg-equip-tile.conflict strong {
   color: #64748b;
+}
+
+.mg-equip-tile.smart-swap strong {
+  color: #0f766e;
 }
 
 .mg-actions {
@@ -417,6 +530,18 @@
   color: #111827;
   padding: 8px 12px;
   font-weight: 1000;
+}
+
+.mg-picker-hint {
+  margin: -4px 0 12px;
+  border: 1px solid #bdece3;
+  border-radius: 12px;
+  background: #ecfffb;
+  color: #0f766e;
+  padding: 9px 10px;
+  font-size: .82rem;
+  line-height: 1.35;
+  font-weight: 900;
 }
 
 .mg-picker-list {
@@ -534,6 +659,19 @@
   .mg-stat-box span { font-size: .46rem; line-height: 1; }
   .mg-stat-box strong { margin-top: 1px; font-size: .82rem; }
   .mg-preview-card .preview-meta { margin-top: 1px; font-size: .58rem; gap: 5px; }
+  .mg-overview-damage-card { padding: 7px; border-radius: 13px; }
+  .mg-overview-damage-head { margin-bottom: 5px; }
+  .mg-overview-damage-head h2 { font-size: .74rem; }
+  .mg-overview-damage-head span { font-size: .46rem; }
+  .mg-overview-damage-list { gap: 4px; }
+  .mg-overview-damage-row { grid-template-columns: 28px minmax(0,1fr) auto; gap: 5px; padding: 5px; border-radius: 9px; }
+  .mg-overview-damage-icon { width: 28px; height: 28px; }
+  .mg-overview-damage-img { width: 24px; height: 24px; }
+  .mg-overview-damage-icon span { width: 23px; height: 23px; font-size: .48rem; }
+  .mg-overview-damage-row strong { font-size: .58rem; }
+  .mg-overview-damage-row span { font-size: .43rem; }
+  .mg-overview-damage-row em { font-size: .56rem; }
+  .mg-picker-hint { font-size: .76rem; }
   .mg-actions { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 7px; margin-top: 8px; }
   .mg-action-small, .mg-action-main { min-height: 36px; border-radius: 12px; }
   .mg-action-small { font-size: .52rem; }
