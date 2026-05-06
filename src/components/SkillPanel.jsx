@@ -217,15 +217,6 @@ export default function SkillPanel({
               className="mg-second-skill-card"
             />
           )}
-
-          <section className="mg-damage-card mg-damage-bottom-card">
-            <h2>技能伤害</h2>
-            <div className="mg-damage-list">
-              {plan.damageCards.map((card, index) => (
-                <DamageRow key={card.name} card={card} index={index} className={classLine?.id} />
-              ))}
-            </div>
-          </section>
         </div>
       </div>
 
@@ -317,19 +308,6 @@ function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus }) {
         <button onClick={onMinus} disabled={!canMinus}>-</button>
         <button onClick={onPlus} disabled={!canPlus}>+</button>
       </div>
-    </article>
-  );
-}
-
-function DamageRow({ card, index, className }) {
-  return (
-    <article className="mg-damage-row">
-      <SkillBadge name={card.name} iconKey={card.iconKey} index={index} className={className} compact={card.isBase} />
-      <div>
-        <strong>{card.name}</strong>
-        <span>{card.isBase ? '普通攻击' : `Lv. ${card.level}/${card.maxLevel} · ${card.role}`}</span>
-      </div>
-      <em>{card.min} - {card.max}</em>
     </article>
   );
 }
