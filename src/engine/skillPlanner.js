@@ -1,3 +1,29 @@
+const skill = (name, max, iconKey = '') => ({ name, max, iconKey });
+
+const FIRST_JOB_ICON = {
+  '强力攻击': 'icons/skill/1st_Job/Warrior/1001001_Power_Strike.png',
+  '群体攻击': 'icons/skill/1st_Job/Warrior/1001002_Slash_Blast.png',
+  '提高 HP 恢复': 'icons/skill/1st_Job/Warrior/1000000_Improved_HP_Recovery.png',
+  '提高 HP 上限': 'icons/skill/1st_Job/Warrior/1000001_Max_HP_Increase.png',
+  '精准打击': 'icons/skill/1st_Job/Warrior/1000002_Precise_Strikes.png',
+  '魔力弹': 'icons/skill/1st_Job/Magician/2001002_Energy_Bolt.png',
+  '提高 MP 恢复': 'icons/skill/1st_Job/Magician/2000000_Improved_MP_Recovery.png',
+  '提高 MP 上限': 'icons/skill/1st_Job/Magician/2000001_Max_MP_Increase.png',
+  '魔法双击': 'icons/skill/1st_Job/Magician/2001003_Magic_Claw.png',
+  '魔法盾': 'icons/skill/1st_Job/Magician/2001000_Magic_Guard.png',
+  '魔法铠甲': 'icons/skill/1st_Job/Magician/2001001_Magic_Armor.png',
+  '精准箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
+  '强力箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
+  '远程箭': 'icons/skill/1st_Job/Archer/3000002_The_Eye_of_Amazon.png',
+  '集中术': 'icons/skill/1st_Job/Archer/3001000_Focus.png',
+  '断魂箭': 'icons/skill/1st_Job/Archer/3001001_Arrow_Blow.png',
+  '双飞斩': 'icons/skill/1st_Job/Theif/4001003_Lucky_Seven.png',
+  '劈空斩': 'icons/skill/1st_Job/Theif/4001002_Double_Stab.png',
+  '远程暗器': 'icons/skill/1st_Job/Theif/4000001_Keen_Eyes.png',
+  '诅咒术': 'icons/skill/1st_Job/Theif/4001000_Disorder.png',
+  '隐身': 'icons/skill/1st_Job/Theif/4001001_Dark_Sight.png',
+};
+
 const PLANS = {
   warrior: {
     default: {
@@ -6,19 +32,19 @@ const PLANS = {
       damage: [{ name: '强力攻击', role: '单体主攻', baseMin: 38, baseMax: 90, scale: 3.4 }, { name: '群体攻击', role: '范围清怪', baseMin: 28, baseMax: 70, scale: 2.7 }],
     },
     fighter: {
-      summary: '二转：精准剑/斧 20 → 快速武器 → 终极剑/斧 → 后续补进阶输出',
-      sequence: [['强力攻击', 20], ['群体攻击', 20], ['精准剑/斧', 20], ['快速武器', 20], ['终极剑/斧', 30]],
-      damage: [{ name: '强力攻击', role: '单体主攻', baseMin: 45, baseMax: 105, scale: 3.8 }, { name: '群体攻击', role: '范围清怪', baseMin: 32, baseMax: 78, scale: 2.9 }],
+      summary: '二转：剑/斧精通、终极攻击、加速、愤怒、伤害反击。',
+      sequence: [],
+      damage: [],
     },
     page: {
-      summary: '二转：精准钝器/剑 → 快速武器 → 属性强化',
-      sequence: [['强力攻击', 20], ['群体攻击', 20], ['精准钝器/剑', 20], ['快速武器', 20], ['属性强化', 30]],
-      damage: [{ name: '强力攻击', role: '单体主攻', baseMin: 42, baseMax: 98, scale: 3.5 }, { name: '群体攻击', role: '范围清怪', baseMin: 30, baseMax: 74, scale: 2.8 }],
+      summary: '二转：剑/钝器精通、终极攻击、加速、压制术、伤害反击。',
+      sequence: [],
+      damage: [],
     },
     spearman: {
-      summary: '二转：精准枪/矛 → 快速枪/矛 → 极限防御',
-      sequence: [['强力攻击', 20], ['群体攻击', 20], ['精准枪/矛', 20], ['快速枪/矛', 20], ['极限防御', 20]],
-      damage: [{ name: '强力攻击', role: '单体主攻', baseMin: 46, baseMax: 108, scale: 3.7 }, { name: '群体攻击', role: '范围清怪', baseMin: 35, baseMax: 86, scale: 3.1 }],
+      summary: '二转：枪/矛精通、终极攻击、加速、钢铁意志、神圣之火。',
+      sequence: [],
+      damage: [],
     },
   },
   magician: {
@@ -28,19 +54,19 @@ const PLANS = {
       damage: [{ name: '魔力弹', role: '前置攻击', baseMin: 22, baseMax: 56, scale: 1.8 }, { name: '魔法双击', role: '单体主攻', baseMin: 50, baseMax: 110, scale: 3.2 }],
     },
     fp: {
-      summary: '二转：火箭术 → 精神力 → 毒雾路线后续补齐',
-      sequence: [['魔法双击', 20], ['提高 MP 上限', 10], ['魔法盾', 20], ['火箭术', 30], ['精神力', 20], ['毒雾', 30]],
+      summary: '二转：MP 吸收、精神力、瞬间移动、缓速术、火箭术、毒雾。',
+      sequence: [],
       damage: [{ name: '火箭术', role: '单体主攻', baseMin: 70, baseMax: 150, scale: 4.0 }, { name: '毒雾', role: '持续输出', baseMin: 32, baseMax: 88, scale: 2.2 }],
     },
     il: {
-      summary: '二转：冰冻术/雷电术，优先控场刷怪',
-      sequence: [['魔法双击', 20], ['提高 MP 上限', 10], ['魔法盾', 20], ['冰冻术', 30], ['雷电术', 30], ['精神力', 20]],
+      summary: '二转：MP 吸收、精神力、瞬间移动、缓速术、冰冻术、雷电术。',
+      sequence: [],
       damage: [{ name: '冰冻术', role: '控场单体', baseMin: 65, baseMax: 138, scale: 3.8 }, { name: '雷电术', role: '范围清怪', baseMin: 45, baseMax: 112, scale: 3.2 }],
     },
     cleric: {
-      summary: '二转：治愈术 30 → 祝福 → 群体治疗刷怪',
-      sequence: [['魔法双击', 20], ['提高 MP 上限', 10], ['魔法盾', 20], ['治愈术', 30], ['祝福', 20]],
-      damage: [{ name: '治愈术', role: '亡灵刷怪/续航', baseMin: 42, baseMax: 118, scale: 3.1 }],
+      summary: '二转：MP 吸收、瞬间移动、治愈术、神之保护、祝福、圣箭术。',
+      sequence: [],
+      damage: [{ name: '治愈术', role: '亡灵刷怪/续航', baseMin: 42, baseMax: 118, scale: 3.1 }, { name: '圣箭术', role: '圣属性单体', baseMin: 48, baseMax: 125, scale: 3.4 }],
     },
   },
   bowman: {
@@ -50,14 +76,14 @@ const PLANS = {
       damage: [{ name: '强力箭', role: '单体主攻', baseMin: 40, baseMax: 102, scale: 3.4 }, { name: '断魂箭', role: '单体攻击', baseMin: 32, baseMax: 86, scale: 2.8 }],
     },
     hunter: {
-      summary: '二转：精准弓 20 → 快速弓 → 终极弓 → 爆炸箭',
-      sequence: [['强力箭', 20], ['精准弓', 20], ['快速弓', 20], ['终极弓', 30], ['爆炸箭', 30]],
-      damage: [{ name: '强力箭', role: '单体主攻', baseMin: 48, baseMax: 125, scale: 3.6 }, { name: '爆炸箭', role: '范围清怪', baseMin: 52, baseMax: 130, scale: 3.5 }],
+      summary: '二转：弓精通、终极弓、弓加速、强弓、无形箭、爆炸箭。',
+      sequence: [],
+      damage: [{ name: '爆炸箭', role: '范围清怪', baseMin: 52, baseMax: 130, scale: 3.5 }],
     },
     crossbowman: {
-      summary: '二转：精准弩 20 → 快速弩 → 终极弩 → 穿透箭',
-      sequence: [['强力箭', 20], ['精准弩', 20], ['快速弩', 20], ['终极弩', 30], ['穿透箭', 30]],
-      damage: [{ name: '强力箭', role: '单体主攻', baseMin: 52, baseMax: 135, scale: 3.8 }, { name: '穿透箭', role: '直线穿透', baseMin: 55, baseMax: 145, scale: 4.0 }],
+      summary: '二转：弩精通、终极弩、弩加速、强弩、无形弩、穿透箭。',
+      sequence: [],
+      damage: [{ name: '穿透箭', role: '直线穿透', baseMin: 55, baseMax: 145, scale: 4.0 }],
     },
   },
   thief: {
@@ -67,14 +93,14 @@ const PLANS = {
       damage: [{ name: '双飞斩', role: '标飞主攻', baseMin: 55, baseMax: 140, scale: 3.7 }, { name: '劈空斩', role: '短刀攻击', baseMin: 46, baseMax: 118, scale: 3.2 }],
     },
     assassin: {
-      summary: '二转：精准暗器 20 → 强力投掷 → 快速暗器 → 轻功',
-      sequence: [['双飞斩', 20], ['精准暗器', 20], ['强力投掷', 30], ['快速暗器', 20], ['轻功', 20]],
-      damage: [{ name: '双飞斩', role: '标飞主攻', baseMin: 65, baseMax: 160, scale: 4.0 }],
+      summary: '二转：精准暗器、强力投掷、恢复术、快速暗器、轻功、吸血。',
+      sequence: [],
+      damage: [{ name: '吸血', role: '续航攻击', baseMin: 42, baseMax: 110, scale: 2.9 }],
     },
     bandit: {
-      summary: '二转：精准短刀 20 → 快速短刀 → 回旋斩 → 轻功',
-      sequence: [['劈空斩', 20], ['精准短刀', 20], ['快速短刀', 20], ['回旋斩', 30], ['轻功', 20]],
-      damage: [{ name: '劈空斩', role: '短刀主攻', baseMin: 58, baseMax: 150, scale: 3.9 }, { name: '回旋斩', role: '爆发连击', baseMin: 62, baseMax: 168, scale: 4.1 }],
+      summary: '二转：精准短刀、恢复术、快速短刀、轻功、偷窃、回旋斩。',
+      sequence: [],
+      damage: [{ name: '回旋斩', role: '爆发连击', baseMin: 62, baseMax: 168, scale: 4.1 }],
     },
   },
   pirate: {
@@ -84,6 +110,95 @@ const PLANS = {
       damage: [{ name: '基础攻击', role: '占位', baseMin: 10, baseMax: 20, scale: 1 }],
     },
   },
+};
+
+const SECOND_JOB_SKILLS = {
+  fighter: [
+    skill('剑精通', 20, 'icons/skill/2nd_Job/Fighter/1100000_Sword_Mastery.png'),
+    skill('斧精通', 20, 'icons/skill/2nd_Job/Fighter/1100001_Axe_Mastery.png'),
+    skill('终极剑', 30, 'icons/skill/2nd_Job/Fighter/1101000_Final_Attack_Sword.png'),
+    skill('终极斧', 30, 'icons/skill/2nd_Job/Fighter/1101001_Final_Attack_Axe.png'),
+    skill('剑加速', 20, 'icons/skill/2nd_Job/Fighter/1101002_Sword_Booster.png'),
+    skill('斧加速', 20, 'icons/skill/2nd_Job/Fighter/1101003_Axe_Booster.png'),
+    skill('愤怒', 20, 'icons/skill/2nd_Job/Fighter/1101004_Rage.png'),
+    skill('伤害反击', 30, 'icons/skill/2nd_Job/Fighter/1101005_Power_Guard.png'),
+  ],
+  page: [
+    skill('剑精通', 20, 'icons/skill/2nd_Job/Page/1200000_Sword_Mastery.png'),
+    skill('钝器精通', 20, 'icons/skill/2nd_Job/Page/1200001_Blunt_Weapon_Mastery.png'),
+    skill('终极剑', 30, 'icons/skill/2nd_Job/Page/1201000_Final_Attack_Sword.png'),
+    skill('终极钝器', 30, 'icons/skill/2nd_Job/Page/1201001_Final_Attack_Blunt_Weapon.png'),
+    skill('剑加速', 20, 'icons/skill/2nd_Job/Page/1201002_Sword_Booster.png'),
+    skill('钝器加速', 20, 'icons/skill/2nd_Job/Page/1201003_Blunt_Weapon_Booster.png'),
+    skill('压制术', 20, 'icons/skill/2nd_Job/Page/1201004_Threaten.png'),
+    skill('伤害反击', 30, 'icons/skill/2nd_Job/Page/1201005_Power_Guard.png'),
+  ],
+  spearman: [
+    skill('枪精通', 20, 'icons/skill/2nd_Job/Spearman/1300000_Spear_Mastery.png'),
+    skill('矛精通', 20, 'icons/skill/2nd_Job/Spearman/1300001_Polearm_Mastery.png'),
+    skill('终极枪', 30, 'icons/skill/2nd_Job/Spearman/1301000_Final_Attack_Spear.png'),
+    skill('终极矛', 30, 'icons/skill/2nd_Job/Spearman/1301001_Final_Attack_Polearm.png'),
+    skill('枪加速', 20, 'icons/skill/2nd_Job/Spearman/1301002_Spear_Booster.png'),
+    skill('矛加速', 20, 'icons/skill/2nd_Job/Spearman/1301003_Polearm_Booster.png'),
+    skill('钢铁意志', 20, 'icons/skill/2nd_Job/Spearman/1301004_Iron_Will.png'),
+    skill('神圣之火', 30, 'icons/skill/2nd_Job/Spearman/1301005_Hyper_Body.png'),
+  ],
+  fp: [
+    skill('MP 吸收', 20, 'icons/skill/2nd_Job/FP_Wizard/2100000_MP_Eater.png'),
+    skill('精神力', 20, 'icons/skill/2nd_Job/FP_Wizard/2101000_Meditation.png'),
+    skill('瞬间移动', 20, 'icons/skill/2nd_Job/FP_Wizard/2101001_Teleport.png'),
+    skill('缓速术', 20, 'icons/skill/2nd_Job/FP_Wizard/2101002_Slow.png'),
+    skill('火箭术', 30, 'icons/skill/2nd_Job/FP_Wizard/2101003_Fire_Arrow.png'),
+    skill('毒雾', 30, 'icons/skill/2nd_Job/FP_Wizard/2101004_Poison_Breath.png'),
+  ],
+  il: [
+    skill('MP 吸收', 20, 'icons/skill/2nd_Job/IL_Wizard/2200000_MP_Eater.png'),
+    skill('精神力', 20, 'icons/skill/2nd_Job/IL_Wizard/2201000_Meditation.png'),
+    skill('瞬间移动', 20, 'icons/skill/2nd_Job/IL_Wizard/2201001_Teleport.png'),
+    skill('缓速术', 20, 'icons/skill/2nd_Job/IL_Wizard/2201002_Slow.png'),
+    skill('冰冻术', 30, 'icons/skill/2nd_Job/IL_Wizard/2201003_Cold_Beam.png'),
+    skill('雷电术', 30, 'icons/skill/2nd_Job/IL_Wizard/2201004_Thunder_Bolt.png'),
+  ],
+  cleric: [
+    skill('MP 吸收', 20, 'icons/skill/2nd_Job/Cleric/2300000_MP_Eater.png'),
+    skill('瞬间移动', 20, 'icons/skill/2nd_Job/Cleric/2301000_Teleport.png'),
+    skill('治愈术', 30, 'icons/skill/2nd_Job/Cleric/2301001_Heal.png'),
+    skill('神之保护', 20, 'icons/skill/2nd_Job/Cleric/2301002_Invincible.png'),
+    skill('祝福', 20, 'icons/skill/2nd_Job/Cleric/2301003_Bless.png'),
+    skill('圣箭术', 30, 'icons/skill/2nd_Job/Cleric/2301004_Holy_Arrow.png'),
+  ],
+  hunter: [
+    skill('弓精通', 20, 'icons/skill/2nd_Job/Hunter/3100000_Bow_Mastery.png'),
+    skill('终极弓', 30, 'icons/skill/2nd_Job/Hunter/3101000_Final_Attack_Bow.png'),
+    skill('弓加速', 20, 'icons/skill/2nd_Job/Hunter/3101001_Bow_Booster.png'),
+    skill('强弓', 20, 'icons/skill/2nd_Job/Hunter/3101002_Power_Knockback.png'),
+    skill('无形箭', 20, 'icons/skill/2nd_Job/Hunter/3101003_Soul_Arrow_Bow.png'),
+    skill('爆炸箭', 30, 'icons/skill/2nd_Job/Hunter/3101004_Arrow_Bomb_Bow.png'),
+  ],
+  crossbowman: [
+    skill('弩精通', 20, 'icons/skill/2nd_Job/Crossbowman/3200000_Crossbow_Mastery.png'),
+    skill('终极弩', 30, 'icons/skill/2nd_Job/Crossbowman/3201000_Final_Attack_Crossbow.png'),
+    skill('弩加速', 20, 'icons/skill/2nd_Job/Crossbowman/3201001_Crossbow_Booster.png'),
+    skill('强弩', 20, 'icons/skill/2nd_Job/Crossbowman/3201002_Power_Knockback.png'),
+    skill('无形弩', 20, 'icons/skill/2nd_Job/Crossbowman/3201003_Soul_Arrow_Crossbow.png'),
+    skill('穿透箭', 30, 'icons/skill/2nd_Job/Crossbowman/3201004_Iron_Arrow_Crossbow.png'),
+  ],
+  assassin: [
+    skill('精准暗器', 20, 'icons/skill/2nd_Job/Assassin/4100000_Claw_Mastery.png'),
+    skill('强力投掷', 30, 'icons/skill/2nd_Job/Assassin/4100001_Critical_Throw.png'),
+    skill('恢复术', 20, 'icons/skill/2nd_Job/Assassin/4100002_Critical_Recovery.png'),
+    skill('快速暗器', 20, 'icons/skill/2nd_Job/Assassin/4101000_Claw_Booster.png'),
+    skill('轻功', 20, 'icons/skill/2nd_Job/Assassin/4101001_Haste.png'),
+    skill('吸血', 30, 'icons/skill/2nd_Job/Assassin/4101002_Drain.png'),
+  ],
+  bandit: [
+    skill('精准短刀', 20, 'icons/skill/2nd_Job/Bandit/4200000_Dagger_Mastery.png'),
+    skill('恢复术', 20, 'icons/skill/2nd_Job/Bandit/4200001_Nimble_Recovery.png'),
+    skill('快速短刀', 20, 'icons/skill/2nd_Job/Bandit/4201000_Dagger_Booster.png'),
+    skill('轻功', 20, 'icons/skill/2nd_Job/Bandit/4201001_Haste.png'),
+    skill('偷窃', 30, 'icons/skill/2nd_Job/Bandit/4201002_Steal.png'),
+    skill('回旋斩', 30, 'icons/skill/2nd_Job/Bandit/4201003_Savage_Blow.png'),
+  ],
 };
 
 const FIRST_JOB_CAP_LEVEL = 30;
@@ -114,36 +229,40 @@ function getTotalSkillPoints(level) {
 
 function uniqueByName(entries) {
   const seen = new Set();
-  return entries.filter(([name]) => {
+  return entries.filter((entry) => {
+    const name = Array.isArray(entry) ? entry[0] : entry.name;
     if (seen.has(name)) return false;
     seen.add(name);
     return true;
   });
 }
 
+function normalizeSkillEntry(entry) {
+  if (Array.isArray(entry)) {
+    return skill(entry[0], entry[1], entry[2] || FIRST_JOB_ICON[entry[0]] || '');
+  }
+  return skill(entry.name, entry.max, entry.iconKey || FIRST_JOB_ICON[entry.name] || '');
+}
+
 function getSecondJobSequence(classId, branchId) {
+  if (SECOND_JOB_SKILLS[branchId]) return SECOND_JOB_SKILLS[branchId];
+
   const firstNames = new Set(getFirstJobPlan(classId).sequence.map(([name]) => name));
   const branchPlan = getBranchPlan(classId, branchId);
   if (branchPlan === getFirstJobPlan(classId)) return [];
-  return uniqueByName(branchPlan.sequence.filter(([name]) => !firstNames.has(name)));
+  return uniqueByName(branchPlan.sequence.filter(([name]) => !firstNames.has(name))).map(normalizeSkillEntry);
 }
 
 function buildSkillRows(classId, branchId, level) {
   const secondUnlocked = Number(level) > FIRST_JOB_CAP_LEVEL;
-  const firstRows = getFirstJobPlan(classId).sequence.map(([name, max]) => ({
-    name,
-    max,
-    tier: 'first',
-    tierLabel: '一转',
-    locked: false,
-  }));
-  const secondRows = getSecondJobSequence(classId, branchId).map(([name, max]) => ({
-    name,
-    max,
-    tier: 'second',
-    tierLabel: '二转',
-    locked: !secondUnlocked,
-  }));
+  const firstRows = getFirstJobPlan(classId).sequence.map((entry) => {
+    const def = normalizeSkillEntry(entry);
+    return { ...def, tier: 'first', tierLabel: '一转', locked: false };
+  });
+  const secondRows = getSecondJobSequence(classId, branchId).map((entry) => {
+    const def = normalizeSkillEntry(entry);
+    return { ...def, tier: 'second', tierLabel: '二转', locked: !secondUnlocked };
+  });
   return [...firstRows, ...secondRows];
 }
 
@@ -158,22 +277,15 @@ function getPlanSummary(classId, branchId, level) {
 
 export function getRecommendedSkillAllocation({ classId, branchId, level }) {
   const rows = buildSkillRows(classId, branchId, level);
-  const totals = {
-    first: getFirstJobSkillPoints(level),
-    second: getSecondJobSkillPoints(level),
-  };
+  const totals = { first: getFirstJobSkillPoints(level), second: getSecondJobSkillPoints(level) };
   const distributed = distributeSkillPoints(rows, totals);
-  return Object.fromEntries(distributed.map((skill) => [skill.name, skill.level]));
+  return Object.fromEntries(distributed.map((row) => [row.name, row.level]));
 }
 
 function distributeSkillPoints(rows, totalPointsByTier, customSkills = null) {
   if (customSkills) return sanitizeSkillAllocation(rows, totalPointsByTier, customSkills);
 
-  const remaining = {
-    first: Math.max(0, Number(totalPointsByTier.first) || 0),
-    second: Math.max(0, Number(totalPointsByTier.second) || 0),
-  };
-
+  const remaining = { first: Math.max(0, Number(totalPointsByTier.first) || 0), second: Math.max(0, Number(totalPointsByTier.second) || 0) };
   return rows.map((row) => {
     if (row.locked) return { ...row, level: 0 };
     const available = remaining[row.tier] ?? 0;
@@ -184,11 +296,7 @@ function distributeSkillPoints(rows, totalPointsByTier, customSkills = null) {
 }
 
 function sanitizeSkillAllocation(rows, totalPointsByTier, customSkills) {
-  const remaining = {
-    first: Math.max(0, Number(totalPointsByTier.first) || 0),
-    second: Math.max(0, Number(totalPointsByTier.second) || 0),
-  };
-
+  const remaining = { first: Math.max(0, Number(totalPointsByTier.first) || 0), second: Math.max(0, Number(totalPointsByTier.second) || 0) };
   return rows.map((row) => {
     if (row.locked) return { ...row, level: 0 };
     const requested = Math.max(0, Math.floor(Number(customSkills?.[row.name] ?? 0)));
@@ -200,11 +308,10 @@ function sanitizeSkillAllocation(rows, totalPointsByTier, customSkills) {
 }
 
 function getRemainingByTier(skills, totalPointsByTier) {
-  const used = skills.reduce((acc, skill) => {
-    acc[skill.tier] = (acc[skill.tier] ?? 0) + skill.level;
+  const used = skills.reduce((acc, row) => {
+    acc[row.tier] = (acc[row.tier] ?? 0) + row.level;
     return acc;
   }, { first: 0, second: 0 });
-
   return {
     first: Math.max(0, (totalPointsByTier.first ?? 0) - (used.first ?? 0)),
     second: Math.max(0, (totalPointsByTier.second ?? 0) - (used.second ?? 0)),
@@ -213,19 +320,17 @@ function getRemainingByTier(skills, totalPointsByTier) {
 
 function nextSteps(skills, totalPointsByTier, level, count = 4) {
   const activeTier = Number(level) > FIRST_JOB_CAP_LEVEL ? 'second' : 'first';
-  const sequence = skills.filter((skill) => skill.tier === activeTier && !skill.locked);
+  const sequence = skills.filter((row) => row.tier === activeTier && !row.locked);
   if (!sequence.length) return [];
-
-  const usedInTier = sequence.reduce((sum, skill) => sum + skill.level, 0);
-  const maxInTier = sequence.reduce((sum, skill) => sum + skill.max, 0);
+  const usedInTier = sequence.reduce((sum, row) => sum + row.level, 0);
+  const maxInTier = sequence.reduce((sum, row) => sum + row.max, 0);
   const steps = [];
-
   for (let i = 1; i <= count; i += 1) {
     let remaining = Math.min(maxInTier, usedInTier + i * 3);
     let target = sequence[sequence.length - 1];
-    for (const skill of sequence) {
-      if (remaining <= skill.max) { target = skill; break; }
-      remaining -= skill.max;
+    for (const row of sequence) {
+      if (remaining <= row.max) { target = row; break; }
+      remaining -= row.max;
     }
     steps.push({ level: Number(level) + i, text: `${target.name} x3` });
   }
@@ -235,10 +340,7 @@ function nextSteps(skills, totalPointsByTier, level, count = 4) {
 function getDamageDefinitions(classId, branchId, level) {
   const first = getFirstJobPlan(classId);
   const second = getBranchPlan(classId, branchId);
-  const definitions = Number(level) > FIRST_JOB_CAP_LEVEL && second !== first
-    ? [...first.damage, ...second.damage]
-    : [...first.damage];
-
+  const definitions = Number(level) > FIRST_JOB_CAP_LEVEL && second !== first ? [...first.damage, ...second.damage] : [...first.damage];
   const byName = new Map();
   for (const card of definitions) byName.set(card.name, card);
   return [...byName.values()];
@@ -246,45 +348,31 @@ function getDamageDefinitions(classId, branchId, level) {
 
 export function getSkillPlan({ classId, branchId, level, mainAttack = 0, customSkills = null }) {
   const rows = buildSkillRows(classId, branchId, level);
-  const totalPointsByTier = {
-    first: getFirstJobSkillPoints(level),
-    second: getSecondJobSkillPoints(level),
-  };
+  const totalPointsByTier = { first: getFirstJobSkillPoints(level), second: getSecondJobSkillPoints(level) };
   const skills = distributeSkillPoints(rows, totalPointsByTier, customSkills);
-  const usedSp = skills.reduce((sum, skill) => sum + skill.level, 0);
+  const usedSp = skills.reduce((sum, row) => sum + row.level, 0);
   const remainingByTier = getRemainingByTier(skills, totalPointsByTier);
-  const current = skills.filter((skill) => skill.level > 0);
+  const current = skills.filter((row) => row.level > 0);
   const next = nextSteps(skills, totalPointsByTier, Number(level));
-  const skillByName = new Map(skills.map((skill) => [skill.name, skill]));
+  const skillByName = new Map(skills.map((row) => [row.name, row]));
   const baseMin = Math.max(1, Math.round(mainAttack * 0.62));
   const baseMax = Math.max(baseMin + 1, Math.round(mainAttack * 1.18));
 
   const activeDamageCards = getDamageDefinitions(classId, branchId, level)
-    .map((card) => ({ card, skill: skillByName.get(card.name) }))
-    .filter(({ skill }) => skill && skill.level > 0)
-    .map(({ card, skill }) => {
-      const skillLevel = skill.level;
-      const min = Math.max(1, Math.round(card.baseMin + mainAttack * card.scale * (skillLevel / 20) * 0.35));
-      const max = Math.max(min + 1, Math.round(card.baseMax + mainAttack * card.scale * (skillLevel / 20) * 0.72));
-      return { ...card, level: skillLevel, maxLevel: skill.max, min, max };
+    .map((card) => ({ card, row: skillByName.get(card.name) }))
+    .filter(({ row }) => row && row.level > 0)
+    .map(({ card, row }) => {
+      const min = Math.max(1, Math.round(card.baseMin + mainAttack * card.scale * (row.level / 20) * 0.35));
+      const max = Math.max(min + 1, Math.round(card.baseMax + mainAttack * card.scale * (row.level / 20) * 0.72));
+      return { ...card, level: row.level, maxLevel: row.max, iconKey: row.iconKey, min, max };
     });
-
-  const damageCards = [{
-    name: 'Base Attack',
-    role: '普通攻击',
-    level: null,
-    maxLevel: null,
-    min: baseMin,
-    max: baseMax,
-    isBase: true,
-  }, ...activeDamageCards];
 
   return {
     summary: getPlanSummary(classId, branchId, level),
     skills,
     current,
     next,
-    damageCards,
+    damageCards: [{ name: 'Base Attack', role: '普通攻击', level: null, maxLevel: null, min: baseMin, max: baseMax, isBase: true }, ...activeDamageCards],
     totalSp: getTotalSkillPoints(level),
     totalSpByTier: totalPointsByTier,
     usedSp,
