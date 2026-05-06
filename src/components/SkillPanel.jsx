@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import CharacterPreview from './CharacterPreview.jsx';
 import IconFallback, { baseUrl, iconSourcesFromNames } from './IconFallback.jsx';
+import SkillDetailSheet from './SkillDetailSheet.jsx';
+import '../styles/detail-sheets.css';
 
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
 const SKILL_ICON_FOLDERS = ['icons/skill', 'icons/skills', 'icons'];
@@ -12,22 +15,24 @@ const SKILL_ICON_ALIASES = {
   '提高 HP 恢复': ['improved hp recovery', '1000000_Improved_HP_Recovery'],
   '提高 HP 上限': ['max hp increase', '1000001_Max_HP_Increase'],
   '精准打击': ['precise strikes', '1000002_Precise_Strikes'],
+  '铁甲术': ['iron body', '1001000_Iron_Body'],
   '魔力弹': ['energy bolt', '2001002_Energy_Bolt'],
   '提高 MP 恢复': ['improved mp recovery', '2000000_Improved_MP_Recovery'],
   '提高 MP 上限': ['max mp increase', '2000001_Max_MP_Increase'],
   '魔法双击': ['magic claw', '2001003_Magic_Claw'],
   '魔法盾': ['magic guard', '2001000_Magic_Guard'],
   '魔法铠甲': ['magic armor', '2001001_Magic_Armor'],
-  '精准箭': ['critical shot', '3000000_Critical_Shot'],
   '强力箭': ['critical shot', '3000000_Critical_Shot'],
   '远程箭': ['eye of amazon', '3000002_The_Eye_of_Amazon'],
   '集中术': ['focus', '3001000_Focus'],
   '断魂箭': ['arrow blow', '3001001_Arrow_Blow'],
+  '二连射': ['double shot', '3001002_Double_Shot'],
   '双飞斩': ['lucky seven', '4001003_Lucky_Seven'],
   '劈空斩': ['double stab', '4001002_Double_Stab'],
   '远程暗器': ['keen eyes', '4000001_Keen_Eyes'],
   '诅咒术': ['disorder', '4001000_Disorder'],
   '隐身': ['dark sight', '4001001_Dark_Sight'],
+  '灵巧身手': ['nimble body', '4000000_Nimble_Body'],
   '剑精通': ['sword mastery', '1100000_Sword_Mastery', '1200000_Sword_Mastery'],
   '斧精通': ['axe mastery', '1100001_Axe_Mastery'],
   '钝器精通': ['blunt weapon mastery', '1200001_Blunt_Weapon_Mastery'],
@@ -84,30 +89,6 @@ const SKILL_ICON_ALIASES = {
   '回旋斩': ['savage blow', '4201003_Savage_Blow'],
 };
 
-const FALLBACK_ICON_BY_NAME = {
-  '强力攻击': 'icons/skill/1st_Job/Warrior/1001001_Power_Strike.png',
-  '群体攻击': 'icons/skill/1st_Job/Warrior/1001002_Slash_Blast.png',
-  '提高 HP 恢复': 'icons/skill/1st_Job/Warrior/1000000_Improved_HP_Recovery.png',
-  '提高 HP 上限': 'icons/skill/1st_Job/Warrior/1000001_Max_HP_Increase.png',
-  '精准打击': 'icons/skill/1st_Job/Warrior/1000002_Precise_Strikes.png',
-  '魔力弹': 'icons/skill/1st_Job/Magician/2001002_Energy_Bolt.png',
-  '提高 MP 恢复': 'icons/skill/1st_Job/Magician/2000000_Improved_MP_Recovery.png',
-  '提高 MP 上限': 'icons/skill/1st_Job/Magician/2000001_Max_MP_Increase.png',
-  '魔法双击': 'icons/skill/1st_Job/Magician/2001003_Magic_Claw.png',
-  '魔法盾': 'icons/skill/1st_Job/Magician/2001000_Magic_Guard.png',
-  '魔法铠甲': 'icons/skill/1st_Job/Magician/2001001_Magic_Armor.png',
-  '精准箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
-  '强力箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
-  '远程箭': 'icons/skill/1st_Job/Archer/3000002_The_Eye_of_Amazon.png',
-  '集中术': 'icons/skill/1st_Job/Archer/3001000_Focus.png',
-  '断魂箭': 'icons/skill/1st_Job/Archer/3001001_Arrow_Blow.png',
-  '双飞斩': 'icons/skill/1st_Job/Theif/4001003_Lucky_Seven.png',
-  '劈空斩': 'icons/skill/1st_Job/Theif/4001002_Double_Stab.png',
-  '远程暗器': 'icons/skill/1st_Job/Theif/4000001_Keen_Eyes.png',
-  '诅咒术': 'icons/skill/1st_Job/Theif/4001000_Disorder.png',
-  '隐身': 'icons/skill/1st_Job/Theif/4001001_Dark_Sight.png',
-};
-
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -126,9 +107,16 @@ function getSkillSources(name, iconKey = '') {
   const names = getSkillNames(name);
   return unique([
     publicIconAsset(iconKey),
-    publicIconAsset(FALLBACK_ICON_BY_NAME[name]),
     ...iconSourcesFromNames(names, SKILL_ICON_FOLDERS),
   ]);
+}
+
+function getShortSkillHint(skill, plan) {
+  const damage = plan?.damageCards?.find((card) => card.name === skill.name);
+  if (damage && skill.level > 0) return `当前伤害 ${damage.min}-${damage.max}`;
+  if (skill.locked) return '点击查看开放条件';
+  if (skill.level > 0) return `已加 ${skill.level} 点，点击查看效果`;
+  return '点击查看技能说明';
 }
 
 export default function SkillPanel({
@@ -146,6 +134,7 @@ export default function SkillPanel({
   onSkillChange,
   onSkillReset,
 }) {
+  const [selectedSkill, setSelectedSkill] = useState(null);
   const firstJobSkills = plan.skills.filter((skill) => skill.tier !== 'second');
   const secondJobSkills = plan.skills.filter((skill) => skill.tier === 'second');
 
@@ -190,6 +179,7 @@ export default function SkillPanel({
             skills={firstJobSkills}
             plan={plan}
             onSkillChange={onSkillChange}
+            onSkillInspect={setSelectedSkill}
             glass
           />
         </div>
@@ -214,6 +204,7 @@ export default function SkillPanel({
               skills={secondJobSkills}
               plan={plan}
               onSkillChange={onSkillChange}
+              onSkillInspect={setSelectedSkill}
               className="mg-second-skill-card"
             />
           )}
@@ -226,11 +217,12 @@ export default function SkillPanel({
         <button className="mg-action-small">百科</button>
       </div>
       <p className="mg-footer">© 2026 MapleGuide | by SduckyDuck</p>
+      <SkillDetailSheet skill={selectedSkill} plan={plan} onClose={() => setSelectedSkill(null)} />
     </section>
   );
 }
 
-function SkillGroupCard({ title, kicker, action, onAction, note, remaining, total, skills, plan, onSkillChange, glass = false, className = '' }) {
+function SkillGroupCard({ title, kicker, action, onAction, note, remaining, total, skills, plan, onSkillChange, onSkillInspect, glass = false, className = '' }) {
   const cardClass = [glass ? 'mg-glass-panel mg-sp-panel' : 'mg-skill-side-card', className].filter(Boolean).join(' ');
 
   return (
@@ -242,12 +234,12 @@ function SkillGroupCard({ title, kicker, action, onAction, note, remaining, tota
         <strong>{remaining}</strong>
         <em>{title} {remaining}/{total}</em>
       </div>
-      <SkillList skills={skills} plan={plan} onSkillChange={onSkillChange} />
+      <SkillList skills={skills} plan={plan} onSkillChange={onSkillChange} onSkillInspect={onSkillInspect} />
     </section>
   );
 }
 
-function SkillList({ skills, plan, onSkillChange }) {
+function SkillList({ skills, plan, onSkillChange, onSkillInspect }) {
   return (
     <div className="mg-skill-stack compact">
       {skills.map((skill) => {
@@ -256,10 +248,12 @@ function SkillList({ skills, plan, onSkillChange }) {
           <SkillPointRow
             key={skill.name}
             skill={skill}
+            plan={plan}
             canMinus={!skill.locked && skill.level > 0}
             canPlus={!skill.locked && remainingForTier > 0 && skill.level < skill.max}
             onMinus={() => onSkillChange(skill.name, -1)}
             onPlus={() => onSkillChange(skill.name, 1)}
+            onInspect={() => onSkillInspect(skill)}
           />
         );
       })}
@@ -295,16 +289,17 @@ function PointRow({ label, value, points, canMinus, canPlus, onMinus, onPlus }) 
   );
 }
 
-function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus }) {
-  const rowClass = ['mg-skill-row', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
+function SkillPointRow({ skill, plan, canMinus, canPlus, onMinus, onPlus, onInspect }) {
+  const rowClass = ['mg-skill-row clickable', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
   return (
-    <article className={rowClass}>
+    <article className={rowClass} role="button" tabIndex={0} onClick={onInspect} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onInspect(); }}>
       <SkillBadge name={skill.name} iconKey={skill.iconKey} />
       <div className="mg-skill-main">
         <strong>{skill.name}</strong>
         <span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · [+/-]'}</span>
+        <small>{getShortSkillHint(skill, plan)}</small>
       </div>
-      <div className="mg-mini-controls">
+      <div className="mg-mini-controls" onClick={(event) => event.stopPropagation()}>
         <button onClick={onMinus} disabled={!canMinus}>-</button>
         <button onClick={onPlus} disabled={!canPlus}>+</button>
       </div>
