@@ -75,7 +75,6 @@ const LOCAL_SKILL_ICON_BY_NAME = {
   '快速枪/矛': ['icons/skill/2nd_Job/Spearman/1301002_Spear_Booster.png', 'icons/skill/2nd_Job/Spearman/1301003_Polearm_Booster.png'],
   '终极剑/斧': ['icons/skill/2nd_Job/Fighter/1101000_Final_Attack_Sword.png', 'icons/skill/2nd_Job/Fighter/1101001_Final_Attack_Axe.png'],
   '极限防御': ['icons/skill/2nd_Job/Spearman/1301004_Iron_Will.png', 'icons/skill/2nd_Job/Spearman/1301005_Hyper_Body.png'],
-
   '魔力弹': 'icons/skill/1st_Job/Magician/2001002_Energy_Bolt.png',
   '提高 MP 恢复': 'icons/skill/1st_Job/Magician/2000000_Improved_MP_Recovery.png',
   '提高 MP 上限': 'icons/skill/1st_Job/Magician/2000001_Max_MP_Increase.png',
@@ -89,7 +88,6 @@ const LOCAL_SKILL_ICON_BY_NAME = {
   '雷电术': 'icons/skill/2nd_Job/IL_Wizard/2201004_Thunder_Bolt.png',
   '治愈术': 'icons/skill/2nd_Job/Cleric/2301001_Heal.png',
   '祝福': 'icons/skill/2nd_Job/Cleric/2301003_Bless.png',
-
   '精准箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
   '强力箭': 'icons/skill/1st_Job/Archer/3000000_Critical_Shot.png',
   '远程箭': 'icons/skill/1st_Job/Archer/3000002_The_Eye_of_Amazon.png',
@@ -103,7 +101,6 @@ const LOCAL_SKILL_ICON_BY_NAME = {
   '快速弩': 'icons/skill/2nd_Job/Crossbowman/3201001_Crossbow_Booster.png',
   '终极弩': 'icons/skill/2nd_Job/Crossbowman/3201000_Final_Attack_Crossbow.png',
   '穿透箭': 'icons/skill/2nd_Job/Crossbowman/3201004_Iron_Arrow_Crossbow.png',
-
   '双飞斩': 'icons/skill/1st_Job/Theif/4001003_Lucky_Seven.png',
   '劈空斩': 'icons/skill/1st_Job/Theif/4001002_Double_Stab.png',
   '远程暗器': 'icons/skill/1st_Job/Theif/4000001_Keen_Eyes.png',
@@ -220,21 +217,25 @@ export default function SkillPanel({
           <section className="mg-glass-panel mg-sp-panel">
             <PanelHead kicker="SP 加点" title="技能点分配" action="系统推荐" onAction={onSkillReset} />
             <p className="mg-character-note">{plan.summary}</p>
-            <div className="mg-character-meter">
+            <div className="mg-character-meter mg-sp-meter">
               <span>剩余 SP</span>
               <strong>{plan.remainingSp}</strong>
+              <em>一转 {plan.remainingByTier?.first ?? 0} / 二转 {plan.remainingByTier?.second ?? 0}</em>
             </div>
-            <div className="mg-skill-stack">
-              {plan.skills.map((skill) => (
-                <SkillPointRow
-                  key={skill.name}
-                  skill={skill}
-                  canMinus={skill.level > 0}
-                  canPlus={plan.remainingSp > 0 && skill.level < skill.max}
-                  onMinus={() => onSkillChange(skill.name, -1)}
-                  onPlus={() => onSkillChange(skill.name, 1)}
-                />
-              ))}
+            <div className="mg-skill-stack compact">
+              {plan.skills.map((skill) => {
+                const remainingForTier = plan.remainingByTier?.[skill.tier] ?? plan.remainingSp;
+                return (
+                  <SkillPointRow
+                    key={skill.name}
+                    skill={skill}
+                    canMinus={!skill.locked && skill.level > 0}
+                    canPlus={!skill.locked && remainingForTier > 0 && skill.level < skill.max}
+                    onMinus={() => onSkillChange(skill.name, -1)}
+                    onPlus={() => onSkillChange(skill.name, 1)}
+                  />
+                );
+              })}
             </div>
           </section>
         </div>
@@ -300,12 +301,13 @@ function PointRow({ label, value, points, canMinus, canPlus, onMinus, onPlus }) 
 }
 
 function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus }) {
+  const rowClass = ['mg-skill-row', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
   return (
-    <article className="mg-skill-row">
+    <article className={rowClass}>
       <SkillBadge name={skill.name} />
       <div className="mg-skill-main">
         <strong>{skill.name}</strong>
-        <span>Lv. {skill.level}/{skill.max} · [+/-]</span>
+        <span>{skill.tierLabel} · Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · [+/-]'}</span>
       </div>
       <div className="mg-mini-controls">
         <button onClick={onMinus} disabled={!canMinus}>-</button>
