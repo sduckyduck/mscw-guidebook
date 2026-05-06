@@ -85,14 +85,30 @@ export function getGearCandidatesBySlot({ classLine, branch, level, budget, gend
 
 export function applyGearOverrides(baseGear, overrides = {}) {
   const bySlot = Object.fromEntries((baseGear ?? []).map((item) => [item.slot, item]));
+  const explicitSlots = new Set();
+
   Object.entries(overrides ?? {}).forEach(([slot, item]) => {
-    if (item) bySlot[slot] = item;
+    if (item) {
+      bySlot[slot] = item;
+      explicitSlots.add(slot);
+    }
   });
-  if (bySlot.overall) {
+
+  // Explicit user selections must win over the auto-recommended base outfit.
+  // Previously, a recommended overall in baseGear deleted a user-selected top/bottom
+  // before the top/bottom override had a chance to remove the overall.
+  if (explicitSlots.has('overall')) {
     delete bySlot.top;
     delete bySlot.bottom;
+  } else if (explicitSlots.has('top') || explicitSlots.has('bottom')) {
+    delete bySlot.overall;
+  } else if (bySlot.overall) {
+    delete bySlot.top;
+    delete bySlot.bottom;
+  } else if (bySlot.top || bySlot.bottom) {
+    delete bySlot.overall;
   }
-  if (bySlot.top || bySlot.bottom) delete bySlot.overall;
+
   return ['cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'cape', 'earring', 'shield', 'weapon']
     .map((slot) => bySlot[slot])
     .filter(Boolean);
