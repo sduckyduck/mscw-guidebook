@@ -29,6 +29,34 @@ const CLASS_POLICIES = {
   pirate: { weapons: ['gun', 'knuckle'], shield: 'never' },
 };
 
+const BUDGET_GEAR_PROFILES = {
+  low: {
+    pricePenalty: 3.2,
+    classBonus: 30,
+    slotLevelLag: { weapon: 12, cap: 13, overall: 14, top: 14, bottom: 14, shoes: 12, shield: 18, glove: 99, cape: 99, earring: 99 },
+    minMaxReqLevel: { weapon: 8, cap: 5, overall: 5, top: 5, bottom: 5, shoes: 5, shield: 5 },
+    autoSlots: new Set(['weapon', 'cap', 'overall', 'top', 'bottom', 'shoes']),
+    note: '低资金：装备明显滞后，优先保留武器、基础防具和鞋子，不主动推荐手套/披风/耳环。',
+  },
+  mid: {
+    pricePenalty: 1.45,
+    classBonus: 58,
+    slotLevelLag: { weapon: 5, cap: 6, overall: 7, top: 7, bottom: 7, shoes: 7, glove: 10, shield: 8, cape: 16, earring: 16 },
+    minMaxReqLevel: { weapon: 10, cap: 8, overall: 8, top: 8, bottom: 8, shoes: 8, glove: 10, shield: 10, cape: 20, earring: 20 },
+    autoSlots: new Set(['weapon', 'cap', 'overall', 'top', 'bottom', 'shoes', 'shield']),
+    conditionalSlots: { glove: 30, cape: 40, earring: 40 },
+    note: '普通：装备会滞后半档，优先核心部位，等级较高后才考虑手套/披风/耳环。',
+  },
+  high: {
+    pricePenalty: 0.25,
+    classBonus: 90,
+    slotLevelLag: { weapon: -2, cap: -2, overall: -2, top: -2, bottom: -2, shoes: -2, glove: -2, shield: -2, cape: -2, earring: -2 },
+    minMaxReqLevel: {},
+    autoSlots: new Set(['weapon', 'cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'shield', 'cape', 'earring']),
+    note: '有钱：装备跟等级走，尽量推荐当前等级能穿的最佳部位。',
+  },
+};
+
 export const SLOT_LABELS = {
   weapon: '武器', cap: '头盔', top: '上衣', overall: '套服', bottom: '裤子',
   shoes: '鞋子', glove: '手套', shield: '盾牌', cape: '披风', earring: '耳环',
@@ -59,11 +87,15 @@ export function selectGear({ classLine, branch, level, budget, gender, statPlan,
 export function getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items }) {
   if (!items?.length) return {};
   const policy = getPolicy(classLine, branch);
-  const candidates = getBaseCandidates({ classLine, level, gender, statPlan, items });
-  const sort = (list) => list.map((item) => toGear(item, classLine)).sort((a, b) => gearScore(b, classLine, budget, level) - gearScore(a, classLine, budget, level));
+  const profile = getBudgetGearProfile(budget);
+  const candidates = getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items });
+  const sort = (list) => list
+    .map((item) => toGear(item, classLine))
+    .sort((a, b) => gearScore(b, classLine, budget, level) - gearScore(a, classLine, budget, level));
+
   const weaponCandidates = candidates.filter((item) => item.slot === 'weapon' && weaponMatchesPolicy(item, policy));
   const classWeapon = weaponCandidates.filter((item) => isClassSpecific(item, classLine));
-  const earlyAllJobWeapon = weaponCandidates.filter((item) => isAllJob(item) && Number(item.reqLevel ?? 0) <= 12 && !isBannedWeaponName(item));
+  const earlyAllJobWeapon = weaponCandidates.filter((item) => isAllJob(item) && Number(item.reqLevel ?? 0) <= maxReqLevelForBudget('weapon', level, profile) && !isBannedWeaponName(item));
   const weapon = classWeapon.length ? classWeapon : earlyAllJobWeapon;
 
   const output = {
@@ -114,13 +146,16 @@ export function applyGearOverrides(baseGear, overrides = {}) {
     .filter(Boolean);
 }
 
-function getBaseCandidates({ classLine, level, gender, statPlan, items }) {
+function getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items }) {
+  const policy = getPolicy(classLine, branch);
+  const profile = getBudgetGearProfile(budget);
   return items
     .filter((item) => item.category === 'Equipment')
     .map((item) => ({ ...item, slot: detectSlot(item), visualGender: detectVisualGender(item) }))
     .filter((item) => item.slot)
+    .filter((item) => budgetAllowsSlot(item.slot, profile, level, policy))
+    .filter((item) => Number(item.reqLevel ?? 0) <= maxReqLevelForBudget(item.slot, level, profile))
     .filter((item) => !isBannedOrSpecial(item))
-    .filter((item) => Number(item.reqLevel ?? 0) <= level + 2)
     .filter((item) => Number(item.reqLevel ?? 0) > 0)
     .filter((item) => jobMatches(item, classLine))
     .filter((item) => statRequirementsMet(item, statPlan))
@@ -129,6 +164,24 @@ function getBaseCandidates({ classLine, level, gender, statPlan, items }) {
 
 function slotClassItems(candidates, slot, classLine) {
   return candidates.filter((item) => item.slot === slot && (isClassSpecific(item, classLine) || isAllJob(item)));
+}
+
+function getBudgetGearProfile(budget) {
+  return BUDGET_GEAR_PROFILES[budget] ?? BUDGET_GEAR_PROFILES.mid;
+}
+
+function budgetAllowsSlot(slot, profile, level, policy) {
+  if (profile.autoSlots.has(slot)) return true;
+  if (profile.conditionalSlots?.[slot] && Number(level) >= profile.conditionalSlots[slot]) return true;
+  if (slot === 'shield' && policy.shield === 'required') return true;
+  return false;
+}
+
+function maxReqLevelForBudget(slot, level, profile) {
+  const numericLevel = Number(level) || 1;
+  const lag = Number(profile.slotLevelLag?.[slot] ?? 0);
+  const minAllowed = Number(profile.minMaxReqLevel?.[slot] ?? 1);
+  return Math.max(1, Math.min(numericLevel + 2, Math.max(minAllowed, numericLevel - lag)));
 }
 
 function getPolicy(classLine, branch) {
@@ -228,16 +281,20 @@ function shouldUseShield(policy, branch, weapon) {
 }
 
 function gearScore(item, classLine, budget, level) {
+  const profile = getBudgetGearProfile(budget);
+  const reqLevel = Number(item.reqLevel ?? 0);
+  const desiredReqLevel = maxReqLevelForBudget(item.slot, level, profile);
   const attack = classLine.id === 'magician'
     ? Number(item.incMAD ?? 0) * 3 + Number(item.incPAD ?? 0) * 0.25
     : Number(item.incPAD ?? 0) * 3 + Number(item.incMAD ?? 0) * 0.25;
   const primary = Number(item.stats?.[`inc${classLine.primaryStat}`] ?? 0) * 5;
   const secondary = Number(item.stats?.[`inc${classLine.secondaryStat}`] ?? 0) * 2;
   const acc = Number(item.incACC ?? 0) * 2;
-  const levelFit = 100 - Math.abs(level - Number(item.reqLevel ?? 0)) * 3;
-  const classBonus = isClassSpecific(item, classLine) ? 80 : 0;
-  const pricePenalty = budget === 'low' ? Math.log10(Math.max(1, Number(item.price ?? 1))) * 1.5 : 0;
-  return attack + primary + secondary + acc + levelFit + classBonus - pricePenalty;
+  const levelFit = 100 - Math.abs(desiredReqLevel - reqLevel) * 3.8;
+  const classBonus = isClassSpecific(item, classLine) ? profile.classBonus : 0;
+  const pricePenalty = Math.log10(Math.max(1, Number(item.price ?? 1))) * profile.pricePenalty;
+  const overFreshPenalty = Math.max(0, reqLevel - desiredReqLevel) * 8;
+  return attack + primary + secondary + acc + levelFit + classBonus - pricePenalty - overFreshPenalty;
 }
 
 function toGear(item, classLine) {
