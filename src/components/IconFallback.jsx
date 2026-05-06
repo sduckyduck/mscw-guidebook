@@ -65,6 +65,11 @@ async function fetchJson(url) {
   return response.json();
 }
 
+function sameOriginPublicIconUrl(entry) {
+  const path = String(entry?.path || '').replace(/^public\//, '');
+  return path ? `${baseUrl()}${path}` : entry?.download_url;
+}
+
 async function walkGithubContents(url, depth = 0) {
   if (depth > 5) return [];
   const entries = await fetchJson(url);
@@ -76,7 +81,7 @@ async function walkGithubContents(url, depth = 0) {
       files.push({
         name: entry.name,
         path: entry.path,
-        url: entry.download_url,
+        url: sameOriginPublicIconUrl(entry),
         folder: entry.path.split('/').slice(0, -1).join('/'),
       });
     }
@@ -100,12 +105,25 @@ export async function getIconFiles({ force = false } = {}) {
   return iconFilesPromise;
 }
 
+function cleanFolder(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/^public\//, '')
+    .replace(/\/+/g, '/')
+    .replace(/^\/+|\/+$/g, '');
+}
+
 function folderMatches(file, folders) {
   if (!folders?.length) return true;
-  const normalizedFileFolder = String(file.folder || '').toLowerCase().replace(/^public\//, '');
+  const normalizedFileFolder = cleanFolder(file.folder);
   return folders.some((folder) => {
-    const clean = String(folder || '').toLowerCase().replace(/^public\//, '').replace(/^\/+|\/+$/g, '');
-    return normalizedFileFolder.endsWith(clean) || normalizedFileFolder.includes(`/${clean}`) || clean === 'icons';
+    const clean = cleanFolder(folder);
+    if (!clean) return false;
+    return clean === 'icons'
+      || normalizedFileFolder === clean
+      || normalizedFileFolder.startsWith(`${clean}/`)
+      || normalizedFileFolder.endsWith(`/${clean}`)
+      || normalizedFileFolder.includes(`/${clean}/`);
   });
 }
 
@@ -125,7 +143,7 @@ function scoreFile(file, names, folders) {
     else if (filePath.includes(key)) score = Math.max(score, 58);
   }
 
-  const folderBonus = folders?.some((folder) => String(file.folder || '').toLowerCase().includes(String(folder).replace(/^public\//, '').toLowerCase())) ? 8 : 0;
+  const folderBonus = folders?.some((folder) => cleanFolder(file.folder).startsWith(cleanFolder(folder))) ? 8 : 0;
   return score < 0 ? score : score + folderBonus;
 }
 
@@ -163,7 +181,7 @@ export function installIconDebugger() {
       const names = Array.isArray(query) ? query : [query];
       const guessed = iconSourcesFromNames(names, folders);
       const discovered = await discoverIconSources(names, folders, { limit: 20 });
-      const all = unique([...discovered, ...guessed]);
+      const all = unique([...guessed, ...discovered]);
       const checks = await Promise.all(all.map(async (url) => {
         try {
           const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
@@ -218,7 +236,7 @@ export default function IconFallback({
     return () => { stopped = true; };
   }, [nameList.join('|'), folderList.join('|')]);
 
-  const list = useMemo(() => unique([...discovered, ...staticList]), [discovered.join('|'), staticList.join('|')]);
+  const list = useMemo(() => unique([...staticList, ...discovered]), [staticList.join('|'), discovered.join('|')]);
 
   useEffect(() => setIndex(0), [list.join('|')]);
 
@@ -235,6 +253,8 @@ export default function IconFallback({
       src={list[index]}
       alt={alt}
       draggable="false"
+      loading="lazy"
+      decoding="async"
       onLoad={onLoad}
       onError={() => setIndex((value) => value + 1)}
       style={style}
