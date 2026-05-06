@@ -2,7 +2,7 @@ const JOB_BITS = { warrior: 1, magician: 2, bowman: 4, thief: 8, pirate: 16 };
 const JOB_LABEL = { warrior: 'Warrior', magician: 'Mage', bowman: 'Bowman', thief: 'Thief', pirate: 'Pirate' };
 
 const BRANCH_POLICIES = {
-  fighter: { weapons: ['2h sword', '2h axe', '1h sword'], shield: 'never' },
+  fighter: { weapons: ['2h sword', '2h axe', '1h sword', '1h axe'], shield: 'oneHandOnly' },
   page: { weapons: ['1h sword', '1h blunt weapon'], shield: 'required' },
   spearman: { weapons: ['spear', 'pole arm'], shield: 'never' },
   magician: { weapons: ['wand', 'staff'], shield: 'oneHandOnly' },
@@ -15,14 +15,14 @@ const BRANCH_POLICIES = {
   bandit: { weapons: ['dagger'], shield: 'required' },
   brawler: { weapons: ['knuckle'], shield: 'never' },
   gunslinger: { weapons: ['gun'], shield: 'never' },
-  warrior: { weapons: ['1h sword', '2h sword', '2h axe', 'spear', 'pole arm'], shield: 'never' },
+  warrior: { weapons: ['1h sword', '2h sword', '1h axe', '2h axe', 'spear', 'pole arm'], shield: 'oneHandOnly' },
   bowman: { weapons: ['bow'], shield: 'never' },
   thief: { weapons: ['dagger', 'claw'], shield: 'auto' },
   pirate: { weapons: ['gun', 'knuckle'], shield: 'never' },
 };
 
 const CLASS_POLICIES = {
-  warrior: { weapons: ['1h sword', '2h sword', '2h axe', 'spear', 'pole arm'], shield: 'never' },
+  warrior: { weapons: ['1h sword', '2h sword', '1h axe', '2h axe', 'spear', 'pole arm'], shield: 'oneHandOnly' },
   magician: { weapons: ['wand', 'staff'], shield: 'oneHandOnly' },
   bowman: { weapons: ['bow', 'crossbow'], shield: 'never' },
   thief: { weapons: ['dagger', 'claw'], shield: 'auto' },
@@ -69,13 +69,13 @@ const EARLY_GEAR_LEVEL_CUTOFF = 20;
 const LOW_BUDGET_STARTER_CUTOFF = 15;
 const STARTER_REQ_LEVEL_MAX = 10;
 const BANNED_NAME_PATTERN = /\b(gm|admin|administrator|test|tester|beginner gm|maple admin|event|cash|nx|donor|vip|wedding|birthday|anniversary|invincible|wizet|nemi|inkwell|dr\. lim|lim hat|staff|developer|manager)\b/i;
-const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume|transparent|invisible)\b/i;
+const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume|transparent|invisible|underwear|undershirt|under shirt|tubetop|tube top|tanktop|tank top|panties|panty|briefs|boxers)\b/i;
 const BANNED_WEAPON_NAMES = /\b(umbrella|snowboard|surfboard|flag|balloon|rose|bouquet|lollipop|fan|tube|briefcase|purse|shovel|plunger|sake bottle|red whip)\b/i;
 
 const STARTER_NAME_PRIORITY = {
   female: {
     cap: ['Red Headband', 'Black Headband'],
-    top: ['White Tubetop', 'Orange Sporty T-Shirt', 'White Undershirt'],
+    top: ['Orange Sporty T-Shirt', 'White Tubetop', 'White Undershirt'],
     bottom: ['Red Miniskirt', 'Red Mini Skirt'],
     shoes: ['Red Rubber Boots', 'Yellow Basic Boots', 'Brown Hard Leather Boots'],
   },
@@ -183,9 +183,11 @@ export function getGearCandidatesBySlot(args) {
   }
 
   if (!shouldUseShield(policy, branch, output.weapon?.[0])) output.shield = [];
-  if (!budgetAllowsSlot('glove', profile, level, policy)) output.glove = [];
-  if (!budgetAllowsSlot('cape', profile, level, policy)) output.cape = [];
-  if (!budgetAllowsSlot('earring', profile, level, policy)) output.earring = [];
+  if (!manualMode) {
+    if (!budgetAllowsSlot('glove', profile, level, policy)) output.glove = [];
+    if (!budgetAllowsSlot('cape', profile, level, policy)) output.cape = [];
+    if (!budgetAllowsSlot('earring', profile, level, policy)) output.earring = [];
+  }
   return output;
 }
 
@@ -324,7 +326,7 @@ function getBudgetGearProfile(budget) {
 function budgetAllowsSlot(slot, profile, level, policy) {
   if (profile.autoSlots.has(slot)) return true;
   if (profile.conditionalSlots?.[slot] && Number(level) >= profile.conditionalSlots[slot]) return true;
-  if (slot === 'shield' && policy.shield === 'required') return true;
+  if (slot === 'shield' && (policy.shield === 'required' || policy.shield === 'oneHandOnly')) return true;
   return false;
 }
 
