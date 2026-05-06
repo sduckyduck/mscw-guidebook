@@ -31,6 +31,9 @@ const SLOT_LABEL = {
   glove: '手套', shield: '盾牌', cape: '披风', weapon: '武器',
 };
 
+const BANNED_NAME_PATTERN = /\b(gm|admin|administrator|test|tester|beginner gm|maple admin|event|cash|nx|donor|vip|wedding|birthday|anniversary)\b/i;
+const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume)\b/i;
+
 export function selectGear({ classLine, branch, level, budget, gender, statPlan, items }) {
   if (!items?.length) {
     return [{ label: '武器', title: classLine.weaponTypes?.[0] ?? '职业武器', desc: `Lv.${level} 过渡`, slot: 'weapon' }];
@@ -40,23 +43,53 @@ export function selectGear({ classLine, branch, level, budget, gender, statPlan,
     .filter((item) => item.category === 'Equipment')
     .map((item) => ({ ...item, slot: detectSlot(item), visualGender: detectVisualGender(item) }))
     .filter((item) => item.slot)
+    .filter((item) => !isBannedOrSpecial(item))
     .filter((item) => Number(item.reqLevel ?? 0) <= level + 2)
     .filter((item) => jobMatches(item, classLine))
     .filter((item) => statRequirementsMet(item, statPlan))
     .filter((item) => genderMatches(item, gender));
 
-  const weapon = pickBest(candidates.filter((item) => item.slot === 'weapon' && weaponMatches(item, classLine, branch)), classLine, budget, level);
-  const cap = pickBest(candidates.filter((item) => item.slot === 'cap'), classLine, budget, level);
-  const overall = pickBest(candidates.filter((item) => item.slot === 'overall'), classLine, budget, level);
-  const top = pickBest(candidates.filter((item) => item.slot === 'top'), classLine, budget, level);
-  const bottom = pickBest(candidates.filter((item) => item.slot === 'bottom'), classLine, budget, level);
-  const shoes = pickBest(candidates.filter((item) => item.slot === 'shoes'), classLine, budget, level);
-  const glove = pickBest(candidates.filter((item) => item.slot === 'glove'), classLine, budget, level);
-  const shield = pickBest(candidates.filter((item) => item.slot === 'shield'), classLine, budget, level);
-  const cape = pickBest(candidates.filter((item) => item.slot === 'cape'), classLine, budget, level);
+  const weapon = pickBestStrict(
+    candidates.filter((item) => item.slot === 'weapon' && weaponMatches(item, classLine, branch)),
+    classLine,
+    budget,
+    level,
+    { allowFallbackAllJob: true },
+  );
 
-  const ordered = [cap, overall || top, overall ? null : bottom, shoes, glove, cape, shouldUseShield(classLine, branch, weapon) ? shield : null, weapon].filter(Boolean);
+  const cap = pickClassGear(candidates, 'cap', classLine, budget, level);
+  const overall = pickClassGear(candidates, 'overall', classLine, budget, level);
+  const top = pickClassGear(candidates, 'top', classLine, budget, level);
+  const bottom = pickClassGear(candidates, 'bottom', classLine, budget, level);
+  const shoes = pickClassGear(candidates, 'shoes', classLine, budget, level);
+  const glove = pickClassGear(candidates, 'glove', classLine, budget, level);
+  const shield = pickClassGear(candidates, 'shield', classLine, budget, level);
+  const cape = pickClassGear(candidates, 'cape', classLine, budget, level);
+
+  const ordered = [
+    cap,
+    overall || top,
+    overall ? null : bottom,
+    shoes,
+    glove,
+    cape,
+    shouldUseShield(classLine, branch, weapon) ? shield : null,
+    weapon,
+  ].filter(Boolean);
+
   return ordered.map((item) => toGear(item, classLine));
+}
+
+function pickClassGear(candidates, slot, classLine, budget, level) {
+  const slotItems = candidates.filter((item) => item.slot === slot);
+  return pickBestStrict(slotItems, classLine, budget, level, { allowFallbackAllJob: false });
+}
+
+function pickBestStrict(list, classLine, budget, level, { allowFallbackAllJob = false } = {}) {
+  const classOnly = list.filter((item) => isClassSpecific(item, classLine));
+  if (classOnly.length) return pickBest(classOnly, classLine, budget, level);
+  if (allowFallbackAllJob) return pickBest(list.filter((item) => isAllJob(item)), classLine, budget, level);
+  return undefined;
 }
 
 function pickBest(list, classLine, budget, level) {
@@ -83,6 +116,22 @@ function detectVisualGender(item) {
   return 'unisex';
 }
 
+function isBannedOrSpecial(item) {
+  const name = String(item.name ?? item.title ?? '');
+  const description = String(item.description ?? '');
+  const text = `${name} ${description}`;
+  if (BANNED_NAME_PATTERN.test(text)) return true;
+  if (item.slot !== 'weapon' && BANNED_SLOT_NAMES.test(text)) return true;
+  if (Number(item.reqLevel ?? 0) >= 200) return true;
+  if (Number(item.price ?? 0) === 1 && !hasAnyStatOrAttack(item)) return true;
+  return false;
+}
+
+function hasAnyStatOrAttack(item) {
+  return ['incSTR', 'incDEX', 'incINT', 'incLUK', 'incPAD', 'incMAD', 'incACC', 'incSpeed', 'incJump']
+    .some((key) => Number(item[key] ?? item.stats?.[key] ?? 0) !== 0);
+}
+
 function genderMatches(item, gender) {
   return item.visualGender === 'unisex' || item.visualGender === gender;
 }
@@ -95,13 +144,26 @@ function statRequirementsMet(item, statPlan) {
     && Number(item.reqLUK ?? 0) <= Number(stats.LUK ?? 0);
 }
 
-function jobMatches(item, classLine) {
-  const reqJob = Number(item.reqJob ?? item.stats?.reqJob ?? 0);
-  if (!reqJob) return true;
+function getReqJob(item) {
+  return Number(item.reqJob ?? item.stats?.reqJob ?? 0);
+}
+
+function isAllJob(item) {
+  const reqJob = getReqJob(item);
+  const label = String(item.req_job_label ?? '');
+  return !reqJob || !label || label === 'All';
+}
+
+function isClassSpecific(item, classLine) {
+  const reqJob = getReqJob(item);
   const bit = JOB_BITS[classLine.id] ?? 0;
   if (bit && (reqJob & bit)) return true;
-  const label = String(item.req_job_label ?? '');
-  return !label || label === 'All' || label.toLowerCase().includes(String(JOB_LABEL[classLine.id] ?? '').toLowerCase());
+  const label = String(item.req_job_label ?? '').toLowerCase();
+  return Boolean(label && label !== 'all' && label.includes(String(JOB_LABEL[classLine.id] ?? '').toLowerCase()));
+}
+
+function jobMatches(item, classLine) {
+  return isAllJob(item) || isClassSpecific(item, classLine);
 }
 
 function weaponMatches(item, classLine, branch) {
@@ -125,8 +187,9 @@ function gearScore(item, classLine, budget, level) {
   const secondary = Number(item.stats?.[`inc${classLine.secondaryStat}`] ?? 0) * 2;
   const acc = Number(item.incACC ?? 0) * 2;
   const levelFit = 100 - Math.abs(level - Number(item.reqLevel ?? 0)) * 3;
+  const classBonus = isClassSpecific(item, classLine) ? 80 : 0;
   const pricePenalty = budget === 'low' ? Math.log10(Math.max(1, Number(item.price ?? 1))) * 1.5 : 0;
-  return attack + primary + secondary + acc + levelFit - pricePenalty;
+  return attack + primary + secondary + acc + levelFit + classBonus - pricePenalty;
 }
 
 function toGear(item, classLine) {
