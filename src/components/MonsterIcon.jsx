@@ -8,8 +8,14 @@ const OSMS_DATA_BASE = 'https://sduckyduck.github.io/osms-classic-guidebook/data
 const API_REGION = 'GMS';
 const API_VERSION = '83';
 
+// These names are known to be easy to mismatch when using local sequential OSMS image IDs.
+// Put them first so the displayed icon follows the real MapleStory.io mob ID instead of a stale local thumbnail.
+const VERIFIED_MSIO_ID_BY_NAME = {
+  'horny mushroom': 2110200,
+};
+
 const LAST_RESORT_MSIO_ID_BY_NAME = {
-  'horny mushroom': 1120100,
+  'horny mushroom': 2110200,
   'zombie mushroom': 2230102,
   'evil eye': 3230100,
   'slime': 210100,
@@ -91,7 +97,7 @@ async function fetchFirstJson(urls) {
   let lastError = null;
   for (const url of urls) {
     try {
-      const response = await fetch(`${url}?v=png-monster-icons-2`, { cache: 'no-store' });
+      const response = await fetch(`${url}?v=png-monster-icons-3`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`${url} ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -112,11 +118,14 @@ async function loadOsmsMonsterIndex() {
   return osmsMonsterPromise;
 }
 
-function getMapleStoryIoSource(monster) {
+function getMapleStoryIoSource(monster, preferredOnly = false) {
+  const key = normalizeName(monster?.name);
   const explicit = Number(monster?.mapleMobId ?? monster?.mobId ?? monster?.monsterId ?? monster?.msioId);
   const id = Number.isFinite(explicit) && explicit > 10000
     ? explicit
-    : LAST_RESORT_MSIO_ID_BY_NAME[normalizeName(monster?.name)];
+    : preferredOnly
+      ? VERIFIED_MSIO_ID_BY_NAME[key]
+      : LAST_RESORT_MSIO_ID_BY_NAME[key];
   return id ? `https://maplestory.io/api/${API_REGION}/${API_VERSION}/mob/${id}/icon?resize=3` : '';
 }
 
@@ -124,23 +133,26 @@ export function getMonsterIconSources(monster, index) {
   const matched = index?.get(normalizeName(monster?.name));
 
   return unique([
-    // 1) PNG first from OSMS Guide by monster name. This avoids gif/webp and avoids wrong local numeric IDs.
+    // 1) Verified MapleStory.io IDs first for names where local data has mismatched thumbnails.
+    getMapleStoryIoSource(monster, true),
+
+    // 2) PNG first from OSMS Guide by monster name.
     osmsAsset(matched?.thumbnail),
 
-    // 2) PNG first from current MSCW AppData if present.
+    // 3) PNG first from current MSCW AppData if present.
     localAsset(monster?.thumbnail),
 
-    // 3) OSMS gif/webp only after PNG fails.
+    // 4) OSMS gif/webp only after PNG fails.
     osmsAsset(matched?.gifs?.stand),
     osmsAsset(matched?.gifs?.move),
     osmsAsset(matched?.gif),
 
-    // 4) Current local gif/webp only after PNG fails.
+    // 5) Current local gif/webp only after PNG fails.
     localAsset(monster?.gifs?.stand),
     localAsset(monster?.gifs?.move),
     localAsset(monster?.gif),
 
-    // 5) Last-resort MapleStory.io icon by name, so the cell is not blank.
+    // 6) Last-resort MapleStory.io icon by name, so the cell is not blank.
     getMapleStoryIoSource(monster),
   ]);
 }
