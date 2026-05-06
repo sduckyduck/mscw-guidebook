@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import CharacterPreview from './components/CharacterPreview.jsx';
+import IconFallback, { baseUrl } from './components/IconFallback.jsx';
 import MonsterIcon from './components/MonsterIcon.jsx';
 import MsioItemIcon from './components/MsioItemIcon.jsx';
 import OsmsDataImage from './components/OsmsDataImage.jsx';
@@ -138,7 +139,7 @@ export default function AppMediaEnhanced() {
   return <main className="app-shell">
     <nav className="top-tabs">{TABS.map(([id, name]) => <button key={id} className={tab === id ? 'top-tab active' : 'top-tab'} onClick={() => changeTab(id)}>{name}</button>)}</nav>
     {edition.dataMode !== 'official-appdata' && <p className="load-error">国服数据/公式已预留，当前暂不启用真实推荐。</p>}
-    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} weapon={weapon} gear={gear} stats={stats} candidatesBySlot={candidatesBySlot} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} />}
+    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} weapon={weapon} gear={gear} stats={stats} skillPlan={skillPlan} candidatesBySlot={candidatesBySlot} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} />}
     {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
     {tab === 'materials' && <MaterialsPage data={activeData} />}
@@ -147,7 +148,7 @@ export default function AppMediaEnhanced() {
   </main>;
 }
 
-function Dashboard({ controls, classLine, gender, level, bestMonster, bestMap, weapon, gear, stats, candidatesBySlot, onPickSlot, onOpenMaps }) {
+function Dashboard({ controls, classLine, gender, level, bestMonster, bestMap, weapon, gear, stats, skillPlan, candidatesBySlot, onPickSlot, onOpenMaps }) {
   return <section className="mg-dashboard">
     <h1 className="mg-dashboard-title">MapleGuide: {classLine.name}开荒仪表盘</h1>
     <p className="mg-dashboard-subtitle">根据您的参数，为您推荐最佳路线</p>
@@ -159,6 +160,7 @@ function Dashboard({ controls, classLine, gender, level, bestMonster, bestMap, w
       <div className="mg-right-stack">
         <StatusPanel bestMonster={bestMonster} bestMap={bestMap} onOpenMaps={onOpenMaps} />
         <PreviewPanel classLine={classLine} gender={gender} level={level} weapon={weapon} gear={gear} stats={stats} />
+        <OverviewDamagePanel classLine={classLine} skillPlan={skillPlan} />
       </div>
     </div>
     <div className="mg-actions">
@@ -209,8 +211,7 @@ function getSlotConflict(slot, by) {
   return '';
 }
 
-function getSlotSwapHint(slot, by, hasCandidates) {
-  if (!hasCandidates) return '';
+function getSlotSwapHint(slot, by) {
   if ((slot === 'top' || slot === 'bottom') && by.overall) return `点击换${slot === 'top' ? '上衣' : '下衣'}`;
   if (slot === 'overall' && (by.top || by.bottom)) return '点击换套服';
   return '';
@@ -228,10 +229,11 @@ function DashboardEquipmentSlots({ gear, candidatesBySlot, onPickSlot }) {
         const item = by[slot];
         const conflict = getSlotConflict(slot, by);
         const hasCandidates = Boolean(candidatesBySlot?.[slot]?.length);
-        const swapHint = getSlotSwapHint(slot, by, hasCandidates);
+        const swapHint = getSlotSwapHint(slot, by);
+        const interactive = hasCandidates || Boolean(swapHint);
         const displayTitle = item?.title ?? swapHint ?? conflict ?? '未装备';
         const className = ['mg-equip-tile', conflict ? 'conflict' : '', swapHint ? 'smart-swap' : ''].filter(Boolean).join(' ');
-        return <button className={className} key={slot} onClick={() => onPickSlot(slot)} disabled={!hasCandidates} title={swapHint || conflict || label}>
+        return <button className={className} key={slot} onClick={() => onPickSlot(slot)} disabled={!interactive} title={swapHint || conflict || label}>
           <MsioItemIcon item={item} size={30} />
           <span>{label}</span>
           <strong>{displayTitle}</strong>
@@ -266,6 +268,51 @@ function PreviewPanel({ classLine, gender, level, weapon, gear, stats }) {
       <div className="preview-meta"><strong>{classLine.name} Lv.{level}</strong><span>{weapon?.title ?? '装备读取中'}</span></div>
     </div>
   </section>;
+}
+
+function OverviewDamagePanel({ classLine, skillPlan }) {
+  const cards = useMemo(() => {
+    const all = skillPlan?.damageCards ?? [];
+    const base = all.find((card) => card.isBase);
+    const skillCards = all
+      .filter((card) => !card.isBase)
+      .sort((a, b) => Number(b.max ?? 0) - Number(a.max ?? 0))
+      .slice(0, 2);
+    return classLine?.id === 'magician' ? skillCards : [base, ...skillCards].filter(Boolean);
+  }, [classLine?.id, skillPlan]);
+
+  if (!cards.length) return null;
+
+  return <section className="mg-overview-damage-card">
+    <div className="mg-overview-damage-head">
+      <h2>技能伤害</h2>
+      <span>{classLine?.id === 'magician' ? '最高 2 项技能' : '普攻 + 最高 2 项'}</span>
+    </div>
+    <div className="mg-overview-damage-list">
+      {cards.map((card) => <OverviewDamageRow key={card.name} card={card} />)}
+    </div>
+  </section>;
+}
+
+function OverviewDamageRow({ card }) {
+  const letters = card.isBase ? 'Ba' : String(card.name || '?').replace(/\s+/g, '').slice(0, 2);
+  return <article className="mg-overview-damage-row">
+    <div className={card.isBase ? 'mg-overview-damage-icon base' : 'mg-overview-damage-icon'}>
+      <IconFallback
+        className="mg-overview-damage-img"
+        sources={card.iconKey ? [`${baseUrl()}${String(card.iconKey).replace(/^\/+/, '')}`] : []}
+        names={[card.name]}
+        folders={['icons/skill', 'icons']}
+        alt=""
+        fallback={<span>{letters}</span>}
+      />
+    </div>
+    <div>
+      <strong>{card.name}</strong>
+      <span>{card.isBase ? '普通攻击' : `Lv. ${card.level}/${card.maxLevel}`}</span>
+    </div>
+    <em>{card.min} - {card.max}</em>
+  </article>;
 }
 
 function GearPicker({ slot, items, current, onChoose, onClose }) {
