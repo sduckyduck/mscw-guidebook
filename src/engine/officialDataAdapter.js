@@ -7,12 +7,15 @@ const PROFESSION_ID_BY_NAME = {
   Arcforge: 'arcforge',
 };
 
+const BASE_URL = import.meta.env.BASE_URL || '/';
+const appDataPath = (path) => `${BASE_URL}${path.replace(/^\/+/, '')}`;
+
 export async function loadOfficialGuideData() {
   const [overview, monstersRaw, mapsRaw, craftingRaw] = await Promise.all([
-    fetchJson('/AppData/overview.json'),
-    fetchJson('/AppData/monsters.json'),
-    fetchJson('/AppData/maps.json'),
-    fetchJson('/AppData/crafting.json'),
+    fetchJson(appDataPath('AppData/overview.json')),
+    fetchJson(appDataPath('AppData/monsters.json')),
+    fetchJson(appDataPath('AppData/maps.json')),
+    fetchJson(appDataPath('AppData/crafting.json')),
   ]);
 
   const monsters = normalizeMonsters(monstersRaw?.monsters ?? []);
@@ -66,8 +69,8 @@ function normalizeMonsters(monsters) {
       isBoss: Boolean(monster.is_boss),
       isNew: Boolean(monster.is_new),
       undead: Boolean(monster.undead),
-      thumbnail: monster.thumbnail ? `/AppData/${monster.thumbnail}` : null,
-      gif: monster.gif ? `/AppData/${monster.gif}` : null,
+      thumbnail: monster.thumbnail ? appDataPath(`AppData/${monster.thumbnail}`) : null,
+      gif: monster.gif ? appDataPath(`AppData/${monster.gif}`) : null,
       maps: (monster.maps ?? []).map((map) => ({
         id: Number(map.id),
         name: map.name,
@@ -91,8 +94,8 @@ function normalizeMaps(regions, monsters) {
         region: map.region ?? region.region ?? 'Unknown',
         isTown: Boolean(map.is_town),
         mobRate: Number(map.mob_rate ?? 1),
-        minimap: map.minimap ? `/AppData/${map.minimap}` : null,
-        thumbnail: map.thumbnail ? `/AppData/${map.thumbnail}` : null,
+        minimap: map.minimap ? appDataPath(`AppData/${map.minimap}`) : null,
+        thumbnail: map.thumbnail ? appDataPath(`AppData/${map.thumbnail}`) : null,
         bgm: map.bgm ?? '',
       });
     }
