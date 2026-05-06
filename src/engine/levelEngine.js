@@ -27,13 +27,33 @@ export function getRecommendedApAllocation(classLine, level, custom = {}) {
   const totalAp = getTotalApFromLevel(safeLevel);
   const primary = classLine.primaryStat;
   const secondary = classLine.secondaryStat;
-  const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel);
+  const budget = custom.budget ?? 'mid';
+  const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget);
+  const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget);
   const baseStats = classLine.baseStats;
   const allocation = Object.fromEntries(STAT_KEYS.map((key) => [key, 0]));
 
+  // First satisfy the stat requirement implied by the budget's gear tier.
+  // Low budget gear lags behind level, so bowman/mage gear stats can also lag;
+  // low budget physical classes still need extra hit-rate insurance.
   const secondaryNeeded = Math.max(0, secondaryTarget - (baseStats[secondary] ?? 0));
-  const secondaryAdded = Math.min(totalAp, secondaryNeeded);
-  const primaryAdded = Math.max(0, totalAp - secondaryAdded);
+  let secondaryAdded = Math.min(totalAp, secondaryNeeded);
+  let primaryAdded = Math.max(0, totalAp - secondaryAdded);
+
+  // For physical jobs, low/normal budget means fewer accuracy bonuses from gear.
+  // Add secondary AP until the estimated hit target is reached, then put the rest
+  // back into the main damage stat. Magician intentionally skips this rule.
+  if (classLine.id !== 'magician' && accuracyTarget > 0) {
+    let safety = 0;
+    while (secondaryAdded < totalAp && safety < totalAp) {
+      const currentStats = buildStatsForAccuracy(baseStats, primary, primaryAdded, secondary, secondaryAdded);
+      const currentAccuracy = estimateAccuracy(classLine.id, currentStats, safeLevel);
+      if (currentAccuracy >= accuracyTarget) break;
+      secondaryAdded += 1;
+      primaryAdded = Math.max(0, primaryAdded - 1);
+      safety += 1;
+    }
+  }
 
   allocation[secondary] = secondaryAdded;
   allocation[primary] = primaryAdded;
@@ -46,7 +66,9 @@ export function buildStatPlan(classLine, level, custom = {}) {
   const totalAp = getTotalApFromLevel(safeLevel);
   const primary = classLine.primaryStat;
   const secondary = classLine.secondaryStat;
-  const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel);
+  const budget = custom.budget ?? 'mid';
+  const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget);
+  const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget);
   const allocation = sanitizeApAllocation(
     custom.apAllocation ?? getRecommendedApAllocation(classLine, safeLevel, custom),
     totalAp,
@@ -72,6 +94,7 @@ export function buildStatPlan(classLine, level, custom = {}) {
     primaryAdded: allocation[primary] ?? 0,
     secondaryAdded: allocation[secondary] ?? 0,
     secondaryTarget,
+    accuracyTarget,
     apAllocation: allocation,
     stats,
     derived: {
@@ -96,13 +119,72 @@ function sanitizeApAllocation(allocation, totalAp) {
   return next;
 }
 
-function inferSecondaryTarget(classId, level) {
-  if (classId === 'magician') return Math.max(8, level + 3);
-  if (classId === 'warrior') return Math.min(90, Math.max(20, Math.round(level * 1.25)));
-  if (classId === 'bowman') return Math.min(80, Math.max(15, Math.round(level * 0.75)));
-  if (classId === 'thief') return Math.min(100, Math.max(25, Math.round(level * 1.4)));
-  if (classId === 'pirate') return Math.min(90, Math.max(20, Math.round(level * 1.0)));
+function buildStatsForAccuracy(baseStats, primary, primaryAdded, secondary, secondaryAdded) {
+  const stats = { ...baseStats };
+  stats[primary] = (stats[primary] ?? 0) + (primaryAdded ?? 0);
+  stats[secondary] = (stats[secondary] ?? 0) + (secondaryAdded ?? 0);
+  return stats;
+}
+
+function inferSecondaryTarget(classId, level, budget = 'mid') {
+  if (classId === 'magician') {
+    if (budget === 'low') return Math.max(8, Math.round(level * 0.78));
+    if (budget === 'high') return Math.max(8, level + 3);
+    return Math.max(8, Math.round(level * 0.92));
+  }
+
+  if (classId === 'warrior') {
+    if (budget === 'low') return Math.min(100, Math.max(24, Math.round(level * 1.42)));
+    if (budget === 'high') return Math.min(85, Math.max(18, Math.round(level * 1.08)));
+    return Math.min(92, Math.max(20, Math.round(level * 1.25)));
+  }
+
+  if (classId === 'bowman') {
+    // Bowman damage and accuracy already come mostly from DEX. Low budget can keep
+    // STR lower because weapon upgrades lag; high budget needs fresher weapon reqs.
+    if (budget === 'low') return Math.min(70, Math.max(10, Math.round(level * 0.48)));
+    if (budget === 'high') return Math.min(90, Math.max(15, Math.round(level * 0.82)));
+    return Math.min(80, Math.max(12, Math.round(level * 0.65)));
+  }
+
+  if (classId === 'thief') {
+    if (budget === 'low') return Math.min(110, Math.max(28, Math.round(level * 1.48)));
+    if (budget === 'high') return Math.min(95, Math.max(24, Math.round(level * 1.22)));
+    return Math.min(100, Math.max(25, Math.round(level * 1.36)));
+  }
+
+  if (classId === 'pirate') {
+    if (budget === 'low') return Math.min(95, Math.max(20, Math.round(level * 1.12)));
+    if (budget === 'high') return Math.min(95, Math.max(20, Math.round(level * 0.92)));
+    return Math.min(90, Math.max(20, Math.round(level * 1.0)));
+  }
+
   return Math.max(20, level);
+}
+
+function inferAccuracyTarget(classId, level, budget = 'mid') {
+  if (classId === 'magician') return 0;
+  if (classId === 'warrior') {
+    if (budget === 'low') return Math.round(level * 1.35 + 10);
+    if (budget === 'high') return Math.round(level * 1.0 + 6);
+    return Math.round(level * 1.18 + 8);
+  }
+  if (classId === 'bowman') {
+    if (budget === 'low') return Math.round(level * 1.18 + 8);
+    if (budget === 'high') return Math.round(level * 0.95 + 6);
+    return Math.round(level * 1.05 + 7);
+  }
+  if (classId === 'thief') {
+    if (budget === 'low') return Math.round(level * 1.28 + 10);
+    if (budget === 'high') return Math.round(level * 1.0 + 7);
+    return Math.round(level * 1.12 + 8);
+  }
+  if (classId === 'pirate') {
+    if (budget === 'low') return Math.round(level * 1.22 + 8);
+    if (budget === 'high') return Math.round(level * 0.98 + 6);
+    return Math.round(level * 1.08 + 7);
+  }
+  return Math.round(level + 6);
 }
 
 function inferHpGrowth(classId) {
