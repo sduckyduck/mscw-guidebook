@@ -1,147 +1,311 @@
-import IconFallback, { baseUrl, iconSourcesFromNames } from './IconFallback.jsx';
-
-const SKILL_ICON_FOLDERS = ['icons/skill', 'icons/skills', 'icons'];
-
-const SKILL_ICON_ALIASES = {
-  'Base Attack': ['base attack', 'basic attack', 'attack', 'normal attack'],
-  '基础攻击': ['base attack', 'basic attack', 'attack', 'normal attack'],
-  '强力攻击': ['power strike', '1001001_Power_Strike'],
-  '群体攻击': ['slash blast', '1001002_Slash_Blast'],
-  '提高 HP 恢复': ['improved hp recovery', '1000000_Improved_HP_Recovery'],
-  '提高 HP 上限': ['max hp increase', '1000001_Max_HP_Increase'],
-  '精准打击': ['precise strikes', '1000002_Precise_Strikes'],
-  '铁甲术': ['iron body', '1001000_Iron_Body'],
-  '魔力弹': ['energy bolt', '2001002_Energy_Bolt'],
-  '提高 MP 恢复': ['improved mp recovery', '2000000_Improved_MP_Recovery'],
-  '提高 MP 上限': ['max mp increase', '2000001_Max_MP_Increase'],
-  '魔法双击': ['magic claw', '2001003_Magic_Claw'],
-  '魔法盾': ['magic guard', '2001000_Magic_Guard'],
-  '魔法铠甲': ['magic armor', '2001001_Magic_Armor'],
-  '强力箭': ['critical shot', '3000000_Critical_Shot'],
-  '远程箭': ['eye of amazon', '3000002_The_Eye_of_Amazon'],
-  '集中术': ['focus', '3001000_Focus'],
-  '断魂箭': ['arrow blow', '3001001_Arrow_Blow'],
-  '二连射': ['double shot', '3001002_Double_Shot'],
-  '双飞斩': ['lucky seven', '4001003_Lucky_Seven'],
-  '劈空斩': ['double stab', '4001002_Double_Stab'],
-  '远程暗器': ['keen eyes', '4000001_Keen_Eyes'],
-  '诅咒术': ['disorder', '4001000_Disorder'],
-  '隐身': ['dark sight', '4001001_Dark_Sight'],
-  '灵巧身手': ['nimble body', '4000000_Nimble_Body'],
-  '剑精通': ['sword mastery', '1100000_Sword_Mastery', '1200000_Sword_Mastery'],
-  '斧精通': ['axe mastery', '1100001_Axe_Mastery'],
-  '钝器精通': ['blunt weapon mastery', '1200001_Blunt_Weapon_Mastery'],
-  '枪精通': ['spear mastery', '1300000_Spear_Mastery'],
-  '矛精通': ['polearm mastery', '1300001_Polearm_Mastery'],
-  '终极剑': ['final attack sword', '1101000_Final_Attack_Sword', '1201000_Final_Attack_Sword'],
-  '终极斧': ['final attack axe', '1101001_Final_Attack_Axe'],
-  '终极钝器': ['final attack blunt weapon', '1201001_Final_Attack_Blunt_Weapon'],
-  '终极枪': ['final attack spear', '1301000_Final_Attack_Spear'],
-  '终极矛': ['final attack polearm', '1301001_Final_Attack_Polearm'],
-  '剑加速': ['sword booster', '1101002_Sword_Booster', '1201002_Sword_Booster'],
-  '斧加速': ['axe booster', '1101003_Axe_Booster'],
-  '钝器加速': ['blunt weapon booster', '1201003_Blunt_Weapon_Booster'],
-  '枪加速': ['spear booster', '1301002_Spear_Booster'],
-  '矛加速': ['polearm booster', '1301003_Polearm_Booster'],
-  '愤怒': ['rage', '1101004_Rage'],
-  '伤害反击': ['power guard', '1101005_Power_Guard', '1201005_Power_Guard'],
-  '压制术': ['threaten', '1201004_Threaten'],
-  '钢铁意志': ['iron will', '1301004_Iron_Will'],
-  '神圣之火': ['hyper body', '1301005_Hyper_Body'],
-  'MP 吸收': ['mp eater', '2100000_MP_Eater', '2200000_MP_Eater', '2300000_MP_Eater'],
-  '精神力': ['meditation', '2101000_Meditation', '2201000_Meditation'],
-  '瞬间移动': ['teleport', '2101001_Teleport', '2201001_Teleport', '2301000_Teleport'],
-  '缓速术': ['slow', '2101002_Slow', '2201002_Slow'],
-  '火箭术': ['fire arrow', '2101003_Fire_Arrow'],
-  '毒雾': ['poison breath', '2101004_Poison_Breath'],
-  '冰冻术': ['cold beam', '2201003_Cold_Beam'],
-  '雷电术': ['thunder bolt', '2201004_Thunder_Bolt'],
-  '治愈术': ['heal', '2301001_Heal'],
-  '神之保护': ['invincible', '2301002_Invincible'],
-  '祝福': ['bless', '2301003_Bless'],
-  '圣箭术': ['holy arrow', '2301004_Holy_Arrow'],
-  '弓精通': ['bow mastery', '3100000_Bow_Mastery'],
-  '终极弓': ['final attack bow', '3101000_Final_Attack_Bow'],
-  '弓加速': ['bow booster', '3101001_Bow_Booster'],
-  '强弓': ['power knockback', '3101002_Power_Knockback'],
-  '无形箭': ['soul arrow bow', '3101003_Soul_Arrow_Bow'],
-  '爆炸箭': ['arrow bomb bow', '3101004_Arrow_Bomb_Bow'],
-  '弩精通': ['crossbow mastery', '3200000_Crossbow_Mastery'],
-  '终极弩': ['final attack crossbow', '3201000_Final_Attack_Crossbow'],
-  '弩加速': ['crossbow booster', '3201001_Crossbow_Booster'],
-  '强弩': ['power knockback', '3201002_Power_Knockback'],
-  '无形弩': ['soul arrow crossbow', '3201003_Soul_Arrow_Crossbow'],
-  '穿透箭': ['iron arrow crossbow', '3201004_Iron_Arrow_Crossbow'],
-  '精准暗器': ['claw mastery', '4100000_Claw_Mastery'],
-  '强力投掷': ['critical throw', '4100001_Critical_Throw'],
-  '恢复术': ['critical recovery', 'nimble recovery', '4100002_Critical_Recovery', '4200001_Nimble_Recovery'],
-  '快速暗器': ['claw booster', '4101000_Claw_Booster'],
-  '轻功': ['haste', '4101001_Haste', '4201001_Haste'],
-  '吸血': ['drain', '4101002_Drain'],
-  '精准短刀': ['dagger mastery', '4200000_Dagger_Mastery'],
-  '快速短刀': ['dagger booster', '4201000_Dagger_Booster'],
-  '偷窃': ['steal', '4201002_Steal'],
-  '回旋斩': ['savage blow', '4201003_Savage_Blow'],
-};
-
-const SKILL_NOTES = {
-  '魔法双击': '发射两道魔法爪攻击单体怪物，是法师一转最主要的练级输出技能。',
-  '魔力弹': '基础魔法攻击，通常只点 1 点作为前置，后续用魔法双击替代。',
-  '提高 MP 恢复': '提高站立时 MP 自然恢复效率，属于续航型被动技能。',
-  '提高 MP 上限': '升级时增加更多 MP，是法师早期最重要的成长技能之一。',
-  '魔法盾': '受到伤害时用 MP 抵消一部分 HP 伤害，提高容错。',
-  '魔法铠甲': '临时提高防御力，前期开荒可以减少吃药压力。',
-  '强力攻击': '战士一转单体主攻技能，适合打血量较高的怪。',
-  '群体攻击': '战士一转范围清怪技能，适合怪物密集地图。',
-  '提高 HP 上限': '升级时增加更多 HP，越早点满收益越高。',
-  '强力箭': '弓箭手的暴击型被动技能，提高输出上限。',
-  '远程箭': '增加攻击距离，让弓箭手更容易风筝怪物。',
-  '集中术': '临时提高命中和回避，适合命中偏紧时使用。',
-  '断魂箭': '弓箭手早期单体攻击技能。',
-  '二连射': '连续射击两次，是弓箭手一转常见主攻技能。',
-  '双飞斩': '标飞一转核心输出技能，一次投掷两枚飞镖。',
-  '劈空斩': '刀飞一转近战攻击技能。',
-  '远程暗器': '增加飞镖射程，是标飞早期很关键的被动技能。',
-  '隐身': '进入隐身状态，适合赶路和躲避怪物。',
-  '灵巧身手': '提高命中和回避，增强飞侠基础手感。',
-  '轻功': '提高移动速度和跳跃力，是飞侠二转非常实用的辅助技能。',
-  '回旋斩': '刀飞二转高段数爆发技能。',
-  '治愈术': '恢复队友 HP，对亡灵怪也能造成伤害。',
-  '祝福': '提高队伍命中、回避、防御等属性。',
-  '神圣之火': '提高队伍最大 HP/MP，是枪战士核心辅助技能。',
-};
-
-function unique(values) {
-  return [...new Set(values.filter(Boolean))];
-}
+import IconFallback, { baseUrl } from './IconFallback.jsx';
 
 function publicIconAsset(path) {
   if (!path) return '';
   return `${baseUrl()}${String(path).replace(/^\/+/, '')}`;
 }
 
-function getSkillNames(name) {
-  return [name, ...(SKILL_ICON_ALIASES[name] ?? [])].filter(Boolean);
+function clampLevel(skill, offset = 0) {
+  const level = Number(skill?.level || 0) + offset;
+  const max = Number(skill?.max || 0);
+  return Math.max(0, Math.min(max, level));
 }
 
-function getSkillSources(name, iconKey = '') {
-  if (name === 'Base Attack' || name === '基础攻击') return [];
-  const names = getSkillNames(name);
-  return unique([
-    publicIconAsset(iconKey),
-    ...iconSourcesFromNames(names, SKILL_ICON_FOLDERS),
-  ]);
+function pct(value) {
+  return `${Math.round(value)}%`;
 }
 
-function getSkillDescription(skill, plan) {
-  const damage = plan?.damageCards?.find((card) => card.name === skill.name);
-  const points = Number(skill.level || 0);
-  const base = SKILL_NOTES[skill.name] || (skill.locked ? '该技能目前还没有开放，达到对应转职等级后才可以加点。' : '当前技能描述使用通用模板；后续可以接入 AppData 的逐级技能表。');
-  if (damage && points > 0) {
-    return `${base} 当前投入 ${points} 点，估算伤害为 ${damage.min} - ${damage.max}。`;
-  }
-  if (points > 0) return `${base} 当前投入 ${points} 点，主要效果会随技能等级提升。`;
-  return `${base} 当前还没有投入 SP。`;
+function sec(value) {
+  return `${Math.round(value)} 秒`;
+}
+
+function mpCost(level, base = 5, step = 1) {
+  return Math.max(0, Math.round(base + level * step));
+}
+
+function makeEffect({ label, current, next, type = '技能效果', note = '', values = [] }) {
+  return { label, current, next, type, note, values };
+}
+
+const EFFECT_RULES = {
+  '提高 HP 上限': (skill) => {
+    const lv = clampLevel(skill);
+    const nx = clampLevel(skill, 1);
+    const cur = lv >= skill.max ? 20 : Math.round((lv / Math.max(1, skill.max)) * 20);
+    const next = nx >= skill.max ? 20 : Math.round((nx / Math.max(1, skill.max)) * 20);
+    return makeEffect({
+      label: '最大 HP 成长',
+      type: '被动成长技能',
+      current: `当前 Lv.${lv}：升级时最大 HP 成长 +${pct(cur)}。`,
+      next: lv >= skill.max ? '下一级：已经满级，最大 HP 成长加成保持 +20%。' : `下一级 Lv.${nx}：升级时最大 HP 成长 +${pct(next)}。`,
+      note: '这个技能越早点高，后面累计血量越好；不是即时回血，而是升级成长收益。',
+      values: [`当前 +${pct(cur)}`, lv < skill.max ? `下一级 +${pct(next)}` : '已满级'],
+    });
+  },
+  '提高 MP 上限': (skill) => {
+    const lv = clampLevel(skill);
+    const nx = clampLevel(skill, 1);
+    const cur = lv >= skill.max ? 20 : Math.round((lv / Math.max(1, skill.max)) * 20);
+    const next = nx >= skill.max ? 20 : Math.round((nx / Math.max(1, skill.max)) * 20);
+    return makeEffect({
+      label: '最大 MP 成长',
+      type: '被动成长技能',
+      current: `当前 Lv.${lv}：升级时最大 MP 成长 +${pct(cur)}。`,
+      next: lv >= skill.max ? '下一级：已经满级，最大 MP 成长加成保持 +20%。' : `下一级 Lv.${nx}：升级时最大 MP 成长 +${pct(next)}。`,
+      note: '法师早期核心成长技能。越早加满，后面累计 MP 越多。',
+      values: [`当前 +${pct(cur)}`, lv < skill.max ? `下一级 +${pct(next)}` : '已满级'],
+    });
+  },
+  '提高 MP 恢复': (skill) => linearPassive(skill, {
+    label: 'MP 自然恢复', type: '被动续航技能', unit: '点', base: 1, per: 1,
+    note: '主要减少蓝药压力，不直接提高单次伤害。',
+  }),
+  '提高 HP 恢复': (skill) => linearPassive(skill, {
+    label: 'HP 自然恢复', type: '被动续航技能', unit: '点', base: 2, per: 2,
+    note: '主要减少红药压力，不直接提高单次伤害。',
+  }),
+  '魔法双击': (skill) => attackPercent(skill, {
+    label: '两段魔法伤害', type: '主动攻击技能', start: -50, per: 10, min: 10, hits: 2, mpBase: 8,
+    note: '每次释放打出 2 段。比如 Lv.17 显示约 120%，Lv.18 显示约 130%。这里用于路线模拟展示。',
+  }),
+  '魔力弹': (skill) => attackPercent(skill, {
+    label: '单段魔法伤害', type: '前置攻击技能', start: 35, per: 4, min: 35, hits: 1, mpBase: 5,
+    note: '通常只点 1 点作为魔法双击前置。',
+  }),
+  '强力攻击': (skill) => attackPercent(skill, {
+    label: '单体物理伤害', type: '主动攻击技能', start: 80, per: 13, min: 80, hits: 1, mpBase: 4,
+    note: '战士一转单体主攻。适合打血量较高的单只怪。',
+  }),
+  '群体攻击': (skill) => attackPercent(skill, {
+    label: '范围物理伤害', type: '主动范围技能', start: 55, per: 7, min: 55, hits: 6, mpBase: 6,
+    note: '适合怪物密集地图。伤害低于单体技，但能同时打多个目标。',
+  }),
+  '断魂箭': (skill) => attackPercent(skill, {
+    label: '单体箭矢伤害', type: '主动攻击技能', start: 70, per: 9, min: 70, hits: 1, mpBase: 4,
+    note: '弓箭手早期单体攻击技能。',
+  }),
+  '二连射': (skill) => attackPercent(skill, {
+    label: '两段箭矢伤害', type: '主动攻击技能', start: 45, per: 6, min: 45, hits: 2, mpBase: 6,
+    note: '连续射击两次，适合作为一转主攻。',
+  }),
+  '劈空斩': (skill) => attackPercent(skill, {
+    label: '近战短刀伤害', type: '主动攻击技能', start: 65, per: 8, min: 65, hits: 1, mpBase: 5,
+    note: '刀飞一转近战攻击技能。',
+  }),
+  '双飞斩': (skill) => attackPercent(skill, {
+    label: '两段飞镖伤害', type: '主动攻击技能', start: 55, per: 7, min: 55, hits: 2, mpBase: 8,
+    note: '标飞一转核心输出技能，一次投出两枚飞镖。',
+  }),
+  '魔法盾': (skill) => buffPercent(skill, {
+    label: 'MP 抵消伤害', type: '防御 Buff', start: 5, per: 2.5, maxValue: 50, durationBase: 60, durationPer: 6,
+    note: '受到伤害时由 MP 承担一部分伤害，提高容错，但会增加蓝耗压力。',
+  }),
+  '魔法铠甲': (skill) => flatBuff(skill, {
+    label: '物理防御力', type: '防御 Buff', start: 2, per: 2, unit: '点', durationBase: 60, durationPer: 6,
+    note: '前期开荒能减少碰撞伤害压力，但优先级通常低于主攻和 MP 成长。',
+  }),
+  '铁甲术': (skill) => flatBuff(skill, {
+    label: '物理防御力', type: '防御 Buff', start: 2, per: 2, unit: '点', durationBase: 60, durationPer: 6,
+    note: '战士前期防御 Buff。',
+  }),
+  '集中术': (skill) => dualFlatBuff(skill, {
+    label: '命中 / 回避', type: '辅助 Buff', a: '命中', b: '回避', start: 1, per: 1, durationBase: 60, durationPer: 6,
+    note: '适合命中偏紧或想提高稳定性的地图。',
+  }),
+  '灵巧身手': (skill) => dualPassive(skill, {
+    label: '命中 / 回避', type: '被动基础能力', a: '命中', b: '回避', start: 1, per: 1,
+    note: '飞侠早期基础手感技能。',
+  }),
+  '远程箭': (skill) => linearPassive(skill, {
+    label: '攻击距离', type: '被动射程技能', unit: '距离', base: 15, per: 15,
+    note: '提高弓箭手攻击距离，改善风筝和站位。',
+  }),
+  '远程暗器': (skill) => linearPassive(skill, {
+    label: '飞镖射程', type: '被动射程技能', unit: '距离', base: 20, per: 25,
+    note: '标飞早期很重要，射程够了之后练级舒服很多。',
+  }),
+  '强力箭': (skill) => critPassive(skill, {
+    label: '暴击概率 / 暴击伤害', type: '被动输出技能', chancePer: 2, damageBase: 100, damagePer: 2,
+    note: '提高弓箭手输出上限。',
+  }),
+  '强力投掷': (skill) => critPassive(skill, {
+    label: '暴击概率 / 暴击伤害', type: '被动输出技能', chancePer: 2, damageBase: 100, damagePer: 2,
+    note: '提高标飞爆发上限。',
+  }),
+  '轻功': (skill) => dualFlatBuff(skill, {
+    label: '速度 / 跳跃', type: '移动 Buff', a: '移动速度', b: '跳跃力', start: 1, per: 1, durationBase: 60, durationPer: 6,
+    note: '跑图和刷怪手感提升非常明显。',
+  }),
+  '瞬间移动': (skill) => teleportEffect(skill),
+  '治愈术': (skill) => healEffect(skill),
+  '神圣之火': (skill) => buffPercent(skill, {
+    label: '最大 HP/MP', type: '队伍 Buff', start: 2, per: 2, maxValue: 60, durationBase: 60, durationPer: 6,
+    note: '提高队伍最大 HP 和 MP，是枪战士核心团队技能。',
+  }),
+  '祝福': (skill) => dualFlatBuff(skill, {
+    label: '命中/回避/防御', type: '队伍 Buff', a: '命中与回避', b: '防御', start: 1, per: 1, durationBase: 60, durationPer: 6,
+    note: '团队稳定性技能，适合组队和命中偏紧的地图。',
+  }),
+};
+
+function linearPassive(skill, cfg) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const cur = lv ? cfg.base + cfg.per * lv : 0;
+  const next = nx ? cfg.base + cfg.per * nx : 0;
+  return makeEffect({
+    label: cfg.label,
+    type: cfg.type,
+    current: `当前 Lv.${lv}：${cfg.label} +${cur}${cfg.unit}。`,
+    next: lv >= skill.max ? `下一级：已经满级，${cfg.label}保持 +${cur}${cfg.unit}。` : `下一级 Lv.${nx}：${cfg.label} +${next}${cfg.unit}。`,
+    note: cfg.note,
+    values: [`当前 +${cur}${cfg.unit}`, lv < skill.max ? `下一级 +${next}${cfg.unit}` : '已满级'],
+  });
+}
+
+function attackPercent(skill, cfg) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const cur = lv ? Math.max(cfg.min, cfg.start + cfg.per * lv) : 0;
+  const next = nx ? Math.max(cfg.min, cfg.start + cfg.per * nx) : 0;
+  const mp = mpCost(lv, cfg.mpBase, 0.6);
+  const nextMp = mpCost(nx, cfg.mpBase, 0.6);
+  return makeEffect({
+    label: cfg.label,
+    type: cfg.type,
+    current: `当前 Lv.${lv}：造成 ${pct(cur)} 伤害，攻击段数 ${cfg.hits}，约消耗 MP ${mp}。`,
+    next: lv >= skill.max ? `下一级：已经满级，伤害保持 ${pct(cur)}。` : `下一级 Lv.${nx}：造成 ${pct(next)} 伤害，攻击段数 ${cfg.hits}，约消耗 MP ${nextMp}。`,
+    note: cfg.note,
+    values: [`当前 ${pct(cur)}`, lv < skill.max ? `下一级 ${pct(next)}` : '已满级', `${cfg.hits} 段`],
+  });
+}
+
+function buffPercent(skill, cfg) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const cur = lv ? Math.min(cfg.maxValue, cfg.start + cfg.per * lv) : 0;
+  const next = nx ? Math.min(cfg.maxValue, cfg.start + cfg.per * nx) : 0;
+  const duration = cfg.durationBase + cfg.durationPer * lv;
+  const nextDuration = cfg.durationBase + cfg.durationPer * nx;
+  return makeEffect({
+    label: cfg.label,
+    type: cfg.type,
+    current: `当前 Lv.${lv}：${cfg.label} +${pct(cur)}，持续 ${sec(duration)}。`,
+    next: lv >= skill.max ? `下一级：已经满级，效果保持 +${pct(cur)}。` : `下一级 Lv.${nx}：${cfg.label} +${pct(next)}，持续 ${sec(nextDuration)}。`,
+    note: cfg.note,
+    values: [`当前 +${pct(cur)}`, lv < skill.max ? `下一级 +${pct(next)}` : '已满级', sec(duration)],
+  });
+}
+
+function flatBuff(skill, cfg) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const cur = lv ? cfg.start + cfg.per * lv : 0;
+  const next = nx ? cfg.start + cfg.per * nx : 0;
+  const duration = cfg.durationBase + cfg.durationPer * lv;
+  const nextDuration = cfg.durationBase + cfg.durationPer * nx;
+  return makeEffect({
+    label: cfg.label,
+    type: cfg.type,
+    current: `当前 Lv.${lv}：${cfg.label} +${cur}${cfg.unit}，持续 ${sec(duration)}。`,
+    next: lv >= skill.max ? `下一级：已经满级，效果保持 +${cur}${cfg.unit}。` : `下一级 Lv.${nx}：${cfg.label} +${next}${cfg.unit}，持续 ${sec(nextDuration)}。`,
+    note: cfg.note,
+    values: [`当前 +${cur}${cfg.unit}`, lv < skill.max ? `下一级 +${next}${cfg.unit}` : '已满级', sec(duration)],
+  });
+}
+
+function dualFlatBuff(skill, cfg) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const cur = lv ? cfg.start + cfg.per * lv : 0;
+  const next = nx ? cfg.start + cfg.per * nx : 0;
+  const duration = cfg.durationBase + cfg.durationPer * lv;
+  const nextDuration = cfg.durationBase + cfg.durationPer * nx;
+  return makeEffect({
+    label: cfg.label,
+    type: cfg.type,
+    current: `当前 Lv.${lv}：${cfg.a} +${cur}，${cfg.b} +${cur}，持续 ${sec(duration)}。`,
+    next: lv >= skill.max ? `下一级：已经满级，效果保持 +${cur}。` : `下一级 Lv.${nx}：${cfg.a} +${next}，${cfg.b} +${next}，持续 ${sec(nextDuration)}。`,
+    note: cfg.note,
+    values: [`当前 +${cur}`, lv < skill.max ? `下一级 +${next}` : '已满级', sec(duration)],
+  });
+}
+
+function dualPassive(skill, cfg) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const cur = lv ? cfg.start + cfg.per * lv : 0;
+  const next = nx ? cfg.start + cfg.per * nx : 0;
+  return makeEffect({
+    label: cfg.label,
+    type: cfg.type,
+    current: `当前 Lv.${lv}：${cfg.a} +${cur}，${cfg.b} +${cur}。`,
+    next: lv >= skill.max ? `下一级：已经满级，效果保持 +${cur}。` : `下一级 Lv.${nx}：${cfg.a} +${next}，${cfg.b} +${next}。`,
+    note: cfg.note,
+    values: [`当前 +${cur}`, lv < skill.max ? `下一级 +${next}` : '已满级'],
+  });
+}
+
+function critPassive(skill, cfg) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const curChance = lv * cfg.chancePer;
+  const nextChance = nx * cfg.chancePer;
+  const curDamage = cfg.damageBase + lv * cfg.damagePer;
+  const nextDamage = cfg.damageBase + nx * cfg.damagePer;
+  return makeEffect({
+    label: cfg.label,
+    type: cfg.type,
+    current: `当前 Lv.${lv}：暴击概率 +${pct(curChance)}，暴击伤害约 ${pct(curDamage)}。`,
+    next: lv >= skill.max ? `下一级：已经满级，暴击概率保持 +${pct(curChance)}。` : `下一级 Lv.${nx}：暴击概率 +${pct(nextChance)}，暴击伤害约 ${pct(nextDamage)}。`,
+    note: cfg.note,
+    values: [`暴击 +${pct(curChance)}`, lv < skill.max ? `下一级 +${pct(nextChance)}` : '已满级', `伤害 ${pct(curDamage)}`],
+  });
+}
+
+function teleportEffect(skill) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const distance = 100 + lv * 7;
+  const nextDistance = 100 + nx * 7;
+  const mp = Math.max(13, 60 - lv * 2);
+  const nextMp = Math.max(13, 60 - nx * 2);
+  return makeEffect({
+    label: '移动距离 / MP 消耗',
+    type: '位移技能',
+    current: `当前 Lv.${lv}：瞬移距离约 ${distance}，消耗 MP ${mp}。`,
+    next: lv >= skill.max ? `下一级：已经满级，瞬移距离保持约 ${distance}。` : `下一级 Lv.${nx}：瞬移距离约 ${nextDistance}，消耗 MP ${nextMp}。`,
+    note: '瞬间移动主要提升跑图、躲避和刷怪节奏。',
+    values: [`距离 ${distance}`, lv < skill.max ? `下一级 ${nextDistance}` : '已满级', `MP ${mp}`],
+  });
+}
+
+function healEffect(skill) {
+  const lv = clampLevel(skill);
+  const nx = clampLevel(skill, 1);
+  const cur = 30 + lv * 5;
+  const next = 30 + nx * 5;
+  return makeEffect({
+    label: '治疗量 / 亡灵伤害',
+    type: '治疗与亡灵攻击技能',
+    current: `当前 Lv.${lv}：治疗与亡灵伤害约 ${pct(cur)}，可作用于周围目标。`,
+    next: lv >= skill.max ? `下一级：已经满级，效果保持约 ${pct(cur)}。` : `下一级 Lv.${nx}：治疗与亡灵伤害约 ${pct(next)}。`,
+    note: '牧师练级时，治愈术会直接决定亡灵地图效率。',
+    values: [`当前 ${pct(cur)}`, lv < skill.max ? `下一级 ${pct(next)}` : '已满级'],
+  });
+}
+
+function makeGenericEffect(skill) {
+  const name = skill.name || '';
+  if (/精通$/.test(name)) return linearPassive(skill, { label: '熟练度', type: '被动精通技能', unit: '%', base: 10, per: 2, note: '精通提高最低伤害，让输出波动变小。' });
+  if (/加速$/.test(name)) return flatBuff(skill, { label: '攻击速度提升', type: '攻击速度 Buff', unit: '档', start: 0, per: 1, durationBase: 30, durationPer: 5, note: '加速类技能主要改善攻击节奏和手感。' });
+  if (/^终极/.test(name)) return buffPercent(skill, { label: '追加攻击触发率', type: '被动追加攻击', start: 1, per: 2, maxValue: 60, durationBase: 0, durationPer: 0, note: '使用指定攻击技能后，有概率追加一次额外攻击。' });
+  if (/箭|火箭术|冰冻术|雷电术|穿透箭|爆炸箭|回旋斩|吸血|圣箭术|毒雾/.test(name)) return attackPercent(skill, { label: '技能伤害', type: '主动攻击技能', start: 45, per: 6, min: 45, hits: 1, mpBase: 8, note: '当前没有官方逐级表，先按路线模拟倍率显示。' });
+  return linearPassive(skill, { label: '技能效果', type: '技能效果', unit: '级', base: 0, per: 1, note: '当前没有官方逐级表，先显示当前等级和下一级变化。' });
+}
+
+function getSkillEffect(skill) {
+  return EFFECT_RULES[skill.name]?.(skill) ?? makeGenericEffect(skill);
 }
 
 function SkillIcon({ skill }) {
@@ -150,9 +314,9 @@ function SkillIcon({ skill }) {
     <div className="mg-skill-badge detail">
       <IconFallback
         className="mg-skill-icon-img"
-        names={getSkillNames(skill?.name)}
+        names={[skill?.name].filter(Boolean)}
         folders={SKILL_ICON_FOLDERS}
-        sources={getSkillSources(skill?.name, skill?.iconKey)}
+        sources={[publicIconAsset(skill?.iconKey)].filter(Boolean)}
         alt=""
         fallback={<span>{letters}</span>}
       />
@@ -163,8 +327,10 @@ function SkillIcon({ skill }) {
 export default function SkillDetailSheet({ skill, plan, onClose }) {
   if (!skill) return null;
   const damage = plan?.damageCards?.find((card) => card.name === skill.name);
-  const nextLevel = Math.min(Number(skill.max || 0), Number(skill.level || 0) + 1);
-  const hasNext = !skill.locked && Number(skill.level || 0) < Number(skill.max || 0);
+  const effect = getSkillEffect(skill);
+  const currentLevel = Number(skill.level || 0);
+  const maxLevel = Number(skill.max || 0);
+  const progress = maxLevel > 0 ? Math.round((currentLevel / maxLevel) * 100) : 0;
 
   return (
     <div className="mg-detail-backdrop" onClick={onClose}>
@@ -182,23 +348,43 @@ export default function SkillDetailSheet({ skill, plan, onClose }) {
         <div className="mg-detail-kpis">
           <div><span>已投入 SP</span><strong>{skill.level}</strong></div>
           <div><span>最高等级</span><strong>{skill.max}</strong></div>
-          <div><span>状态</span><strong>{skill.locked ? '未开放' : '可调整'}</strong></div>
+          <div><span>状态</span><strong>{skill.locked ? '未开放' : currentLevel >= maxLevel ? '已满级' : '可调整'}</strong></div>
         </div>
 
-        <p className="mg-detail-copy">{getSkillDescription(skill, plan)}</p>
+        <div className="mg-skill-progress">
+          <span>技能等级进度</span>
+          <div><i style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} /></div>
+          <em>{progress}%</em>
+        </div>
+
+        <p className="mg-detail-copy">{effect.note}</p>
+
+        <div className="mg-effect-grid">
+          <article>
+            <span>技能定位</span>
+            <strong>{effect.type}</strong>
+          </article>
+          <article className="wide">
+            <span>当前等级效果</span>
+            <strong>{effect.current}</strong>
+          </article>
+          <article className="wide">
+            <span>下一级变化</span>
+            <strong>{effect.next}</strong>
+          </article>
+        </div>
+
+        <div className="mg-effect-pills">
+          {effect.values.map((value) => <span key={value}>{value}</span>)}
+        </div>
 
         {damage && (
           <div className="mg-detail-damage">
-            <span>{damage.role || '技能效果'}</span>
+            <span>{damage.role || '路线估算伤害'}</span>
             <strong>{damage.min} - {damage.max}</strong>
-            <em>基于当前角色属性和当前技能点的估算值。</em>
+            <em>这是根据当前角色属性、装备和当前技能点计算出来的路线估算伤害。上面的百分比是技能等级效果展示。</em>
           </div>
         )}
-
-        <div className="mg-detail-list">
-          <div><span>当前等级说明</span><strong>{skill.level > 0 ? `已经加了 ${skill.level} 点，可以作为当前路线使用。` : '还没有加点，只显示技能预览。'}</strong></div>
-          <div><span>下一级预览</span><strong>{hasNext ? `再加 1 点后变为 Lv.${nextLevel}/${skill.max}` : '已经满级或暂未开放。'}</strong></div>
-        </div>
       </section>
     </div>
   );
