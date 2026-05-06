@@ -118,8 +118,8 @@ export default function AppMediaEnhanced() {
   const candidatesBySlot = useMemo(() => getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items: activeData.items, manualMode: true }), [classLine, branch, level, budget, gender, statPlan, activeData]);
   const gear = useMemo(() => applyGearOverrides(recommendedGear, gearOverrides), [recommendedGear, gearOverrides]);
   const weapon = gear.find((x) => x.slot === 'weapon');
-  const mainAttack = calcMainAttack(classLine, statPlan, weapon);
-  const stats = compactStats(statPlan, classLine, mainAttack);
+  const mainAttack = useMemo(() => calcMainAttack(classLine, statPlan, gear), [classLine, statPlan, gear]);
+  const stats = useMemo(() => compactStats(statPlan, classLine, gear), [statPlan, classLine, gear]);
   const bestMap = maps[0];
   const bestMonster = bestMap?.monsters?.[0];
   const recommendedSkillAllocation = useMemo(() => getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level }), [classLine, branch, level]);
@@ -311,7 +311,7 @@ function PreviewPanel({ classLine, gender, level, weapon, gear, stats }) {
       <div className="mg-character-frame"><CharacterPreview classLine={classLine} gender={gender} gear={gear} /></div>
       <div>
         <h3 className="mg-stats-title">角色属性</h3>
-        <div className="mg-stats-grid">{stats.map(([label, value]) => <div className="mg-stat-box" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+        <div className="mg-stats-grid">{stats.map((stat) => <div className="mg-stat-box" key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong>{stat.bonus ? <small className="mg-stat-breakdown">({stat.base}+{stat.bonus})</small> : null}</div>)}</div>
       </div>
       <div className="preview-meta"><strong>{classLine.name} Lv.{level}</strong><span>{weapon?.title ?? '装备读取中'}</span></div>
     </div>
@@ -438,5 +438,57 @@ function adjustPointAllocation(current, key, delta, totalPoints, maxForKey = Inf
 
 function MaterialsPage() { return <Section title="材料 / 锻造"><p className="section-copy">材料价值指数和锻造路线保留在后续国服/国际服数据整理阶段继续接入。</p></Section>; }
 function Section({ title, children }) { return <section className="section-card"><h2>{title}</h2>{children}</section>; }
-function compactStats(statPlan, classLine, mainAttack) { return [['STR', statPlan.stats.STR], ['DEX', statPlan.stats.DEX], ['INT', statPlan.stats.INT], ['LUK', statPlan.stats.LUK], ['ACC', statPlan.derived.accuracy], ['HP', statPlan.derived.hp], ['MP', statPlan.derived.mp], [classLine.id === 'magician' ? 'MATK' : 'WATK', mainAttack]]; }
-function calcMainAttack(classLine, statPlan, weapon) { const primary = statPlan.stats[classLine.primaryStat] ?? 0; const secondary = statPlan.stats[classLine.secondaryStat] ?? 0; const gearAttack = classLine.id === 'magician' ? (weapon?.incMAD ?? 0) : (weapon?.incPAD ?? 0); return Math.max(1, Math.round(primary * 1.35 + secondary * 0.35 + statPlan.level * 0.7 + gearAttack)); }
+
+function statRow(label, base, bonus = 0) {
+  const roundedBase = Math.round(Number(base) || 0);
+  const roundedBonus = Math.round(Number(bonus) || 0);
+  return { label, base: roundedBase, bonus: roundedBonus, value: roundedBase + roundedBonus };
+}
+
+function getGearValue(item, aliases) {
+  for (const key of aliases) {
+    const value = item?.[key] ?? item?.stats?.[key];
+    if (value !== undefined && value !== null && value !== '') return Number(value) || 0;
+  }
+  return 0;
+}
+
+function getGearBonuses(gear = []) {
+  return (gear ?? []).reduce((sum, item) => {
+    sum.STR += getGearValue(item, ['incSTR', 'str']);
+    sum.DEX += getGearValue(item, ['incDEX', 'dex']);
+    sum.INT += getGearValue(item, ['incINT', 'int']);
+    sum.LUK += getGearValue(item, ['incLUK', 'luk']);
+    sum.HP += getGearValue(item, ['incMHP', 'incMaxHP', 'incHP', 'mhp', 'hp']);
+    sum.MP += getGearValue(item, ['incMMP', 'incMaxMP', 'incMP', 'mmp', 'mp']);
+    sum.ACC += getGearValue(item, ['incACC', 'accuracy', 'acc']);
+    sum.WATK += getGearValue(item, ['incPAD', 'pad', 'watk']);
+    sum.MATK += getGearValue(item, ['incMAD', 'mad', 'matk']);
+    return sum;
+  }, { STR: 0, DEX: 0, INT: 0, LUK: 0, HP: 0, MP: 0, ACC: 0, WATK: 0, MATK: 0 });
+}
+
+function compactStats(statPlan, classLine, gear = []) {
+  const bonuses = getGearBonuses(gear);
+  const attackLabel = classLine.id === 'magician' ? 'MATK' : 'WATK';
+  const baseAttack = calcMainAttack(classLine, statPlan, []);
+  const totalAttack = calcMainAttack(classLine, statPlan, gear);
+  return [
+    statRow('STR', statPlan.stats.STR, bonuses.STR),
+    statRow('DEX', statPlan.stats.DEX, bonuses.DEX),
+    statRow('INT', statPlan.stats.INT, bonuses.INT),
+    statRow('LUK', statPlan.stats.LUK, bonuses.LUK),
+    statRow('ACC', statPlan.derived.accuracy, bonuses.ACC),
+    statRow('HP', statPlan.derived.hp, bonuses.HP),
+    statRow('MP', statPlan.derived.mp, bonuses.MP),
+    statRow(attackLabel, baseAttack, totalAttack - baseAttack),
+  ];
+}
+
+function calcMainAttack(classLine, statPlan, gear = []) {
+  const bonuses = getGearBonuses(gear);
+  const primary = (statPlan.stats[classLine.primaryStat] ?? 0) + (bonuses[classLine.primaryStat] ?? 0);
+  const secondary = (statPlan.stats[classLine.secondaryStat] ?? 0) + (bonuses[classLine.secondaryStat] ?? 0);
+  const gearAttack = classLine.id === 'magician' ? bonuses.MATK : bonuses.WATK;
+  return Math.max(1, Math.round(primary * 1.35 + secondary * 0.35 + statPlan.level * 0.7 + gearAttack));
+}
