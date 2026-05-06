@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { iconSourcesFromNames } from './IconFallback.jsx';
 
 const OSMS_MONSTERS_URLS = [
   'https://sduckyduck.github.io/osms-classic-guidebook/data/monsters.json',
@@ -8,8 +9,6 @@ const OSMS_DATA_BASE = 'https://sduckyduck.github.io/osms-classic-guidebook/data
 const API_REGION = 'GMS';
 const API_VERSION = '83';
 
-// These names are known to be easy to mismatch when using local sequential OSMS image IDs.
-// Put them first so the displayed icon follows the real MapleStory.io mob ID instead of a stale local thumbnail.
 const VERIFIED_MSIO_ID_BY_NAME = {
   'horny mushroom': 2110200,
   'zombie mushroom': 2230102,
@@ -38,6 +37,26 @@ const LAST_RESORT_MSIO_ID_BY_NAME = {
   'zombie lupin': 4230106,
   'fire boar': 3210100,
   'wild boar': 2230101,
+};
+
+const MONSTER_LOCAL_ALIASES = {
+  'horny mushroom': ['horny mushroom', 'horny-mushroom', 'horny_mushroom', 'mushroom-horny', '2110200'],
+  'zombie mushroom': ['zombie mushroom', 'zombie-mushroom', 'zombie_mushroom', '2230102'],
+  'evil eye': ['evil eye', 'evil-eye', 'evil_eye', '3230100'],
+  'slime': ['slime', '210100'],
+  'dark stump': ['dark stump', 'dark-stump', 'dark_stump', '1140100'],
+  'stump': ['stump', '1130100'],
+  'green mushroom': ['green mushroom', 'green-mushroom', 'green_mushroom', '1110101'],
+  'blue mushroom': ['blue mushroom', 'blue-mushroom', 'blue_mushroom', '1120101'],
+  'orange mushroom': ['orange mushroom', 'orange-mushroom', 'orange_mushroom', '1110100'],
+  'shroom': ['shroom', '1110100'],
+  'pig': ['pig', '1210100'],
+  'ribbon pig': ['ribbon pig', 'ribbon-pig', 'ribbon_pig', '1210101'],
+  'octopus': ['octopus', '2230100'],
+  'lupin': ['lupin', '3210101'],
+  'zombie lupin': ['zombie lupin', 'zombie-lupin', 'zombie_lupin', '4230106'],
+  'fire boar': ['fire boar', 'fire-boar', 'fire_boar', '3210100'],
+  'wild boar': ['wild boar', 'wild-boar', 'wild_boar', '2230101'],
 };
 
 let osmsMonsterIndex = null;
@@ -100,7 +119,7 @@ async function fetchFirstJson(urls) {
   let lastError = null;
   for (const url of urls) {
     try {
-      const response = await fetch(`${url}?v=png-monster-icons-3`, { cache: 'no-store' });
+      const response = await fetch(`${url}?v=png-monster-icons-4`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`${url} ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -132,23 +151,33 @@ function getMapleStoryIoSource(monster, preferredOnly = false) {
   return id ? `https://maplestory.io/api/${API_REGION}/${API_VERSION}/mob/${id}/icon?resize=3` : '';
 }
 
+function getLocalMonsterSources(monster) {
+  const key = normalizeName(monster?.name);
+  const aliases = MONSTER_LOCAL_ALIASES[key] ?? [];
+  const id = monster?.id ?? monster?.mobId ?? monster?.monsterId ?? monster?.mapleMobId ?? monster?.msioId;
+  return iconSourcesFromNames([monster?.name, key, id, ...aliases], ['icons/monsters', 'icons/monster', 'icons']);
+}
+
 export function getMonsterIconSources(monster, index) {
   const matched = index?.get(normalizeName(monster?.name));
 
   return unique([
-    // 1) Known-good MapleStory.io mob IDs first where AppData only carries missing image paths.
+    // 1) User-uploaded icons in public/icons win first.
+    ...getLocalMonsterSources(monster),
+
+    // 2) Known-good MapleStory.io mob IDs where local/OSMS data can be stale.
     getMapleStoryIoSource(monster, true),
 
-    // 2) OSMS Guide fallback by monster name for missing local images.
+    // 3) OSMS Guide fallback by monster name.
     osmsAsset(matched?.thumbnail),
     osmsAsset(matched?.gifs?.stand),
     osmsAsset(matched?.gifs?.move),
     osmsAsset(matched?.gif),
 
-    // 3) Last-resort MapleStory.io icon by name, so the cell is not blank.
+    // 4) Last-resort MapleStory.io icon by name, so the cell is not blank.
     getMapleStoryIoSource(monster),
 
-    // 4) Current local assets if the deployed AppData bundle includes them.
+    // 5) Current local AppData assets if the deployed bundle includes them.
     localAsset(monster?.thumbnail),
     localAsset(monster?.gifs?.stand),
     localAsset(monster?.gifs?.move),
