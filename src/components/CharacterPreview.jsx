@@ -2,33 +2,43 @@ import { useMemo, useState } from 'react';
 
 const API_REGION = 'GMS';
 const API_VERSION = '83';
+const FIXED_SKIN_ID = 2000;
+const DEFAULT_ACTION = 'stand1';
 
-const BASE_AVATARS = {
-  male: {
-    skin: 2000,
-    face: 20000,
-    hair: 30000,
-    top: 1040002,
-    bottom: 1060002,
-    shoes: 1072001,
-  },
-  female: {
-    skin: 2000,
-    face: 21000,
-    hair: 31000,
-    top: 1041002,
-    bottom: 1061002,
-    shoes: 1072005,
-  },
+const HAIRS = {
+  male: [30000, 30060, 30100, 30120, 30140, 30200, 30210, 30260, 30300],
+  female: [31000, 31030, 31040, 31070, 31100, 31150, 31260, 31280, 31310],
 };
 
-const DEFAULT_WEAPONS = {
-  warrior: 1302000,
-  magician: 1372005,
-  bowman: 1452002,
-  thief: 1472000,
-  pirate: 1492000,
+const FACES = {
+  male: [20000, 20001, 20002, 20003, 20005, 20011, 20014],
+  female: [21000, 21001, 21002, 21003, 21004, 21010, 21014],
 };
+
+const FALLBACK_EQUIPMENT = {
+  warrior: [1002001, 1060016, 1302000],
+  magician: [1002019, 1050003, 1372000],
+  bowman: [1002165, 1060056, 1452000],
+  thief: [1002170, 1060043, 1472000],
+  pirate: [1002610, 1052095, 1072288, 1492000],
+};
+
+const EMOTE_BY_CLASS = {
+  warrior: 'angry',
+  magician: 'bewildered',
+  bowman: 'default',
+  thief: 'wink',
+  pirate: 'wink',
+};
+
+function normalizeGender(value) {
+  return value === 'male' || value === 'female' ? value : 'female';
+}
+
+function stablePick(values, seed = 0) {
+  if (!values?.length) return null;
+  return values[Math.abs(seed) % values.length];
+}
 
 function normalizeItemId(id) {
   const value = Number(String(id ?? '').replace(/^0+/, ''));
@@ -49,53 +59,75 @@ function itemTypeFromId(id) {
   return 'other';
 }
 
-function mergeGear(base, gear, classLine) {
-  const byType = { ...base };
+function gearIdsFromRecommendations(gear) {
+  const byType = {};
   for (const item of gear ?? []) {
     const id = normalizeItemId(item.id);
     if (!id) continue;
     const type = item.slot === 'weapon' ? 'weapon' : itemTypeFromId(item.id);
     if (type === 'overall') {
-      byType.top = id;
+      byType.overall = id;
+      delete byType.top;
       delete byType.bottom;
       continue;
     }
-    if (['top', 'bottom', 'shoes', 'glove', 'shield', 'cape', 'cap', 'weapon'].includes(type)) {
+    if (['cap', 'top', 'bottom', 'shoes', 'glove', 'cape', 'shield', 'weapon'].includes(type)) {
       byType[type] = id;
     }
   }
-  if (!byType.weapon) byType.weapon = DEFAULT_WEAPONS[classLine?.id] ?? DEFAULT_WEAPONS.warrior;
-  return byType;
+  return [byType.cap, byType.overall, byType.top, byType.bottom, byType.shoes, byType.glove, byType.cape, byType.shield, byType.weapon].filter(Boolean);
 }
 
-function buildItems(classLine, gender, gear) {
-  const base = BASE_AVATARS[gender] ?? BASE_AVATARS.female;
-  const merged = mergeGear(base, gear, classLine);
-  return [
-    merged.skin,
-    merged.face,
-    merged.hair,
-    merged.cap,
-    merged.top,
-    merged.bottom,
-    merged.shoes,
-    merged.glove,
-    merged.cape,
-    merged.shield,
-    merged.weapon,
+function sanitizeEquipment(ids) {
+  const seen = new Set();
+  return (ids ?? [])
+    .map(normalizeItemId)
+    .filter(Boolean)
+    .filter((id) => {
+      const key = String(id);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function buildMsciUrl({ skin = FIXED_SKIN_ID, hair, face, emote, equipment, action = DEFAULT_ACTION }) {
+  const entries = [hair, `${face}:${emote}`, ...sanitizeEquipment(equipment)].filter(Boolean);
+  const itemPath = encodeURIComponent(entries.join(','));
+  return `https://maplestory.io/api/${API_REGION}/${API_VERSION}/Character/${skin}/${itemPath}/${encodeURIComponent(action)}/0?resize=3&renderMode=Full&bgColor=0,0,0,0&faceEmote=${encodeURIComponent(emote)}`;
+}
+
+function buildAttemptUrls({ classLine, gender, gear }) {
+  const safeGender = normalizeGender(gender);
+  const classId = classLine?.id ?? 'warrior';
+  const seed = String(classId).split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) + (safeGender === 'female' ? 11 : 0);
+  const hair = stablePick(HAIRS[safeGender], seed) ?? 31000;
+  const face = stablePick(FACES[safeGender], seed) ?? 21000;
+  const emote = EMOTE_BY_CLASS[classId] ?? 'default';
+  const recommended = gearIdsFromRecommendations(gear);
+  const fallback = FALLBACK_EQUIPMENT[classId] ?? FALLBACK_EQUIPMENT.warrior;
+  const baseClothes = safeGender === 'female' ? [1041002, 1061002, 1072005] : [1040002, 1060002, 1072001];
+
+  const attempts = [
+    recommended.length ? recommended : null,
+    [...baseClothes, ...fallback],
+    fallback,
+    [safeGender === 'female' ? 1041002 : 1040002, safeGender === 'female' ? 1061002 : 1060002, fallback[fallback.length - 1]],
   ].filter(Boolean);
+
+  return attempts.map((equipment) => buildMsciUrl({ hair, face, emote, equipment }));
 }
 
-export function buildCharacterImageUrl({ classLine, gender, gear, action = 'stand1', emotion = '0', resize = 3 }) {
-  const items = buildItems(classLine, gender, gear).join(',');
-  return `https://maplestory.io/api/${API_REGION}/${API_VERSION}/character/${items}/${action}/${emotion}?resize=${resize}&showears=false&showLefEars=false`;
+export function buildCharacterImageUrl({ classLine, gender, gear }) {
+  return buildAttemptUrls({ classLine, gender, gear })[0];
 }
 
 export default function CharacterPreview({ classLine, gender = 'female', gear = [] }) {
-  const [failed, setFailed] = useState(false);
-  const src = useMemo(() => buildCharacterImageUrl({ classLine, gender, gear }), [classLine, gender, gear]);
+  const [attemptIndex, setAttemptIndex] = useState(0);
+  const urls = useMemo(() => buildAttemptUrls({ classLine, gender, gear }), [classLine, gender, gear]);
+  const src = urls[Math.min(attemptIndex, urls.length - 1)];
 
-  if (failed) {
+  if (!src || attemptIndex >= urls.length) {
     return (
       <div className={`pixel-avatar ${classLine?.id ?? ''}`} style={{ transform: 'scale(1.05)' }}>
         <div className="avatar-hat" />
@@ -108,10 +140,11 @@ export default function CharacterPreview({ classLine, gender = 'female', gear = 
 
   return (
     <img
+      key={src}
       className="real-character-preview"
       src={src}
       alt={`${classLine?.name ?? '角色'} preview`}
-      onError={() => setFailed(true)}
+      onError={() => setAttemptIndex((index) => index + 1)}
       draggable="false"
     />
   );
