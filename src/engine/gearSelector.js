@@ -49,6 +49,7 @@ export function selectGear({ classLine, branch, level, budget, gender, statPlan,
     bySlot.shoes?.[0],
     bySlot.glove?.[0],
     bySlot.cape?.[0],
+    bySlot.earring?.[0],
     shouldUseShield(policy, branch, weapon) ? bySlot.shield?.[0] : null,
     weapon,
   ].filter(Boolean);
@@ -74,6 +75,7 @@ export function getGearCandidatesBySlot({ classLine, branch, level, budget, gend
     shoes: sort(slotClassItems(candidates, 'shoes', classLine)),
     glove: sort(slotClassItems(candidates, 'glove', classLine)),
     cape: sort(slotClassItems(candidates, 'cape', classLine)),
+    earring: sort(slotClassItems(candidates, 'earring', classLine)),
     shield: sort(candidates.filter((item) => item.slot === 'shield' && (isClassSpecific(item, classLine) || isAllJob(item)))),
   };
 
@@ -91,7 +93,7 @@ export function applyGearOverrides(baseGear, overrides = {}) {
     delete bySlot.bottom;
   }
   if (bySlot.top || bySlot.bottom) delete bySlot.overall;
-  return ['cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'cape', 'shield', 'weapon']
+  return ['cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'cape', 'earring', 'shield', 'weapon']
     .map((slot) => bySlot[slot])
     .filter(Boolean);
 }
@@ -109,7 +111,7 @@ function getBaseCandidates({ classLine, level, gender, statPlan, items }) {
 }
 
 function slotClassItems(candidates, slot, classLine) {
-  return candidates.filter((item) => item.slot === slot && isClassSpecific(item, classLine));
+  return candidates.filter((item) => item.slot === slot && (isClassSpecific(item, classLine) || isAllJob(item)));
 }
 
 function getPolicy(classLine, branch) {
