@@ -9,6 +9,7 @@ import { CLASS_LINES, EDITIONS } from './data/classes.js';
 import { buildStatPlan, getRecommendedApAllocation } from './engine/levelEngine.js';
 import { applyGearOverrides, getGearCandidatesBySlot, selectGear } from './engine/gearSelector.js';
 import { getMapRecommendations } from './engine/recommendationEngine.js';
+import { rankLevelingMapsByBreakpoints } from './engine/levelingRouteAlgorithm.js';
 import { loadOfficialGuideData } from './engine/officialDataAdapter.js';
 import { getApNote, getRecommendedSkillAllocation, getSkillPlan } from './engine/skillPlanner.js';
 import './styles/dashboard.css';
@@ -23,7 +24,7 @@ const SLOTS = [
   ['weapon', '武器'], ['cap', '头盔'], ['overall', '套服'], ['top', '上衣'], ['bottom', '下衣'],
   ['shoes', '鞋子'], ['glove', '手套'], ['shield', '盾牌'], ['cape', '披风'], ['earring', '耳环'],
 ];
-const emptyData = { items: [], maps: [], monsters: [], recipes: [], materials: [] };
+const emptyData = { items: [], maps: [], monsters: [], recipes: [], materials: [], skillGroups: [] };
 const tabIds = new Set(TABS.map(([id]) => id));
 const STORAGE_KEY = 'mscw-guidebook-state-v2';
 
@@ -57,6 +58,11 @@ function getSavedNumber(saved, key, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function hasSkillAllocationMatch(allocation, recommended) {
+  if (!allocation || typeof allocation !== 'object') return false;
+  return Object.keys(recommended ?? {}).some((name) => Object.prototype.hasOwnProperty.call(allocation, name));
+}
+
 export default function AppMediaEnhanced() {
   const savedRef = useRef(readSavedState());
   const saved = savedRef.current;
@@ -87,6 +93,7 @@ export default function AppMediaEnhanced() {
   const minLevel = edition.minLevel ?? 10;
   const maxLevel = edition.maxLevel ?? 50;
   const activeData = edition.dataMode === 'official-appdata' ? (data ?? emptyData) : emptyData;
+  const skillGroups = activeData.skillGroups ?? [];
   const classes = CLASS_LINES.filter((x) => edition.classIds.includes(x.id));
   const classLine = classes.find((x) => x.id === classId) ?? classes[0];
   const branch = classLine.branches.find((x) => x.id === branchId) ?? classLine.branches[0] ?? classLine;
@@ -102,8 +109,8 @@ export default function AppMediaEnhanced() {
   }, [classLine, level, budget]);
   useEffect(() => {
     if (!didInitSkill.current) { didInitSkill.current = true; return; }
-    setSkillAllocation(getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level }));
-  }, [classLine, branch, level]);
+    setSkillAllocation(getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level, budget, skillGroups }));
+  }, [classLine, branch, level, budget, skillGroups]);
   useEffect(() => {
     if (!didInitGearReset.current) { didInitGearReset.current = true; return; }
     setGearOverrides({});
@@ -112,19 +119,30 @@ export default function AppMediaEnhanced() {
 
   const recommendedApAllocation = useMemo(() => getRecommendedApAllocation(classLine, level, { budget }), [classLine, level, budget]);
   const effectiveApAllocation = apAllocation ?? recommendedApAllocation;
-  const statPlan = useMemo(() => buildStatPlan(classLine, level, { budget, apAllocation: effectiveApAllocation }), [classLine, level, budget, effectiveApAllocation]);
-  const maps = useMemo(() => getMapRecommendations({ classLine, level, statPlan, budget, priority, maps: activeData.maps, monsters: activeData.monsters }).slice(0, 8), [classLine, level, statPlan, budget, priority, activeData]);
+  const recommendedSkillAllocation = useMemo(() => getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level, budget, skillGroups }), [classLine, branch, level, budget, skillGroups]);
+  const effectiveSkillAllocation = hasSkillAllocationMatch(skillAllocation, recommendedSkillAllocation) ? skillAllocation : recommendedSkillAllocation;
+  const skillPlanForStats = useMemo(
+    () => getSkillPlan({ classId: classLine.id, branchId: branch.id, level, budget, mainAttack: 0, customSkills: effectiveSkillAllocation, skillGroups }),
+    [classLine, branch, level, budget, effectiveSkillAllocation, skillGroups],
+  );
+  const statPlan = useMemo(() => buildStatPlan(classLine, level, { budget, apAllocation: effectiveApAllocation, skillBonuses: skillPlanForStats.statBonuses }), [classLine, level, budget, effectiveApAllocation, skillPlanForStats]);
   const recommendedGear = useMemo(() => selectGear({ classLine, branch, level, budget, gender, statPlan, items: activeData.items }), [classLine, branch, level, budget, gender, statPlan, activeData]);
   const candidatesBySlot = useMemo(() => getGearCandidatesBySlot({ classLine, branch, level, budget, gender, statPlan, items: activeData.items, manualMode: true }), [classLine, branch, level, budget, gender, statPlan, activeData]);
   const gear = useMemo(() => applyGearOverrides(recommendedGear, gearOverrides), [recommendedGear, gearOverrides]);
   const weapon = gear.find((x) => x.slot === 'weapon');
   const mainAttack = useMemo(() => calcMainAttack(classLine, statPlan, gear), [classLine, statPlan, gear]);
   const stats = useMemo(() => compactStats(statPlan, classLine, gear), [statPlan, classLine, gear]);
+  const skillPlan = useMemo(() => getSkillPlan({ classId: classLine.id, branchId: branch.id, level, budget, mainAttack, customSkills: effectiveSkillAllocation, skillGroups }), [classLine, branch, level, budget, mainAttack, effectiveSkillAllocation, skillGroups]);
+  const baseMaps = useMemo(
+    () => getMapRecommendations({ classLine, branch, level, statPlan, budget, priority, maps: activeData.maps, monsters: activeData.monsters, gear }),
+    [classLine, branch, level, statPlan, budget, priority, activeData, gear],
+  );
+  const maps = useMemo(
+    () => rankLevelingMapsByBreakpoints({ maps: baseMaps, level, budget, priority, skillPlan, mainAttack, items: activeData.items }).slice(0, 8),
+    [baseMaps, level, budget, priority, skillPlan, mainAttack, activeData.items],
+  );
   const bestMap = maps[0];
   const bestMonster = bestMap?.monsters?.[0];
-  const recommendedSkillAllocation = useMemo(() => getRecommendedSkillAllocation({ classId: classLine.id, branchId: branch.id, level }), [classLine, branch, level]);
-  const effectiveSkillAllocation = skillAllocation ?? recommendedSkillAllocation;
-  const skillPlan = useMemo(() => getSkillPlan({ classId: classLine.id, branchId: branch.id, level, mainAttack, customSkills: effectiveSkillAllocation }), [classLine, branch, level, mainAttack, effectiveSkillAllocation]);
   const apNote = useMemo(() => getApNote({ classLine, statPlan, budget }), [classLine, statPlan, budget]);
   const controls = { edition, editionId, setEditionId, classId, setClassId, branchId, setBranchId, gender, setGender, level, setLevel, budget, setBudget, priority, setPriority, classes, classLine, minLevel, maxLevel };
 
@@ -170,7 +188,8 @@ export default function AppMediaEnhanced() {
     const tierTotal = skillPlan.totalSpByTier?.[skill.tier] ?? skillPlan.totalSp;
     const tierUsed = skillPlan.skills.filter((item) => item.tier === skill.tier).reduce((sum, item) => sum + item.level, 0);
     setSkillAllocation((current) => {
-      const next = { ...(current ?? recommendedSkillAllocation) };
+      const base = hasSkillAllocationMatch(current, recommendedSkillAllocation) ? current : recommendedSkillAllocation;
+      const next = { ...base };
       const currentValue = Math.max(0, Number(next[name] ?? 0));
       if (delta > 0) {
         if (tierUsed >= tierTotal || currentValue >= skill.max) return next;
@@ -292,13 +311,15 @@ function DashboardEquipmentSlots({ gear, candidatesBySlot, onPickSlot }) {
 }
 
 function StatusPanel({ bestMonster, bestMap, onOpenMaps }) {
+  const hitValue = Number(bestMonster?.hitPercent);
+  const hitText = Number.isFinite(hitValue) ? `${hitValue}%` : bestMap?.canHitAll ? '100%' : '偏紧';
   return <button type="button" className="mg-status-panel mg-status-link" onClick={onOpenMaps}>
     <h2 className="mg-panel-title">地图刷怪推荐</h2>
     <div className="mg-status-row">
       <div>
         <p className="mg-status-line mg-status-monster"><MonsterIcon monster={bestMonster} size={42} /> <span>优先打</span><strong>{bestMonster?.name ?? '推荐怪物'}</strong></p>
         <p className="mg-status-line mg-status-map"><span>推荐地图</span><strong>{bestMap?.name ?? '读取中'}</strong></p>
-        <p className="mg-status-line"><span>命中</span><strong>{bestMonster?.hitPercent ? `${bestMonster.hitPercent}%` : bestMap?.canHitAll ? '100%' : '偏紧'}</strong><span>刷怪数</span><strong>{bestMap?.spawnTotal ?? '-'}</strong></p>
+        <p className="mg-status-line"><span>命中</span><strong>{hitText}</strong><span>刷怪数</span><strong>{bestMap?.spawnTotal ?? '-'}</strong></p>
       </div>
       {bestMap?.thumbnail && <OsmsDataImage className="mg-map-thumb" src={bestMap.thumbnail} sources={[bestMap.minimap]} alt={bestMap.name} placeholder="Map" />}
     </div>
@@ -414,6 +435,11 @@ function MapsPage({ maps, data }) {
               <span>刷怪数 {map.spawnTotal ?? '-'}</span>
               <span>分数 {map.score}</span>
               <span>{map.canHitAll ? '命中稳定' : '命中偏紧'}</span>
+              {target?.bestSkillName && <span>{target.bestSkillName} {target.expectedCastsToKill ?? target.hitsToKill} 次</span>}
+              {target?.estimatedExpPerMp && <span>EXP/MP {target.estimatedExpPerMp}</span>}
+              {Number(target?.expectedPotionCost) > 0 && <span>药水 {target.expectedPotionCost} meso/只</span>}
+              {Number(target?.maxIncomingDamage) > 0 && <span>最大伤害 {target.maxIncomingDamage}</span>}
+              {Number(target?.deathRisk) > 0 && <span>死亡风险 {Math.round(target.deathRisk * 100)}%</span>}
             </div>
           </div>
         </article>;
@@ -490,5 +516,8 @@ function calcMainAttack(classLine, statPlan, gear = []) {
   const primary = (statPlan.stats[classLine.primaryStat] ?? 0) + (bonuses[classLine.primaryStat] ?? 0);
   const secondary = (statPlan.stats[classLine.secondaryStat] ?? 0) + (bonuses[classLine.secondaryStat] ?? 0);
   const gearAttack = classLine.id === 'magician' ? bonuses.MATK : bonuses.WATK;
-  return Math.max(1, Math.round(primary * 1.35 + secondary * 0.35 + statPlan.level * 0.7 + gearAttack));
+  const skillAttack = classLine.id === 'magician'
+    ? (statPlan.derived?.magicAttackBonus ?? 0)
+    : (statPlan.derived?.weaponAttackBonus ?? 0);
+  return Math.max(1, Math.round(primary * 1.35 + secondary * 0.35 + statPlan.level * 0.7 + gearAttack + skillAttack));
 }

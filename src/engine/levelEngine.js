@@ -1,6 +1,27 @@
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
 const clamp = (value, min, max) => Math.min(Math.max(Number(value) || min, min), max);
 
+function normalizeSkillBonuses(raw = {}) {
+  return {
+    stats: Object.fromEntries(STAT_KEYS.map((key) => [key, Number(raw?.stats?.[key] ?? 0) || 0])),
+    maxHpPercent: Number(raw?.maxHpPercent ?? 0) || 0,
+    maxMpPercent: Number(raw?.maxMpPercent ?? 0) || 0,
+    accuracy: Number(raw?.accuracy ?? 0) || 0,
+    magicAccuracy: Number(raw?.magicAccuracy ?? 0) || 0,
+    avoidability: Number(raw?.avoidability ?? 0) || 0,
+    weaponAttack: Number(raw?.weaponAttack ?? 0) || 0,
+    magicAttack: Number(raw?.magicAttack ?? 0) || 0,
+    speed: Number(raw?.speed ?? 0) || 0,
+    jump: Number(raw?.jump ?? 0) || 0,
+    criticalRate: Number(raw?.criticalRate ?? 0) || 0,
+    criticalDamage: Number(raw?.criticalDamage ?? 0) || 0,
+  };
+}
+
+function applyPercent(value, percent) {
+  return Math.round((Number(value) || 0) * (1 + (Number(percent) || 0) / 100));
+}
+
 export function getLevelGains(level) {
   const safeLevel = clamp(level, 1, 200);
 
@@ -63,6 +84,7 @@ export function getRecommendedApAllocation(classLine, level, custom = {}) {
 export function buildStatPlan(classLine, level, custom = {}) {
   const safeLevel = clamp(level, 1, 200);
   const baseStats = classLine.baseStats;
+  const skillBonuses = normalizeSkillBonuses(custom.skillBonuses);
   const totalAp = getTotalApFromLevel(safeLevel);
   const primary = classLine.primaryStat;
   const secondary = classLine.secondaryStat;
@@ -77,14 +99,17 @@ export function buildStatPlan(classLine, level, custom = {}) {
 
   for (const key of STAT_KEYS) {
     stats[key] = (stats[key] ?? 0) + (allocation[key] ?? 0);
+    stats[key] += skillBonuses.stats[key] ?? 0;
   }
 
-  stats.HP = Math.round((stats.HP ?? 0) + safeLevel * inferHpGrowth(classLine.id));
-  stats.MP = Math.round((stats.MP ?? 0) + safeLevel * inferMpGrowth(classLine.id, stats.INT));
+  const baseHp = Math.round((stats.HP ?? 0) + safeLevel * inferHpGrowth(classLine.id));
+  const baseMp = Math.round((stats.MP ?? 0) + safeLevel * inferMpGrowth(classLine.id, stats.INT));
+  stats.HP = applyPercent(baseHp, skillBonuses.maxHpPercent);
+  stats.MP = applyPercent(baseMp, skillBonuses.maxMpPercent);
 
   const allocatedAp = STAT_KEYS.reduce((sum, key) => sum + (allocation[key] ?? 0), 0);
-  const accuracy = estimateAccuracy(classLine.id, stats, safeLevel);
-  const magicAccuracy = estimateMagicAccuracy(stats, safeLevel);
+  const accuracy = estimateAccuracy(classLine.id, stats, safeLevel) + skillBonuses.accuracy;
+  const magicAccuracy = estimateMagicAccuracy(stats, safeLevel) + skillBonuses.magicAccuracy;
 
   return {
     level: safeLevel,
@@ -102,6 +127,13 @@ export function buildStatPlan(classLine, level, custom = {}) {
       magicAccuracy,
       hp: stats.HP,
       mp: stats.MP,
+      avoidability: skillBonuses.avoidability,
+      weaponAttackBonus: skillBonuses.weaponAttack,
+      magicAttackBonus: skillBonuses.magicAttack,
+      speedBonus: skillBonuses.speed,
+      jumpBonus: skillBonuses.jump,
+      criticalRateBonus: skillBonuses.criticalRate,
+      criticalDamageBonus: skillBonuses.criticalDamage,
     },
   };
 }
@@ -166,23 +198,23 @@ function inferAccuracyTarget(classId, level, budget = 'mid') {
   if (classId === 'magician') return 0;
   if (classId === 'warrior') {
     if (budget === 'low') return Math.round(level * 1.35 + 10);
-    if (budget === 'high') return Math.round(level * 1.0 + 6);
-    return Math.round(level * 1.18 + 8);
+    if (budget === 'high') return Math.round(level * 1.28 + 10);
+    return Math.round(level * 1.3 + 10);
   }
   if (classId === 'bowman') {
     if (budget === 'low') return Math.round(level * 1.18 + 8);
-    if (budget === 'high') return Math.round(level * 0.95 + 6);
-    return Math.round(level * 1.05 + 7);
+    if (budget === 'high') return Math.round(level * 1.08 + 8);
+    return Math.round(level * 1.12 + 8);
   }
   if (classId === 'thief') {
     if (budget === 'low') return Math.round(level * 1.28 + 10);
-    if (budget === 'high') return Math.round(level * 1.0 + 7);
-    return Math.round(level * 1.12 + 8);
+    if (budget === 'high') return Math.round(level * 1.18 + 10);
+    return Math.round(level * 1.23 + 10);
   }
   if (classId === 'pirate') {
     if (budget === 'low') return Math.round(level * 1.22 + 8);
-    if (budget === 'high') return Math.round(level * 0.98 + 6);
-    return Math.round(level * 1.08 + 7);
+    if (budget === 'high') return Math.round(level * 1.1 + 8);
+    return Math.round(level * 1.14 + 8);
   }
   return Math.round(level + 6);
 }

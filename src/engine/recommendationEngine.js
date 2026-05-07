@@ -186,6 +186,9 @@ function buildCombatSnapshot({ classLine, profile, level, statPlan, gear = [] })
   const accuracy = profile.attackType === 'magic' ? Math.max(magicAccuracy, physicalAccuracy * 0.8) : physicalAccuracy;
   const hp = Number(derived.hp ?? 0) + gearBonus.HP;
   const mp = Number(derived.mp ?? 0) + gearBonus.MP;
+  const physicalDefense = gearBonus.PDD;
+  const magicDefense = gearBonus.MDD;
+  const avoidability = Number(derived.avoidability ?? 0) + gearBonus.AVOID;
 
   return {
     level: Number(level) || 1,
@@ -196,6 +199,9 @@ function buildCombatSnapshot({ classLine, profile, level, statPlan, gear = [] })
     accuracy: Math.round(accuracy),
     hp,
     mp,
+    physicalDefense,
+    magicDefense,
+    avoidability,
     gearBonus,
   };
 }
@@ -209,10 +215,13 @@ function getGearBonuses(gear = []) {
     sum.HP += readGearValue(item, ['incMHP', 'incMaxHP', 'incHP', 'mhp', 'hp']);
     sum.MP += readGearValue(item, ['incMMP', 'incMaxMP', 'incMP', 'mmp', 'mp']);
     sum.ACC += readGearValue(item, ['incACC', 'accuracy', 'acc']);
+    sum.AVOID += readGearValue(item, ['incEVA', 'incAVOID', 'incAvoid', 'avoidability', 'eva']);
     sum.WATK += readGearValue(item, ['incPAD', 'pad', 'watk']);
     sum.MATK += readGearValue(item, ['incMAD', 'mad', 'matk']);
+    sum.PDD += readGearValue(item, ['incPDD', 'pdd', 'wdef', 'defense']);
+    sum.MDD += readGearValue(item, ['incMDD', 'mdd', 'magicDefense']);
     return sum;
-  }, { STR: 0, DEX: 0, INT: 0, LUK: 0, HP: 0, MP: 0, ACC: 0, WATK: 0, MATK: 0 });
+  }, { STR: 0, DEX: 0, INT: 0, LUK: 0, HP: 0, MP: 0, ACC: 0, AVOID: 0, WATK: 0, MATK: 0, PDD: 0, MDD: 0 });
 }
 
 function readGearValue(item, aliases) {
@@ -261,8 +270,13 @@ function rankMonstersForPlayer({ level, combat, profile, budgetProfile, weights,
 }
 
 function scoreMonster({ monster, level, combat, profile, budgetProfile, weights }) {
-  const requiredAccuracy = getRequiredAccuracy(level, monster);
-  const hitRate = getHitRate(combat.accuracy, requiredAccuracy);
+  const hitProfile = getMonsterHitProfile({
+    characterLevel: level,
+    monster,
+    accuracy: combat.accuracy,
+    attackType: profile.attackType,
+  });
+  const { requiredAccuracy, minimumAccuracy, hitRate } = hitProfile;
   const levelDelta = Number(monster.level) - Number(level);
   const averageDamage = estimateAverageDamage({ monster, combat, profile });
   const timeToKill = Math.max(0.35, monster.hp / Math.max(1, averageDamage * hitRate));
@@ -275,7 +289,9 @@ function scoreMonster({ monster, level, combat, profile, budgetProfile, weights 
   const classFitComponent = scoreMonsterClassFit({ monster, profile, levelDelta });
   const valueComponent = scoreMonsterValue({ monster, budgetProfile });
   const levelPenalty = scoreMonsterLevelPenalty(levelDelta, budgetProfile);
-  const dangerPenalty = Math.max(0, (budgetProfile.minHit - hitRate) * 42) + levelPenalty;
+  const missPenalty = profile.attackType === 'magic' ? 0 : Math.max(0, (budgetProfile.minHit - hitRate) * 78);
+  const noHitPenalty = profile.attackType === 'magic' ? 0 : hitRate <= 0 ? 88 : hitRate < 0.6 ? 34 : 0;
+  const dangerPenalty = missPenalty + noHitPenalty + levelPenalty;
   const targetScore = clamp(
     (hitComponent * weights.hit)
       + (expComponent * weights.exp)
@@ -291,6 +307,7 @@ function scoreMonster({ monster, level, combat, profile, budgetProfile, weights 
   return {
     ...monster,
     requiredAccuracy,
+    minimumAccuracy,
     hitRate,
     hitPercent: Math.round(hitRate * 100),
     averageDamage: Math.round(averageDamage),
@@ -349,13 +366,30 @@ function normalizeKillSpeed(timeToKill, monsterLevel, playerLevel) {
 }
 
 function scoreSafety({ monster, level, timeToKill, combat, profile, budgetProfile }) {
-  const incoming = Math.max(monster.physicalAttack, monster.magicAttack, monster.level * 2.4);
+  const incomingProfile = getIncomingDamageProfile(monster, combat);
+  const incoming = incomingProfile.maxDamage;
   const levelRisk = clamp((monster.level - level) * 3, -12, 35);
   const hpBuffer = combat.hp ? clamp(combat.hp / Math.max(1, incoming * 5), 0.45, 1.35) : 0.85;
   const contactFactor = profile.rangeType === 'ranged' ? 0.72 : profile.rangeType === 'magic' ? 0.82 : 1.05;
   const exposure = Math.min(1.5, timeToKill / 4) * contactFactor;
   const risk = (incoming * exposure * budgetProfile.potionPenalty * profile.safetyWeight) / Math.max(40, level * 6) + levelRisk / 100;
   return clamp(100 - risk * 85 / hpBuffer, 0, 100);
+}
+
+function getIncomingDamageProfile(monster, combat = {}) {
+  const physicalAttack = Number(monster?.physicalAttack ?? 0);
+  const magicAttack = Number(monster?.magicAttack ?? 0);
+  const usesMagic = magicAttack > physicalAttack;
+  const attack = Math.max(physicalAttack, magicAttack, Number(monster?.level ?? 1) * 2.2);
+  const defense = usesMagic ? Number(combat.magicDefense ?? 0) : Number(combat.physicalDefense ?? 0);
+  const monsterLevel = Math.max(1, Number(monster?.level ?? 1));
+  const reduction = Math.floor(Math.min(defense * monsterLevel / 70, defense / 5));
+  return {
+    minDamage: Math.max(1, Math.floor(attack * 1.0) - reduction),
+    avgDamage: Math.max(1, Math.floor(attack * 1.25) - reduction),
+    maxDamage: Math.max(1, Math.floor(attack * 1.5) - reduction),
+    reduction,
+  };
 }
 
 function scoreMonsterClassFit({ monster, profile, levelDelta }) {
@@ -481,20 +515,57 @@ function scoreTravelPenalty(map) {
   return 0;
 }
 
-function getRequiredAccuracy(characterLevel, monster) {
-  if (Number(monster.requiredAccuracy) > 0) {
-    const levelDiff = Math.max(0, Number(monster.level ?? 1) - Number(characterLevel ?? 1));
-    return Math.max(1, Math.ceil(Number(monster.requiredAccuracy) + levelDiff * 1.35));
+function getMonsterHitProfile({ characterLevel, monster, accuracy, attackType }) {
+  if (attackType === 'magic') {
+    return { hitRate: 1, requiredAccuracy: 0, minimumAccuracy: 0 };
   }
-  const monsterLevel = Number(monster.level ?? 1);
-  const avoid = Math.max(0, Number(monster.avoid ?? monster.eva ?? 0));
-  const levelDiff = Math.max(0, monsterLevel - Number(characterLevel ?? 1));
-  return Math.max(1, Math.ceil(((55 + levelDiff * 2) * avoid) / 15));
+  const hitRate = getPhysicalHitRate({ accuracy, characterLevel, monster });
+  return {
+    hitRate,
+    requiredAccuracy: getAccuracyForHitRate({ characterLevel, monster, desiredHitRate: 1 }),
+    minimumAccuracy: getAccuracyForHitRate({ characterLevel, monster, desiredHitRate: 0.000001 }),
+  };
 }
 
-function getHitRate(accuracy, requiredAccuracy) {
-  if (!requiredAccuracy) return 1;
-  return clamp(Number(accuracy ?? 0) / requiredAccuracy, 0, 1);
+function getPhysicalHitRate({ accuracy, characterLevel, monster }) {
+  const avoid = Math.max(0, Number(monster?.avoid ?? monster?.eva ?? 0));
+  if (avoid <= 0) {
+    const legacyRequired = getLegacyRequiredAccuracy(characterLevel, monster);
+    return legacyRequired > 0 ? clamp(Number(accuracy ?? 0) / legacyRequired, 0, 1) : 1;
+  }
+  const acc = Number(accuracy ?? 0);
+  if (acc <= 0) return 0;
+  const levelGap = Math.max(0, Number(monster?.level ?? 1) - Number(characterLevel ?? 1));
+  const accuracyFactor = acc * 100 / ((levelGap + 51) * 5);
+  if (accuracyFactor <= 0) return 0;
+
+  const spread = 0.3 / (1 + Math.exp((accuracyFactor - avoid) / 12));
+  const minRoll = 0.95 - spread;
+  const maxRoll = 1.05 + spread;
+  const requiredRoll = avoid / accuracyFactor;
+  if (requiredRoll <= minRoll) return 1;
+  if (requiredRoll >= maxRoll) return 0;
+  return clamp((maxRoll - requiredRoll) / (maxRoll - minRoll), 0, 1);
+}
+
+function getAccuracyForHitRate({ characterLevel, monster, desiredHitRate }) {
+  const avoid = Math.max(0, Number(monster?.avoid ?? monster?.eva ?? 0));
+  const legacyRequired = getLegacyRequiredAccuracy(characterLevel, monster);
+  if (avoid <= 0) {
+    if (legacyRequired > 0) return Math.max(1, Math.ceil(legacyRequired * desiredHitRate));
+    return 0;
+  }
+  const target = clamp(desiredHitRate, 0, 1);
+  for (let acc = 0; acc <= 9999; acc += 1) {
+    if (getPhysicalHitRate({ accuracy: acc, characterLevel, monster }) >= target) return acc;
+  }
+  return 9999;
+}
+
+function getLegacyRequiredAccuracy(characterLevel, monster) {
+  if (Number(monster?.requiredAccuracy) <= 0) return 0;
+  const levelDiff = Math.max(0, Number(monster?.level ?? 1) - Number(characterLevel ?? 1));
+  return Math.max(1, Math.ceil(Number(monster.requiredAccuracy) + levelDiff * 1.35));
 }
 
 function buildWarning(monsters, classId, budgetProfile) {
@@ -525,6 +596,7 @@ export function getMonsterRows(map) {
     level: monster.level,
     hp: monster.hp,
     exp: monster.exp,
+    minimumAccuracy: monster.minimumAccuracy,
     requiredAccuracy: monster.requiredAccuracy,
     hitPercent: monster.hitPercent,
     defense: monster.defense,
