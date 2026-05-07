@@ -5,6 +5,7 @@ import SkillDetailSheet from './SkillDetailSheet.jsx';
 import '../styles/detail-sheets.css';
 
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
+const MIN_STAT_AP = 4;
 const SKILL_ICON_FOLDERS = ['icons/skill', 'icons/skills', 'icons'];
 
 const SKILL_ICON_ALIASES = {
@@ -159,22 +160,26 @@ export default function SkillPanel({
             <PanelHead kicker="AP 加点" title="能力值分配" action="系统推荐" onAction={onApReset} />
             <p className="mg-character-note">{apNote}</p>
             <div className="mg-character-meter">
-              <span>总剩余 AP</span>
+              <span>可分配 AP</span>
               <strong>{statPlan.remainingAp}</strong>
+              <em>每项最低 {MIN_STAT_AP}</em>
             </div>
             <div className="mg-ap-grid">
-              {STAT_KEYS.map((stat) => (
-                <PointRow
-                  key={stat}
-                  label={stat}
-                  value={statPlan.stats[stat]}
-                  points={apAllocation?.[stat] ?? 0}
-                  canMinus={(apAllocation?.[stat] ?? 0) > 0}
-                  canPlus={statPlan.remainingAp > 0}
-                  onMinus={() => onApChange(stat, -1)}
-                  onPlus={() => onApChange(stat, 1)}
-                />
-              ))}
+              {STAT_KEYS.map((stat) => {
+                const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
+                return (
+                  <PointRow
+                    key={stat}
+                    label={stat}
+                    value={statPlan.stats[stat]}
+                    points={apValue}
+                    canMinus={apValue > MIN_STAT_AP}
+                    canPlus={statPlan.remainingAp > 0}
+                    onMinus={() => onApChange(stat, -1)}
+                    onPlus={() => onApChange(stat, 1)}
+                  />
+                );
+              })}
             </div>
           </section>
 
@@ -289,7 +294,7 @@ function PointRow({ label, value, points, canMinus, canPlus, onMinus, onPlus }) 
       <div>
         <span>{label}</span>
         <strong>{value}</strong>
-        <em>AP +{points}</em>
+        <em>AP {points}</em>
       </div>
       <div className="mg-mini-controls">
         <button onClick={onMinus} disabled={!canMinus}>-</button>
