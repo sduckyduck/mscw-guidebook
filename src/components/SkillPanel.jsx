@@ -162,18 +162,20 @@ export default function SkillPanel({
             <div className="mg-character-meter">
               <span>可分配 AP</span>
               <strong>{statPlan.remainingAp}</strong>
-              <em>每项最低 {MIN_STAT_AP}</em>
+              <em>最低值按职业转职要求保护</em>
             </div>
             <div className="mg-ap-grid">
               {STAT_KEYS.map((stat) => {
                 const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
+                const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
                 return (
                   <PointRow
                     key={stat}
                     label={stat}
                     value={statPlan.stats[stat]}
                     points={apValue}
-                    canMinus={apValue > MIN_STAT_AP}
+                    minValue={minValue}
+                    canMinus={apValue > minValue}
                     canPlus={statPlan.remainingAp > 0}
                     onMinus={() => onApChange(stat, -1)}
                     onPlus={() => onApChange(stat, 1)}
@@ -288,13 +290,13 @@ function PanelHead({ kicker, title, action, onAction }) {
   );
 }
 
-function PointRow({ label, value, points, canMinus, canPlus, onMinus, onPlus }) {
+function PointRow({ label, value, points, minValue, canMinus, canPlus, onMinus, onPlus }) {
   return (
     <article className="mg-ap-box">
       <div>
         <span>{label}</span>
         <strong>{value}</strong>
-        <em>AP {points}</em>
+        <em>AP {points} · 最低 {minValue}</em>
       </div>
       <div className="mg-mini-controls">
         <button onClick={onMinus} disabled={!canMinus}>-</button>
