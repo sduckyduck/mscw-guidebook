@@ -2,7 +2,6 @@ import { useState } from 'react';
 import CharacterPreview from './CharacterPreview.jsx';
 import IconFallback, { baseUrl, iconSourcesFromNames } from './IconFallback.jsx';
 import SkillDetailSheet from './SkillDetailSheet.jsx';
-import { translateSkillText } from '../engine/skillTextTranslator.js';
 import '../styles/detail-sheets.css';
 
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
@@ -28,29 +27,6 @@ function getSkillSources(name, iconKey = '') {
     publicIconAsset(iconKey),
     ...iconSourcesFromNames(getSkillNames(name), SKILL_ICON_FOLDERS),
   ]);
-}
-
-function trimSkillHint(value, max = 96) {
-  const text = String(value ?? '');
-  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
-}
-
-function getShortSkillHint(skill, plan) {
-  const levelStats = skill.allLevelStats ?? skill.all_level_stats ?? [];
-  if (levelStats.length) {
-    if (skill.level > 0) {
-      const raw = levelStats[Math.max(0, skill.level - 1)] ?? '';
-      return trimSkillHint(`当前 Lv.${skill.level}：${translateSkillText(raw) || raw}`);
-    }
-    const nextRaw = levelStats[0] ?? '';
-    return nextRaw ? trimSkillHint(`下一级 Lv.1：${translateSkillText(nextRaw) || nextRaw}`) : '点击查看技能效果';
-  }
-
-  const damage = plan?.damageCards?.find((card) => card.name === skill.name);
-  if (damage && skill.level > 0) return `当前伤害 ${damage.min}-${damage.max}`;
-  if (skill.locked) return '点击查看开放条件';
-  if (skill.level > 0) return `已加 ${skill.level} 点，点击查看效果`;
-  return '点击查看技能说明';
 }
 
 export default function SkillPanel({
@@ -188,7 +164,6 @@ function SkillList({ skills, plan, onSkillChange, onSkillInspect }) {
           <SkillPointRow
             key={skill.name}
             skill={skill}
-            plan={plan}
             canMinus={!skill.locked && skill.level > 0}
             canPlus={!skill.locked && remainingForTier > 0 && skill.level < skill.max}
             onMinus={() => onSkillChange(skill.name, -1)}
@@ -229,7 +204,7 @@ function PointRow({ label, value, points, minValue, canMinus, canPlus, onMinus, 
   );
 }
 
-function SkillPointRow({ skill, plan, canMinus, canPlus, onMinus, onPlus, onInspect }) {
+function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus, onInspect }) {
   const rowClass = ['mg-skill-row clickable', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
   return (
     <article className={rowClass} role="button" tabIndex={0} onClick={onInspect} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onInspect(); }}>
@@ -237,7 +212,6 @@ function SkillPointRow({ skill, plan, canMinus, canPlus, onMinus, onPlus, onInsp
       <div className="mg-skill-main">
         <strong>{skill.name}</strong>
         <span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · [+/-]'}</span>
-        <small>{getShortSkillHint(skill, plan)}</small>
       </div>
       <div className="mg-mini-controls" onClick={(event) => event.stopPropagation()}>
         <button onClick={onMinus} disabled={!canMinus}>-</button>
