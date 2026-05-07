@@ -1,4 +1,5 @@
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
+const LEVEL_10_TOTAL_AP = 70;
 const clamp = (value, min, max) => Math.min(Math.max(Number(value) || min, min), max);
 
 function normalizeSkillBonuses(raw = {}) {
@@ -16,6 +17,25 @@ function normalizeSkillBonuses(raw = {}) {
     criticalRate: Number(raw?.criticalRate ?? 0) || 0,
     criticalDamage: Number(raw?.criticalDamage ?? 0) || 0,
   };
+}
+
+function getStatTotal(stats = {}) {
+  return STAT_KEYS.reduce((sum, key) => sum + (Number(stats?.[key] ?? 0) || 0), 0);
+}
+
+function getLevel10BaseApDeficit(baseStats = {}) {
+  return Math.max(0, LEVEL_10_TOTAL_AP - getStatTotal(baseStats));
+}
+
+function normalizeLevel10BaseStats(baseStats = {}, primaryStat = 'STR') {
+  const stats = { ...baseStats };
+  const deficit = getLevel10BaseApDeficit(stats);
+
+  if (deficit > 0 && STAT_KEYS.includes(primaryStat)) {
+    stats[primaryStat] = (Number(stats[primaryStat] ?? 0) || 0) + deficit;
+  }
+
+  return stats;
 }
 
 function applyPercent(value, percent) {
@@ -51,12 +71,11 @@ export function getRecommendedApAllocation(classLine, level, custom = {}) {
   const budget = custom.budget ?? 'mid';
   const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget);
   const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget);
-  const baseStats = classLine.baseStats;
+  const baseStats = normalizeLevel10BaseStats(classLine.baseStats, primary);
   const allocation = Object.fromEntries(STAT_KEYS.map((key) => [key, 0]));
 
-  // First satisfy the stat requirement implied by the budget's gear tier.
-  // Low budget gear lags behind level, so bowman/mage gear stats can also lag;
-  // low budget physical classes still need extra hit-rate insurance.
+  // Level 10 has a fixed 70 AP baseline. Any missing base AP is applied to the
+  // primary stat before level-up AP is distributed, so Lv.10 does not lose AP.
   const secondaryNeeded = Math.max(0, secondaryTarget - (baseStats[secondary] ?? 0));
   let secondaryAdded = Math.min(totalAp, secondaryNeeded);
   let primaryAdded = Math.max(0, totalAp - secondaryAdded);
@@ -83,17 +102,20 @@ export function getRecommendedApAllocation(classLine, level, custom = {}) {
 
 export function buildStatPlan(classLine, level, custom = {}) {
   const safeLevel = clamp(level, 1, 200);
-  const baseStats = classLine.baseStats;
-  const skillBonuses = normalizeSkillBonuses(custom.skillBonuses);
-  const totalAp = getTotalApFromLevel(safeLevel);
   const primary = classLine.primaryStat;
   const secondary = classLine.secondaryStat;
+  const rawBaseStats = classLine.baseStats;
+  const baseApDeficit = getLevel10BaseApDeficit(rawBaseStats);
+  const baseStats = normalizeLevel10BaseStats(rawBaseStats, primary);
+  const skillBonuses = normalizeSkillBonuses(custom.skillBonuses);
+  const levelUpAp = getTotalApFromLevel(safeLevel);
+  const totalAp = baseApDeficit + levelUpAp;
   const budget = custom.budget ?? 'mid';
   const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget);
   const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget);
   const allocation = sanitizeApAllocation(
     custom.apAllocation ?? getRecommendedApAllocation(classLine, safeLevel, custom),
-    totalAp,
+    levelUpAp,
   );
   const stats = { ...baseStats };
 
@@ -114,8 +136,11 @@ export function buildStatPlan(classLine, level, custom = {}) {
   return {
     level: safeLevel,
     totalAp,
+    baseApTotal: LEVEL_10_TOTAL_AP,
+    baseApDeficit,
+    levelUpAp,
     totalSp: getTotalSpFromLevel(safeLevel, classLine.id === 'magician' ? 8 : 10),
-    remainingAp: Math.max(0, totalAp - allocatedAp),
+    remainingAp: Math.max(0, levelUpAp - allocatedAp),
     primaryAdded: allocation[primary] ?? 0,
     secondaryAdded: allocation[secondary] ?? 0,
     secondaryTarget,
