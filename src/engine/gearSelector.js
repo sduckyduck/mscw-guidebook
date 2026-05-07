@@ -33,10 +33,10 @@ const BUDGET_GEAR_PROFILES = {
   low: {
     pricePenalty: 3.2,
     classBonus: 30,
-    slotLevelLag: { weapon: 12, cap: 13, overall: 14, top: 14, bottom: 14, shoes: 12, shield: 18, glove: 99, cape: 99, earring: 99 },
-    minMaxReqLevel: { weapon: 8, cap: 5, overall: 5, top: 5, bottom: 5, shoes: 5, shield: 5 },
+    slotLevelLag: { weapon: 10, cap: 13, overall: 14, top: 14, bottom: 14, shoes: 12, shield: 18, glove: 99, cape: 99, earring: 99 },
+    minMaxReqLevel: { weapon: 10, cap: 5, overall: 5, top: 5, bottom: 5, shoes: 5, shield: 5 },
     autoSlots: new Set(['weapon', 'cap', 'top', 'bottom', 'shoes']),
-    note: '低资金：Lv.15 前保持新手装和一转赠送武器；之后装备明显滞后，只推荐核心部位。',
+    note: '低资金：保持便宜核心装备；武器永远不能空，只是会用价格和等级滞后降权。',
   },
   mid: {
     pricePenalty: 1.45,
@@ -69,20 +69,20 @@ const EARLY_GEAR_LEVEL_CUTOFF = 20;
 const LOW_BUDGET_STARTER_CUTOFF = 15;
 const STARTER_REQ_LEVEL_MAX = 10;
 const BANNED_NAME_PATTERN = /\b(gm|admin|administrator|test|tester|beginner gm|maple admin|event|cash|nx|donor|vip|wedding|birthday|anniversary|invincible|wizet|nemi|inkwell|dr\. lim|lim hat|staff|developer|manager)\b/i;
-const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume|transparent|invisible|underwear|undershirt|under shirt|tubetop|tube top|tanktop|tank top|panties|panty|briefs|boxers)\b/i;
+const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|swimming|swimsuit|swimwear|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume|transparent|invisible|underwear|undershirt|under shirt|tubetop|tube top|tanktop|tank top|panties|panty|briefs|boxers)\b/i;
 const BANNED_WEAPON_NAMES = /\b(umbrella|snowboard|surfboard|flag|balloon|rose|bouquet|lollipop|fan|tube|briefcase|purse|shovel|plunger|sake bottle|red whip)\b/i;
 
 const STARTER_NAME_PRIORITY = {
   female: {
     cap: ['Red Headband', 'Black Headband'],
-    top: ['Orange Sporty T-Shirt', 'White Tubetop', 'White Undershirt'],
+    top: ['Orange Sporty T-Shirt', 'Yellow T-Shirt'],
     bottom: ['Red Miniskirt', 'Red Mini Skirt'],
     shoes: ['Red Rubber Boots', 'Yellow Basic Boots', 'Brown Hard Leather Boots'],
   },
   male: {
     cap: ['Black Headband', 'Red Headband'],
-    top: ['White Undershirt', 'White Tubetop'],
-    bottom: ['Blue Jean Shorts', 'Red Miniskirt', 'Red Mini Skirt'],
+    top: ['Yellow T-Shirt', 'Blue One-Lined T-Shirt'],
+    bottom: ['Blue Jean Shorts', 'Brown Cotton Shorts'],
     shoes: ['Yellow Basic Boots', 'Brown Hard Leather Boots', 'Red Rubber Boots'],
   },
 };
@@ -90,13 +90,13 @@ const STARTER_NAME_PRIORITY = {
 const STARTER_FALLBACKS = {
   female: {
     cap: { id: '1002067', name: 'Red Headband', slot: 'cap', reqLevel: 0 },
-    top: { id: '1041013', name: 'White Tubetop', slot: 'top', reqLevel: 0 },
+    top: { id: '1041018', name: 'Yellow T-Shirt', slot: 'top', reqLevel: 0 },
     bottom: { id: '1061013', name: 'Red Miniskirt', slot: 'bottom', reqLevel: 0 },
     shoes: { id: '1072005', name: 'Red Rubber Boots', slot: 'shoes', reqLevel: 0 },
   },
   male: {
     cap: { id: '1002019', name: 'Black Headband', slot: 'cap', reqLevel: 0 },
-    top: { id: '1040002', name: 'White Undershirt', slot: 'top', reqLevel: 0 },
+    top: { id: '1040003', name: 'Yellow T-Shirt', slot: 'top', reqLevel: 0 },
     bottom: { id: '1060002', name: 'Blue Jean Shorts', slot: 'bottom', reqLevel: 0 },
     shoes: { id: '1072007', name: 'Yellow Basic Boots', slot: 'shoes', reqLevel: 0 },
   },
@@ -125,8 +125,16 @@ export function selectGear(args) {
   }
 
   const bySlot = getGearCandidatesBySlot({ ...args, manualMode: false });
-  const weapon = bySlot.weapon?.[0];
   const policy = getPolicy(args.classLine, args.branch);
+  const weaponPair = pickWeaponShieldPair({
+    weapons: bySlot.weapon ?? [],
+    shields: bySlot.shield ?? [],
+    policy,
+    branch: args.branch,
+    classLine: args.classLine,
+    budget: args.budget,
+    level: args.level,
+  });
   const useOverall = Boolean(bySlot.overall?.[0]) && !(bySlot.top?.[0] && bySlot.bottom?.[0] && Number(args.level) <= EARLY_GEAR_LEVEL_CUTOFF);
   const ordered = [
     bySlot.cap?.[0],
@@ -136,8 +144,8 @@ export function selectGear(args) {
     bySlot.glove?.[0],
     bySlot.cape?.[0],
     bySlot.earring?.[0],
-    shouldUseShield(policy, args.branch, weapon) ? bySlot.shield?.[0] : null,
-    weapon,
+    weaponPair.shield,
+    weaponPair.weapon,
   ].filter(Boolean);
   return ordered.map((item) => toGear(item, args.classLine));
 }
@@ -182,7 +190,7 @@ export function getGearCandidatesBySlot(args) {
     }
   }
 
-  if (!shouldUseShield(policy, branch, output.weapon?.[0])) output.shield = [];
+  if (policy.shield === 'never') output.shield = [];
   if (!manualMode) {
     if (!budgetAllowsSlot('glove', profile, level, policy)) output.glove = [];
     if (!budgetAllowsSlot('cape', profile, level, policy)) output.cape = [];
@@ -215,6 +223,34 @@ export function applyGearOverrides(baseGear, overrides = {}) {
   }
 
   return ['cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'cape', 'earring', 'shield', 'weapon'].map((slot) => bySlot[slot]).filter(Boolean);
+}
+
+function pickWeaponShieldPair({ weapons, shields, policy, branch, classLine, budget, level }) {
+  let best = { weapon: weapons?.[0] ?? null, shield: null, score: -Infinity };
+
+  for (const weapon of weapons ?? []) {
+    const weaponScore = gearScore(weapon, classLine, budget, level);
+    const canUseShield = shouldUseShield(policy, branch, weapon);
+    const shieldOptions = canUseShield ? [null, ...(shields ?? []).slice(0, 10)] : [null];
+
+    for (const shield of shieldOptions) {
+      const shieldScore = shield ? gearScore(shield, classLine, budget, level) * 0.72 + shieldUtilityScore(shield, classLine) : 0;
+      const requiredPenalty = policy.shield === 'required' && !shield ? 36 : 0;
+      const pairScore = weaponScore + shieldScore - requiredPenalty;
+      if (pairScore > best.score) best = { weapon, shield, score: pairScore };
+    }
+  }
+
+  if (!best.weapon && weapons?.[0]) best.weapon = weapons[0];
+  return best;
+}
+
+function shieldUtilityScore(shield, classLine) {
+  const defense = Number(shield.incPDD ?? shield.stats?.incPDD ?? shield.incMDD ?? shield.stats?.incMDD ?? 0) * 0.25;
+  const hp = Number(shield.incMHP ?? shield.stats?.incMHP ?? shield.incHP ?? shield.stats?.incHP ?? 0) * 0.12;
+  const primary = Number(shield[`inc${classLine?.primaryStat}`] ?? shield.stats?.[`inc${classLine?.primaryStat}`] ?? 0) * 3;
+  const acc = Number(shield.incACC ?? shield.stats?.incACC ?? 0) * 2;
+  return 6 + defense + hp + primary + acc;
 }
 
 function isLowBudgetStarter({ budget, level }) {
@@ -282,13 +318,13 @@ function normalizeText(value) {
 function getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items, manualMode = false }) {
   const policy = getPolicy(classLine, branch);
   const profile = getBudgetGearProfile(budget);
-  const maxReqLevel = manualMode ? Number(level || 1) : null;
+  const maxReqLevel = Number(level || 1);
   return items
     .filter((item) => item.category === 'Equipment')
     .map((item) => ({ ...item, slot: detectSlot(item), visualGender: detectVisualGender(item) }))
     .filter((item) => item.slot)
     .filter((item) => manualMode || budgetAllowsSlot(item.slot, profile, level, policy))
-    .filter((item) => Number(item.reqLevel ?? 0) <= (manualMode ? maxReqLevel : maxReqLevelForBudget(item.slot, level, profile)))
+    .filter((item) => Number(item.reqLevel ?? 0) <= maxReqLevel)
     .filter((item) => !isBannedOrSpecial(item))
     .filter((item) => jobMatches(item, classLine))
     .filter((item) => statRequirementsMet(item, statPlan))
@@ -312,7 +348,9 @@ function getStarterFallbackBySlot({ classLine, gender }) {
   const outfit = STARTER_FALLBACKS[gender === 'male' ? 'male' : 'female'];
   const weapon = STARTER_WEAPON_FALLBACKS[classLine?.id] ?? STARTER_WEAPON_FALLBACKS.warrior;
   const result = Object.fromEntries(ALL_SLOTS.map((slot) => [slot, []]));
-  [...Object.values(outfit), weapon].forEach((item) => { result[item.slot] = [toGear(item, classLine)]; });
+  [...Object.values(outfit), weapon].forEach((item) => {
+    if (!isHardBanned(item)) result[item.slot] = [toGear(item, classLine)];
+  });
   return result;
 }
 
