@@ -100,3 +100,378 @@
     font-size: .88rem;
   }
 }
+
+/* MapleStory Classic World UI branch theme
+   Inspired by the classic in-game windows: pale blue inventory panes, grey bevels,
+   red selected tabs, orange action buttons, grass/wood/sky color palette. */
+:root {
+  --bg: #8fcef5;
+  --card: #f8f5e8;
+  --card-soft: #efe6c9;
+  --border: #8b806e;
+  --border-strong: #5f5346;
+  --text: #3a2a1a;
+  --muted: #725f48;
+  --green: #4f9b42;
+  --green-dark: #276732;
+  --green-soft: #d5e8aa;
+  --teal: #61a7d9;
+  --teal-dark: #2a6aa3;
+  --blue: #2c73c8;
+  --red: #d44b5f;
+  --shadow: 0 5px 0 rgba(67, 44, 25, .24), 0 18px 34px rgba(59, 42, 25, .18);
+}
+
+html {
+  background: #8fcef5;
+}
+
+body {
+  background:
+    radial-gradient(circle at 14% 12%, rgba(255,255,255,.94) 0 34px, rgba(255,255,255,.55) 35px 70px, transparent 72px),
+    radial-gradient(circle at 76% 8%, rgba(255,255,255,.9) 0 42px, rgba(255,255,255,.5) 43px 88px, transparent 90px),
+    linear-gradient(180deg, #2f72d7 0%, #6eb7f1 34%, #c7ecff 60%, #86c45f 61%, #6a9a42 100%);
+  color: var(--text);
+  image-rendering: pixelated;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 0 66%, rgba(62, 116, 37, .28) 66% 100%),
+    repeating-linear-gradient(90deg, transparent 0 34px, rgba(255,255,255,.08) 35px 36px),
+    repeating-linear-gradient(0deg, transparent 0 34px, rgba(0,0,0,.035) 35px 36px);
+  opacity: .7;
+}
+
+.app-shell {
+  max-width: 980px;
+}
+
+.top-tabs {
+  border: 3px solid #6f6f6f;
+  border-top-color: #f8f8f8;
+  border-left-color: #f8f8f8;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f8f8f8, #d4d4d4 46%, #b9b9b9 47%, #eeeeee);
+  box-shadow: 0 4px 0 rgba(54, 43, 32, .28), 0 12px 22px rgba(38, 28, 18, .2);
+  backdrop-filter: none;
+}
+
+.top-tab {
+  border: 2px solid #8b8b8b;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #ffffff, #d7d7d7 52%, #bdbdbd);
+  color: #535353;
+  text-shadow: 0 1px 0 #fff;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.9), inset -1px -1px 0 rgba(0,0,0,.16);
+}
+
+.top-tab.active {
+  border-color: #8f3346;
+  border-top-color: #ffb4c2;
+  border-left-color: #ffb4c2;
+  background: linear-gradient(180deg, #ff7190, #d84361 55%, #a92e49);
+  color: #fffbe9;
+  text-shadow: 0 2px 0 rgba(93, 18, 34, .58);
+}
+
+.mg-dashboard,
+.mg-character-dashboard {
+  border: 4px solid #5e4a34;
+  border-top-color: #b48b55;
+  border-left-color: #b48b55;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 90% 4%, rgba(255,255,255,.28), transparent 190px),
+    linear-gradient(180deg, rgba(110, 170, 67, .96), rgba(65, 118, 47, .98) 44%, rgba(80, 56, 32, .96));
+  color: #fff8d8;
+  box-shadow: 0 6px 0 #3e2c1d, 0 20px 42px rgba(38, 28, 18, .3);
+}
+
+.mg-dashboard-title {
+  color: #fff4c0;
+  letter-spacing: -0.02em;
+  text-shadow: 0 3px 0 #5a351c, 2px 2px 0 rgba(0,0,0,.28);
+}
+
+.mg-dashboard-subtitle,
+.mg-footer {
+  color: #f8e7aa;
+  text-shadow: 0 1px 0 rgba(0,0,0,.38);
+}
+
+.mg-glass-panel,
+.mg-status-panel,
+.mg-equipment-board,
+.mg-skill-side-card,
+.mg-character-preview-card,
+.mg-overview-damage-card {
+  border: 3px solid #797979;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(250,252,255,.97), rgba(215,229,241,.97));
+  color: #2b2b2b;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.95), inset -2px -2px 0 rgba(61,61,61,.18), 0 4px 0 rgba(38, 27, 17, .18);
+  backdrop-filter: none;
+}
+
+.mg-panel-title,
+.mg-character-panel-head h2,
+.mg-stats-title,
+.mg-overview-damage-head h2 {
+  color: #2f3944;
+  letter-spacing: 0;
+  text-shadow: 0 1px 0 #fff;
+}
+
+.mg-field label,
+.mg-level label,
+.mg-character-panel-head span,
+.mg-character-note,
+.mg-equipment-head span,
+.mg-status-line span,
+.mg-overview-damage-head span {
+  color: #725f48;
+  text-shadow: 0 1px 0 rgba(255,255,255,.72);
+}
+
+.mg-select,
+.mg-level-value,
+.mg-stat-box,
+.mg-equip-tile,
+.mg-preview-card,
+.mg-map-card,
+.mg-picker-sheet,
+.section-card {
+  border: 2px solid #9b9285;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #ffffff, #eef5fb 64%, #dce7ef);
+  color: #2c2c2c;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 rgba(0,0,0,.14);
+}
+
+.mg-level-btn,
+.mg-mini-controls button,
+.point-controls button,
+.mg-picker-head button,
+.planner-reset {
+  border: 2px solid #8a6d38;
+  border-top-color: #ffe9a6;
+  border-left-color: #ffe9a6;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #ffd771, #f39c26 52%, #b96914);
+  color: #fff9d8;
+  text-shadow: 0 2px 0 rgba(95, 44, 6, .58);
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.72), inset -1px -2px 0 rgba(105, 49, 6, .32), 0 2px 0 rgba(64, 42, 16, .3);
+}
+
+.mg-level-btn:active,
+.mg-mini-controls button:active,
+.mg-action-main:active,
+.mg-action-small:active,
+.mg-picker-head button:active {
+  transform: translateY(1px);
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.16);
+}
+
+.mg-mini-controls button:disabled,
+.point-controls button:disabled,
+.mg-equip-tile:disabled {
+  border-color: #a7a7a7;
+  background: linear-gradient(180deg, #eeeeee, #cfcfcf);
+  color: #858585;
+  text-shadow: 0 1px 0 #fff;
+  box-shadow: inset 1px 1px 0 #fff;
+}
+
+.mg-action-main {
+  border: 3px solid #8b3c21;
+  border-top-color: #ffe79a;
+  border-left-color: #ffe79a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffe17a, #ff9c24 52%, #d55e17);
+  color: #fff8d7;
+  text-shadow: 0 2px 0 rgba(104, 36, 9, .64);
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.78), inset -2px -2px 0 rgba(113,44,6,.35), 0 4px 0 #6f3a17;
+}
+
+.mg-action-small {
+  border: 3px solid #315f8d;
+  border-top-color: #bee6ff;
+  border-left-color: #bee6ff;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #8ed0ff, #3389d2 55%, #1f5d9c);
+  color: #f5fbff;
+  text-shadow: 0 2px 0 rgba(17,57,96,.62);
+}
+
+.mg-range,
+.level-slider {
+  accent-color: #e15c46;
+}
+
+.mg-character-frame,
+.preview-frame {
+  border: 3px solid #8a7f70;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 25% 16%, rgba(255,255,255,.75) 0 18px, transparent 19px),
+    radial-gradient(circle at 76% 22%, rgba(255,255,255,.72) 0 22px, transparent 24px),
+    linear-gradient(180deg, #7dc1f7 0%, #dbf3ff 58%, #7bbb53 59%, #4d873e 100%);
+}
+
+.mg-stat-box span,
+.mg-equip-tile span,
+.mg-overview-damage-row span,
+.mg-map-target span,
+.mg-picker-item span,
+.item-label,
+.small-tags span {
+  color: #6f5b43;
+}
+
+.mg-stat-box strong,
+.mg-equip-tile strong,
+.mg-status-line strong,
+.mg-map-target strong,
+.mg-overview-damage-row strong,
+.mg-overview-damage-row em,
+.mg-picker-item strong {
+  color: #244d8f;
+}
+
+.mg-status-line,
+.mg-status-line strong {
+  color: #2b2b2b;
+  text-shadow: 0 1px 0 #fff;
+}
+
+.mg-map-thumb,
+.mg-map-card-image {
+  border: 3px solid #8a7f70;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-radius: 6px;
+  background: #eaf7ff;
+}
+
+.mg-equip-tile.smart-swap,
+.mg-skill-row.second-job:not(.locked) {
+  border-color: #709c46;
+  border-top-color: #e9ffc8;
+  border-left-color: #e9ffc8;
+  background: linear-gradient(180deg, #f7ffd8, #d8ef9b);
+}
+
+.mg-skill-row,
+.mg-overview-damage-row,
+.mg-picker-item,
+.point-row,
+.skill-point-row,
+.damage-calc-row {
+  border: 2px solid #a09685;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #ffffff, #edf3f7);
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 rgba(0,0,0,.12);
+}
+
+.mg-skill-row.locked {
+  background: linear-gradient(180deg, #e8e8e8, #cfcfcf);
+}
+
+.mg-character-meter,
+.mg-sp-meter,
+.planner-meter {
+  border: 2px solid #8a7f70;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #fff9d9, #e6d49c);
+  color: #513a1f;
+}
+
+.mg-character-meter span,
+.mg-character-meter em,
+.mg-sp-meter span,
+.mg-sp-meter em,
+.planner-meter span {
+  color: #6a4c24;
+}
+
+.mg-character-meter strong,
+.mg-sp-meter strong,
+.planner-meter strong {
+  color: #a83b28;
+}
+
+.mg-picker-backdrop {
+  background: rgba(22, 34, 51, .5);
+}
+
+.mg-picker-hint,
+.load-error {
+  border: 2px solid #8a6d38;
+  border-top-color: #fff0b8;
+  border-left-color: #fff0b8;
+  border-radius: 7px;
+  background: #fff3bd;
+  color: #784016;
+}
+
+.small-tags span,
+.score-pill,
+.mg-map-rank,
+.material-row strong {
+  border: 2px solid #6e873a;
+  border-top-color: #edffc0;
+  border-left-color: #edffc0;
+  background: linear-gradient(180deg, #e8ffb0, #8fc65c);
+  color: #244d1f;
+  text-shadow: 0 1px 0 rgba(255,255,255,.72);
+}
+
+@media (max-width: 760px) {
+  .mg-dashboard,
+  .mg-character-dashboard {
+    border-width: 3px;
+    border-radius: 10px;
+  }
+
+  .mg-glass-panel,
+  .mg-status-panel,
+  .mg-equipment-board,
+  .mg-skill-side-card,
+  .mg-character-preview-card,
+  .mg-overview-damage-card {
+    border-width: 2px;
+    border-radius: 7px;
+  }
+
+  .top-tabs {
+    border-width: 2px;
+    border-radius: 8px;
+  }
+
+  .top-tab,
+  .mg-select,
+  .mg-level-btn,
+  .mg-level-value,
+  .mg-equip-tile,
+  .mg-stat-box {
+    border-radius: 5px;
+  }
+}
