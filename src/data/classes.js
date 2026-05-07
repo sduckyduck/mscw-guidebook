@@ -11,7 +11,7 @@ export const CLASS_LINES = [
       { id: 'page', name: '准骑士', level: 30, theme: '属性攻防，容错极高' },
       { id: 'spearman', name: '枪战士', level: 30, theme: '长兵器范围，组队价值高' },
     ],
-    baseStats: { STR: 35, DEX: 4, INT: 4, LUK: 4, HP: 150, MP: 20 },
+    baseStats: { STR: 35, DEX: 15, INT: 4, LUK: 4, HP: 150, MP: 20 },
     apPriority: ['STR', 'DEX'],
     hitFormulaNote: '战士通常需要补 DEX/命中来稳定打高等级怪。',
   },
