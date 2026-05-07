@@ -1,4 +1,5 @@
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
+const MIN_STAT_AP = 4;
 const LEVEL_10_TOTAL_AP = 70;
 const clamp = (value, min, max) => Math.min(Math.max(Number(value) || min, min), max);
 
@@ -35,6 +36,10 @@ function normalizeLevel10BaseStats(baseStats = {}, primaryStat = 'STR') {
     stats[primaryStat] = (Number(stats[primaryStat] ?? 0) || 0) + deficit;
   }
 
+  for (const key of STAT_KEYS) {
+    stats[key] = Math.max(MIN_STAT_AP, Math.floor(Number(stats[key] ?? MIN_STAT_AP) || MIN_STAT_AP));
+  }
+
   return stats;
 }
 
@@ -63,30 +68,34 @@ export function getTotalSpFromLevel(level, firstJobLevel = 10, secondJobLevel = 
   return firstJobSp + secondJobSp;
 }
 
+export function getTotalApPool(level) {
+  return LEVEL_10_TOTAL_AP + getTotalApFromLevel(level);
+}
+
 export function getRecommendedApAllocation(classLine, level, custom = {}) {
   const safeLevel = clamp(level, 1, 200);
-  const totalAp = getTotalApFromLevel(safeLevel);
+  const levelUpAp = getTotalApFromLevel(safeLevel);
+  const totalAp = getTotalApPool(safeLevel);
   const primary = classLine.primaryStat;
   const secondary = classLine.secondaryStat;
   const budget = custom.budget ?? 'mid';
   const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget);
   const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget);
-  const baseStats = normalizeLevel10BaseStats(classLine.baseStats, primary);
-  const allocation = Object.fromEntries(STAT_KEYS.map((key) => [key, 0]));
+  const allocation = normalizeLevel10BaseStats(classLine.baseStats, primary);
 
-  // Level 10 has a fixed 70 AP baseline. Any missing base AP is applied to the
-  // primary stat before level-up AP is distributed, so Lv.10 does not lose AP.
-  const secondaryNeeded = Math.max(0, secondaryTarget - (baseStats[secondary] ?? 0));
-  let secondaryAdded = Math.min(totalAp, secondaryNeeded);
-  let primaryAdded = Math.max(0, totalAp - secondaryAdded);
+  // Start from the corrected Lv.10 stat line, then distribute level-up AP.
+  // The returned allocation is the editable final AP line, not only the delta.
+  const secondaryNeeded = Math.max(0, secondaryTarget - (allocation[secondary] ?? MIN_STAT_AP));
+  let secondaryAdded = Math.min(levelUpAp, secondaryNeeded);
+  let primaryAdded = Math.max(0, levelUpAp - secondaryAdded);
 
   // For physical jobs, low/normal budget means fewer accuracy bonuses from gear.
   // Add secondary AP until the estimated hit target is reached, then put the rest
   // back into the main damage stat. Magician intentionally skips this rule.
   if (classLine.id !== 'magician' && accuracyTarget > 0) {
     let safety = 0;
-    while (secondaryAdded < totalAp && safety < totalAp) {
-      const currentStats = buildStatsForAccuracy(baseStats, primary, primaryAdded, secondary, secondaryAdded);
+    while (secondaryAdded < levelUpAp && safety < levelUpAp) {
+      const currentStats = buildStatsForAccuracy(allocation, primary, primaryAdded, secondary, secondaryAdded);
       const currentAccuracy = estimateAccuracy(classLine.id, currentStats, safeLevel);
       if (currentAccuracy >= accuracyTarget) break;
       secondaryAdded += 1;
@@ -95,9 +104,9 @@ export function getRecommendedApAllocation(classLine, level, custom = {}) {
     }
   }
 
-  allocation[secondary] = secondaryAdded;
-  allocation[primary] = primaryAdded;
-  return allocation;
+  allocation[secondary] = (allocation[secondary] ?? MIN_STAT_AP) + secondaryAdded;
+  allocation[primary] = (allocation[primary] ?? MIN_STAT_AP) + primaryAdded;
+  return sanitizeFinalApAllocation(allocation, totalAp);
 }
 
 export function buildStatPlan(classLine, level, custom = {}) {
@@ -109,23 +118,20 @@ export function buildStatPlan(classLine, level, custom = {}) {
   const baseStats = normalizeLevel10BaseStats(rawBaseStats, primary);
   const skillBonuses = normalizeSkillBonuses(custom.skillBonuses);
   const levelUpAp = getTotalApFromLevel(safeLevel);
-  const totalAp = LEVEL_10_TOTAL_AP + levelUpAp;
+  const totalAp = getTotalApPool(safeLevel);
   const budget = custom.budget ?? 'mid';
   const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget);
   const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget);
-  const allocation = sanitizeApAllocation(
-    custom.apAllocation ?? getRecommendedApAllocation(classLine, safeLevel, custom),
-    levelUpAp,
-  );
-  const stats = { ...baseStats };
+  const recommendedAllocation = getRecommendedApAllocation(classLine, safeLevel, custom);
+  const allocation = resolveFinalApAllocation(custom.apAllocation, baseStats, recommendedAllocation, totalAp);
+  const stats = { ...allocation };
 
   for (const key of STAT_KEYS) {
-    stats[key] = (stats[key] ?? 0) + (allocation[key] ?? 0);
     stats[key] += skillBonuses.stats[key] ?? 0;
   }
 
-  const baseHp = Math.round((stats.HP ?? 0) + safeLevel * inferHpGrowth(classLine.id));
-  const baseMp = Math.round((stats.MP ?? 0) + safeLevel * inferMpGrowth(classLine.id, stats.INT));
+  const baseHp = Math.round((stats.HP ?? rawBaseStats.HP ?? 0) + safeLevel * inferHpGrowth(classLine.id));
+  const baseMp = Math.round((stats.MP ?? rawBaseStats.MP ?? 0) + safeLevel * inferMpGrowth(classLine.id, stats.INT));
   stats.HP = applyPercent(baseHp, skillBonuses.maxHpPercent);
   stats.MP = applyPercent(baseMp, skillBonuses.maxMpPercent);
 
@@ -140,9 +146,9 @@ export function buildStatPlan(classLine, level, custom = {}) {
     baseApDeficit,
     levelUpAp,
     totalSp: getTotalSpFromLevel(safeLevel, classLine.id === 'magician' ? 8 : 10),
-    remainingAp: Math.max(0, levelUpAp - allocatedAp),
-    primaryAdded: allocation[primary] ?? 0,
-    secondaryAdded: allocation[secondary] ?? 0,
+    remainingAp: Math.max(0, totalAp - allocatedAp),
+    primaryAdded: Math.max(0, (allocation[primary] ?? MIN_STAT_AP) - (baseStats[primary] ?? MIN_STAT_AP)),
+    secondaryAdded: Math.max(0, (allocation[secondary] ?? MIN_STAT_AP) - (baseStats[secondary] ?? MIN_STAT_AP)),
     secondaryTarget,
     accuracyTarget,
     apAllocation: allocation,
@@ -163,14 +169,51 @@ export function buildStatPlan(classLine, level, custom = {}) {
   };
 }
 
-function sanitizeApAllocation(allocation, totalAp) {
+function resolveFinalApAllocation(customAllocation, baseStats, recommendedAllocation, totalAp) {
+  if (!customAllocation || typeof customAllocation !== 'object') {
+    return sanitizeFinalApAllocation(recommendedAllocation, totalAp);
+  }
+
+  const values = STAT_KEYS.map((key) => Number(customAllocation?.[key] ?? 0) || 0);
+  const looksLikeFinalStats = values.every((value) => value >= MIN_STAT_AP);
+
+  if (looksLikeFinalStats) {
+    return sanitizeFinalApAllocation(customAllocation, totalAp);
+  }
+
+  // Backward compatibility for older saved state, where AP allocation meant
+  // level-up deltas instead of final AP values.
+  const migrated = { ...baseStats };
+  for (const key of STAT_KEYS) {
+    migrated[key] = (migrated[key] ?? MIN_STAT_AP) + Math.max(0, Math.floor(Number(customAllocation?.[key] ?? 0)));
+  }
+  return sanitizeFinalApAllocation(migrated, totalAp);
+}
+
+function sanitizeFinalApAllocation(allocation, totalAp) {
   let remaining = Math.max(0, Number(totalAp) || 0);
   const next = {};
 
   for (const key of STAT_KEYS) {
-    const requested = Math.max(0, Math.floor(Number(allocation?.[key] ?? 0)));
+    const requested = Math.max(MIN_STAT_AP, Math.floor(Number(allocation?.[key] ?? MIN_STAT_AP)));
     next[key] = Math.min(requested, remaining);
     remaining -= next[key];
+  }
+
+  // If an imported/custom allocation over-spent before later stats received their
+  // minimums, repair it by pulling points from earlier stats down to the floor.
+  for (const key of [...STAT_KEYS].reverse()) {
+    if (next[key] >= MIN_STAT_AP) continue;
+    let needed = MIN_STAT_AP - next[key];
+    next[key] = MIN_STAT_AP;
+    for (const donor of STAT_KEYS) {
+      if (donor === key) continue;
+      const available = Math.max(0, (next[donor] ?? MIN_STAT_AP) - MIN_STAT_AP);
+      const take = Math.min(available, needed);
+      next[donor] -= take;
+      needed -= take;
+      if (needed <= 0) break;
+    }
   }
 
   return next;
