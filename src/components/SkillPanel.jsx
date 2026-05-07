@@ -111,7 +111,17 @@ function getSkillSources(name, iconKey = '') {
   ]);
 }
 
+function trimSkillHint(value, max = 96) {
+  const text = String(value ?? '');
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
+}
+
 function getShortSkillHint(skill, plan) {
+  const levelStats = skill.allLevelStats ?? skill.all_level_stats ?? [];
+  if (levelStats.length) {
+    if (skill.level > 0) return trimSkillHint(levelStats[Math.max(0, skill.level - 1)] ?? 'Click to view skill effect');
+    return levelStats[0] ? trimSkillHint(`Next Lv.1: ${levelStats[0]}`) : 'Click to view skill effect';
+  }
   const damage = plan?.damageCards?.find((card) => card.name === skill.name);
   if (damage && skill.level > 0) return `当前伤害 ${damage.min}-${damage.max}`;
   if (skill.locked) return '点击查看开放条件';

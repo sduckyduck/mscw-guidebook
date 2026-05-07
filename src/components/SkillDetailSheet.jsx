@@ -22,6 +22,52 @@ function mk(type, note, current, next, values = []) {
   return { type, note, current, next, values };
 }
 
+function officialStats(skill) {
+  return skill?.allLevelStats ?? skill?.all_level_stats ?? [];
+}
+
+function cleanDescription(description = '') {
+  const lines = String(description)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^\[Master Level/i.test(line));
+  return lines.join(' ') || String(description).trim() || 'Current AppData skill entry.';
+}
+
+function officialEffectType(skill, currentText = '') {
+  const text = `${skill?.description ?? ''} ${currentText}`;
+  if (/Damage|Basic Attack|Attack \d+x/i.test(text)) return 'Attack skill';
+  if (/\bfor\s+\d+\s+sec|while active|party/i.test(text)) return 'Active buff';
+  if (/Max HP|Max MP|Accuracy|Avoidability|Mastery|Critical Rate|Critical Damage/i.test(text)) return 'Passive stat skill';
+  return 'Skill effect';
+}
+
+function effectPills(text, nextText) {
+  return [text, nextText]
+    .flatMap((value) => String(value || '').split(/[;,]/))
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+function officialSkillEffect(skill) {
+  const stats = officialStats(skill);
+  if (!stats.length) return null;
+  const lv = levelOf(skill);
+  const nx = levelOf(skill, 1);
+  const max = Number(skill?.max || 0);
+  const currentText = lv > 0 ? String(stats[lv - 1] ?? '') : '';
+  const nextText = nx > 0 ? String(stats[nx - 1] ?? '') : '';
+  return mk(
+    officialEffectType(skill, currentText || nextText),
+    cleanDescription(skill?.description),
+    currentText ? `Current Lv.${lv}: ${currentText}` : `Current Lv.${lv}: no SP invested, no level effect is active.`,
+    lv >= max ? `Next level: maxed. Effect remains: ${currentText || stats[max - 1] || 'none'}.` : `Next Lv.${nx}: ${nextText}`,
+    effectPills(currentText, nextText),
+  );
+}
+
 function attackEffect(skill, cfg) {
   const lv = levelOf(skill);
   const nx = levelOf(skill, 1);
@@ -173,6 +219,9 @@ function healEffect(skill) {
 }
 
 function getSkillEffect(skill) {
+  const official = officialSkillEffect(skill);
+  if (official) return official;
+
   const name = skill?.name || '';
   const rules = {
     '提高 HP 上限': () => growthEffect(skill, 'HP'),

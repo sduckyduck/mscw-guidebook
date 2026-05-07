@@ -32,15 +32,25 @@ const CLASS_POLICIES = {
 const BUDGET_GEAR_PROFILES = {
   low: {
     pricePenalty: 3.2,
-    classBonus: 30,
-    slotLevelLag: { weapon: 10, cap: 13, overall: 14, top: 14, bottom: 14, shoes: 12, shield: 18, glove: 99, cape: 99, earring: 99 },
+    classBonus: 8,
+    weaponWeight: 1.18,
+    accuracyWeight: 2.8,
+    survivalWeight: 1.25,
+    mpWeight: 1.05,
+    mobilityWeight: 0.8,
+    slotLevelLag: { weapon: 5, cap: 13, overall: 14, top: 14, bottom: 14, shoes: 12, shield: 18, glove: 99, cape: 99, earring: 99 },
     minMaxReqLevel: { weapon: 10, cap: 5, overall: 5, top: 5, bottom: 5, shoes: 5, shield: 5 },
     autoSlots: new Set(['weapon', 'cap', 'top', 'bottom', 'shoes']),
     note: '低资金：保持便宜核心装备；武器永远不能空，只是会用价格和等级滞后降权。',
   },
   mid: {
     pricePenalty: 1.45,
-    classBonus: 58,
+    classBonus: 34,
+    weaponWeight: 1.28,
+    accuracyWeight: 2.15,
+    survivalWeight: 1,
+    mpWeight: 0.82,
+    mobilityWeight: 1,
     slotLevelLag: { weapon: 5, cap: 6, overall: 7, top: 7, bottom: 7, shoes: 7, glove: 10, shield: 8, cape: 16, earring: 16 },
     minMaxReqLevel: { weapon: 10, cap: 8, overall: 8, top: 8, bottom: 8, shoes: 8, glove: 10, shield: 10, cape: 20, earring: 20 },
     autoSlots: new Set(['weapon', 'cap', 'overall', 'top', 'bottom', 'shoes', 'shield']),
@@ -49,7 +59,12 @@ const BUDGET_GEAR_PROFILES = {
   },
   high: {
     pricePenalty: 0.25,
-    classBonus: 90,
+    classBonus: 54,
+    weaponWeight: 1.42,
+    accuracyWeight: 1.55,
+    survivalWeight: 0.78,
+    mpWeight: 0.58,
+    mobilityWeight: 1.12,
     slotLevelLag: { weapon: -2, cap: -2, overall: -2, top: -2, bottom: -2, shoes: -2, glove: -2, shield: -2, cape: -2, earring: -2 },
     minMaxReqLevel: {},
     autoSlots: new Set(['weapon', 'cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'shield', 'cape', 'earring']),
@@ -63,7 +78,7 @@ export const SLOT_LABELS = {
 };
 
 const ALL_SLOTS = ['weapon', 'cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'shield', 'cape', 'earring'];
-const LOW_BUDGET_STARTER_ORDER = ['cap', 'top', 'bottom', 'shoes', 'weapon'];
+const LOW_BUDGET_STARTER_ORDER = ['weapon', 'cap', 'top', 'bottom', 'shoes'];
 const CORE_EARLY_SLOTS = new Set(['weapon', 'cap', 'top', 'bottom', 'shoes']);
 const EARLY_GEAR_LEVEL_CUTOFF = 20;
 const LOW_BUDGET_STARTER_CUTOFF = 15;
@@ -134,6 +149,7 @@ export function selectGear(args) {
     classLine: args.classLine,
     budget: args.budget,
     level: args.level,
+    statPlan: args.statPlan,
   });
   const useOverall = Boolean(bySlot.overall?.[0]) && !(bySlot.top?.[0] && bySlot.bottom?.[0] && Number(args.level) <= EARLY_GEAR_LEVEL_CUTOFF);
   const ordered = [
@@ -147,7 +163,8 @@ export function selectGear(args) {
     weaponPair.shield,
     weaponPair.weapon,
   ].filter(Boolean);
-  return ordered.map((item) => toGear(item, args.classLine));
+  const selected = ordered.map((item) => toGear(item, args.classLine));
+  return smoothLowBudgetProgression(selected, args);
 }
 
 export function getGearCandidatesBySlot(args) {
@@ -159,16 +176,20 @@ export function getGearCandidatesBySlot(args) {
   const profile = getBudgetGearProfile(budget);
   const candidates = getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items, manualMode });
   const starterCandidates = getStarterCandidates({ classLine, branch, level, gender, statPlan, items });
+  const earlyLevel = Number(level) <= EARLY_GEAR_LEVEL_CUTOFF;
+  const starterFallback = earlyLevel ? getStarterFallbackBySlot(args) : null;
+  const lowStarterBySlot = budget === 'low' && earlyLevel ? getLowBudgetStarterBySlot(args) : null;
   const scoreBudget = manualMode ? 'high' : budget;
-  const sort = (list) => list.map((item) => toGear(item, classLine)).sort((a, b) => gearScore(b, classLine, scoreBudget, level) - gearScore(a, classLine, scoreBudget, level));
+  const sort = (list) => list.map((item) => toGear(item, classLine)).sort((a, b) => gearScore(b, classLine, scoreBudget, level, statPlan) - gearScore(a, classLine, scoreBudget, level, statPlan));
 
   const weaponCandidates = candidates.filter((item) => item.slot === 'weapon' && weaponMatchesPolicy(item, policy));
   const classWeapon = weaponCandidates.filter((item) => isClassSpecific(item, classLine));
   const allJobWeapon = weaponCandidates.filter((item) => isAllJob(item) && !isBannedWeaponName(item));
-  const weapon = classWeapon.length ? classWeapon : allJobWeapon;
+  const weapon = dedupeGear([...classWeapon, ...allJobWeapon]);
+  const weaponPool = budget === 'low' && earlyLevel ? dedupeGear([...(lowStarterBySlot?.weapon ?? []), ...(starterFallback?.weapon ?? []), ...weapon]) : weapon;
 
   const output = {
-    weapon: sort(weapon),
+    weapon: sort(weaponPool),
     cap: sort(slotClassItems(candidates, 'cap', classLine)),
     overall: sort(slotClassItems(candidates, 'overall', classLine)),
     top: sort(slotClassItems(candidates, 'top', classLine)),
@@ -180,12 +201,12 @@ export function getGearCandidatesBySlot(args) {
     shield: sort(candidates.filter((item) => item.slot === 'shield' && (isClassSpecific(item, classLine) || isAllJob(item)))),
   };
 
-  if (Number(level) <= EARLY_GEAR_LEVEL_CUTOFF) {
-    const starterFallback = getStarterFallbackBySlot(args);
+  if (earlyLevel) {
     for (const slot of CORE_EARLY_SLOTS) {
       if (!output[slot]?.length) {
         const starterPool = starterCandidates.filter((item) => item.slot === slot && (slot !== 'weapon' || weaponMatchesPolicy(item, policy)));
-        output[slot] = sort(starterPool.length ? starterPool : (starterFallback[slot] ?? []));
+        const keepStarterSlot = budget === 'low' && !budgetAllowsSlot(slot, profile, level, policy);
+        output[slot] = keepStarterSlot ? (lowStarterBySlot?.[slot] ?? starterFallback?.[slot] ?? []) : sort(starterPool.length ? starterPool : (starterFallback?.[slot] ?? []));
       }
     }
   }
@@ -225,16 +246,16 @@ export function applyGearOverrides(baseGear, overrides = {}) {
   return ['cap', 'overall', 'top', 'bottom', 'shoes', 'glove', 'cape', 'earring', 'shield', 'weapon'].map((slot) => bySlot[slot]).filter(Boolean);
 }
 
-function pickWeaponShieldPair({ weapons, shields, policy, branch, classLine, budget, level }) {
+function pickWeaponShieldPair({ weapons, shields, policy, branch, classLine, budget, level, statPlan }) {
   let best = { weapon: weapons?.[0] ?? null, shield: null, score: -Infinity };
 
   for (const weapon of weapons ?? []) {
-    const weaponScore = gearScore(weapon, classLine, budget, level);
+    const weaponScore = gearScore(weapon, classLine, budget, level, statPlan);
     const canUseShield = shouldUseShield(policy, branch, weapon);
     const shieldOptions = canUseShield ? [null, ...(shields ?? []).slice(0, 10)] : [null];
 
     for (const shield of shieldOptions) {
-      const shieldScore = shield ? gearScore(shield, classLine, budget, level) * 0.72 + shieldUtilityScore(shield, classLine) : 0;
+      const shieldScore = shield ? gearScore(shield, classLine, budget, level, statPlan) * 0.72 + shieldUtilityScore(shield, classLine) : 0;
       const requiredPenalty = policy.shield === 'required' && !shield ? 36 : 0;
       const pairScore = weaponScore + shieldScore - requiredPenalty;
       if (pairScore > best.score) best = { weapon, shield, score: pairScore };
@@ -251,6 +272,46 @@ function shieldUtilityScore(shield, classLine) {
   const primary = Number(shield[`inc${classLine?.primaryStat}`] ?? shield.stats?.[`inc${classLine?.primaryStat}`] ?? 0) * 3;
   const acc = Number(shield.incACC ?? shield.stats?.incACC ?? 0) * 2;
   return 6 + defense + hp + primary + acc;
+}
+
+function smoothLowBudgetProgression(selected, args) {
+  const level = Number(args.level ?? 1);
+  if (args.skipProgressionSmoothing || args.budget !== 'low' || level <= LOW_BUDGET_STARTER_CUTOFF) return selected;
+  const previous = selectGear({ ...args, level: level - 1 });
+  const previousBySlot = Object.fromEntries((previous ?? []).map((item) => [item.slot, item]));
+  return selected
+    .map((item) => {
+      const previousItem = previousBySlot[item.slot];
+      if (previousItem && sameGear(previousItem, item)) return item;
+      const gain = practicalGearUtility(item, args.classLine, args.budget, args.level, args.statPlan)
+        - (previousItem ? practicalGearUtility(previousItem, args.classLine, args.budget, args.level, args.statPlan) : 0);
+      const threshold = getLowBudgetUpgradeThreshold(item.slot, level);
+      if (gain < threshold) return previousItem ?? null;
+      return item;
+    })
+    .filter(Boolean);
+}
+
+function getLowBudgetUpgradeThreshold(slot, level) {
+  const base = {
+    weapon: 18,
+    cap: 16,
+    top: 16,
+    bottom: 16,
+    overall: 24,
+    shoes: 10,
+    shield: 26,
+    glove: 18,
+    cape: 22,
+    earring: 18,
+  }[slot] ?? 16;
+  if (Number(level) >= 25) return base * 0.55;
+  if (Number(level) >= 20) return base * 0.75;
+  return base;
+}
+
+function sameGear(left, right) {
+  return String(left?.id ?? left?.title ?? left?.name ?? '') === String(right?.id ?? right?.title ?? right?.name ?? '');
 }
 
 function isLowBudgetStarter({ budget, level }) {
@@ -313,6 +374,14 @@ function nameMatches(item, target) {
 
 function normalizeText(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, Number(value) || 0));
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function getBaseCandidates({ classLine, branch, level, budget, gender, statPlan, items, manualMode = false }) {
@@ -461,8 +530,14 @@ function jobMatches(item, classLine) {
 }
 
 function weaponMatchesPolicy(item, policy) {
-  const type = String(item.weaponType ?? item.weapon_type ?? '').toLowerCase();
-  return (policy.weapons ?? []).some((word) => type.includes(word));
+  const type = normalizeText(`${item.weaponType ?? item.weapon_type ?? ''} ${item.name ?? item.title ?? ''}`);
+  return (policy.weapons ?? []).some((word) => {
+    const wanted = normalizeText(word);
+    if (wanted === 'bow') return /\bbow\b/.test(type) && !/\bcrossbow\b/.test(type);
+    if (wanted === 'crossbow') return /\bcrossbow\b/.test(type);
+    if (wanted === 'pole arm') return /\bpole\s*arm\b|\bpolearm\b/.test(type);
+    return new RegExp(`\\b${escapeRegExp(wanted).replace(/\\s+/g, '\\s+')}\\b`).test(type);
+  });
 }
 
 function shouldUseShield(policy, branch, weapon) {
@@ -475,20 +550,56 @@ function shouldUseShield(policy, branch, weapon) {
   return false;
 }
 
-function gearScore(item, classLine, budget, level) {
+function practicalGearUtility(item, classLine, budget, level, statPlan = null) {
+  const profile = getBudgetGearProfile(budget);
+  const attackRaw = classLine?.id === 'magician'
+    ? Number(item.incMAD ?? item.stats?.incMAD ?? 0) * 3 + Number(item.incPAD ?? item.stats?.incPAD ?? 0) * 0.25
+    : Number(item.incPAD ?? item.stats?.incPAD ?? 0) * 3 + Number(item.incMAD ?? item.stats?.incMAD ?? 0) * 0.25;
+  const attack = attackRaw * (item.slot === 'weapon' ? profile.weaponWeight ?? 1 : 1);
+  const primary = Number(item.stats?.[`inc${classLine?.primaryStat}`] ?? item[`inc${classLine?.primaryStat}`] ?? 0) * 5;
+  const secondary = Number(item.stats?.[`inc${classLine?.secondaryStat}`] ?? item[`inc${classLine?.secondaryStat}`] ?? 0) * 2;
+  const accuracyNeed = classLine?.id !== 'magician' && Number(statPlan?.derived?.accuracy ?? 0) < Number(level ?? 1) * 2 + 12 ? 1.2 : 1;
+  const acc = Number(item.incACC ?? item.stats?.incACC ?? 0) * (profile.accuracyWeight ?? 2) * accuracyNeed;
+  const hp = Number(item.incMHP ?? item.stats?.incMHP ?? item.incHP ?? item.stats?.incHP ?? 0);
+  const mp = Number(item.incMMP ?? item.stats?.incMMP ?? item.incMP ?? item.stats?.incMP ?? 0);
+  const defense = Number(item.incPDD ?? item.stats?.incPDD ?? 0) + Number(item.incMDD ?? item.stats?.incMDD ?? 0) * 0.75;
+  const survival = (hp * 0.05 + defense * 0.18) * (profile.survivalWeight ?? 1);
+  const sustain = mp * (classLine?.id === 'magician' ? 0.08 : 0.035) * (profile.mpWeight ?? 1);
+  const mobility = (Number(item.incSpeed ?? item.stats?.incSpeed ?? 0) * 1.8 + Number(item.incJump ?? item.stats?.incJump ?? 0) * 1.2) * (profile.mobilityWeight ?? 1);
+  return attack + primary + secondary + acc + survival + sustain + mobility;
+}
+
+function gearScore(item, classLine, budget, level, statPlan = null) {
   const profile = getBudgetGearProfile(budget);
   const reqLevel = Number(item.reqLevel ?? 0);
   const desiredReqLevel = maxReqLevelForBudget(item.slot, level, profile);
-  const attack = classLine?.id === 'magician'
+  const attackRaw = classLine?.id === 'magician'
     ? Number(item.incMAD ?? item.stats?.incMAD ?? 0) * 3 + Number(item.incPAD ?? item.stats?.incPAD ?? 0) * 0.25
     : Number(item.incPAD ?? item.stats?.incPAD ?? 0) * 3 + Number(item.incMAD ?? item.stats?.incMAD ?? 0) * 0.25;
+  const attack = attackRaw * (item.slot === 'weapon' ? profile.weaponWeight ?? 1 : 1);
   const primary = Number(item.stats?.[`inc${classLine?.primaryStat}`] ?? item[`inc${classLine?.primaryStat}`] ?? 0) * 5;
   const secondary = Number(item.stats?.[`inc${classLine?.secondaryStat}`] ?? item[`inc${classLine?.secondaryStat}`] ?? 0) * 2;
-  const acc = Number(item.incACC ?? item.stats?.incACC ?? 0) * 2;
-  const levelFit = 100 - Math.abs(desiredReqLevel - reqLevel) * 3.8;
-  const classBonus = isClassSpecific(item, classLine) ? profile.classBonus : 0;
+  const accuracyNeed = classLine?.id !== 'magician' && Number(statPlan?.derived?.accuracy ?? 0) < Number(level ?? 1) * 2 + 12 ? 1.2 : 1;
+  const acc = Number(item.incACC ?? item.stats?.incACC ?? 0) * (profile.accuracyWeight ?? 2) * accuracyNeed;
+  const hp = Number(item.incMHP ?? item.stats?.incMHP ?? item.incHP ?? item.stats?.incHP ?? 0);
+  const mp = Number(item.incMMP ?? item.stats?.incMMP ?? item.incMP ?? item.stats?.incMP ?? 0);
+  const defense = Number(item.incPDD ?? item.stats?.incPDD ?? 0) + Number(item.incMDD ?? item.stats?.incMDD ?? 0) * 0.75;
+  const survival = (hp * 0.05 + defense * 0.18) * (profile.survivalWeight ?? 1);
+  const sustain = mp * (classLine?.id === 'magician' ? 0.08 : 0.035) * (profile.mpWeight ?? 1);
+  const mobility = (Number(item.incSpeed ?? item.stats?.incSpeed ?? 0) * 1.8 + Number(item.incJump ?? item.stats?.incJump ?? 0) * 1.2) * (profile.mobilityWeight ?? 1);
+  const rawLevelFit = 100 - Math.abs(desiredReqLevel - reqLevel) * 3.8;
+  const levelFitWeight = item.slot === 'weapon' ? 1 : budget === 'low' ? 0.42 : budget === 'mid' ? 0.72 : 1;
+  const levelFit = rawLevelFit * levelFitWeight;
+  const nonWeaponUtility = primary + secondary + acc + survival + sustain + mobility;
+  const classBonus = isClassSpecific(item, classLine)
+    ? profile.classBonus * (item.slot === 'weapon' ? 0 : clamp(nonWeaponUtility / 18, 0, 1))
+    : 0;
   const pricePenalty = Math.log10(Math.max(1, Number(item.price ?? 1))) * profile.pricePenalty;
-  return attack + primary + secondary + acc + levelFit + classBonus - pricePenalty;
+  const beginnerWeaponPenalty = item.slot === 'weapon' && /\bbeginner'?s\b/i.test(String(item.name ?? item.title ?? '')) ? 18 : 0;
+  const earlyArmorChurnPenalty = budget === 'low' && item.slot !== 'weapon' && Number(level ?? 1) < 22
+    ? Math.max(0, 10 - nonWeaponUtility) + Math.log10(Math.max(1, Number(item.price ?? 1))) * 0.9
+    : 0;
+  return attack + primary + secondary + acc + survival + sustain + mobility + levelFit + classBonus - pricePenalty - beginnerWeaponPenalty - earlyArmorChurnPenalty;
 }
 
 function toGear(item, classLine) {
