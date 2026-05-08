@@ -12,6 +12,16 @@ const PROFESSION_ZH = {
   Crafting: '制作',
 };
 
+const PROFESSION_ICON_FILES = {
+  Smithing: ['smithing.png', 'Smithing.png'],
+  Weaponcrafting: ['weaponcrafting.png', 'weapon.png', 'Weaponcrafting.png', 'Weapon.png'],
+  Tailoring: ['tailoring.png', 'Tailoring.png'],
+  Woodcrafting: ['woodcrafting.png', 'wood.png', 'Woodcrafting.png', 'Wood.png'],
+  Leatherworking: ['leatherwork.png', 'leatherworking.png', 'Leatherwork.png', 'Leatherworking.png'],
+  Arcforge: ['arcane_forge.png', 'arcane-forge.png', 'arcforge.png', 'Arcane_Forge.png', 'Arcforge.png'],
+  Crafting: ['smithing.png', 'Smithing.png'],
+};
+
 const MATERIAL_ZH = {
   'Bronze Ingot': '青铜锭',
   'Steel Ingot': '钢铁锭',
@@ -79,6 +89,10 @@ function getBaseUrl() {
   return base.endsWith('/') ? base : `${base}/`;
 }
 
+function publicAsset(path) {
+  return `${getBaseUrl()}${String(path).replace(/^\/+/, '')}`;
+}
+
 function normalizeName(value = '') {
   return String(value)
     .toLowerCase()
@@ -101,6 +115,40 @@ function translateProfession(value = '') {
 
 function translateMaterial(value = '') {
   return MATERIAL_ZH[value] ?? MATERIAL_ZH[String(value).trim()] ?? value ?? '未知材料';
+}
+
+function getProfessionIconCandidates(profession = '') {
+  const files = PROFESSION_ICON_FILES[profession] ?? PROFESSION_ICON_FILES[String(profession).trim()] ?? PROFESSION_ICON_FILES.Crafting;
+  return [...new Set(files.flatMap((file) => [
+    publicAsset(`icons/crafting/${file}`),
+    publicAsset(`icon/crafting/${file}`),
+  ]))];
+}
+
+function wireIconFallback(img, candidates) {
+  if (!img || !candidates?.length) return;
+  img.dataset.iconIndex = '0';
+  img.src = candidates[0];
+  img.addEventListener('error', () => {
+    const nextIndex = Number(img.dataset.iconIndex ?? 0) + 1;
+    if (nextIndex >= candidates.length) {
+      img.style.display = 'none';
+      return;
+    }
+    img.dataset.iconIndex = String(nextIndex);
+    img.src = candidates[nextIndex];
+  });
+}
+
+function createProfessionIcon(recipe, className = 'mg-craft-profession-icon') {
+  const icon = document.createElement('img');
+  icon.className = className;
+  icon.alt = translateProfession(recipe.profession);
+  icon.draggable = false;
+  icon.loading = 'eager';
+  icon.decoding = 'async';
+  wireIconFallback(icon, getProfessionIconCandidates(recipe.profession));
+  return icon;
 }
 
 function buildRecipeMap(raw) {
@@ -182,11 +230,18 @@ function removeStaleBadge(node) {
 function createBadge(recipe, variant) {
   const badge = document.createElement('span');
   badge.className = `${BADGE_CLASS} ${variant === 'tile' ? 'tile' : 'picker'}`;
-  badge.textContent = variant === 'tile' ? '可造' : '可锻造';
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
   badge.setAttribute('aria-label', `查看 ${recipe.output} 的制作材料`);
+  badge.setAttribute('title', translateProfession(recipe.profession));
   badge.dataset.recipeId = recipe.id;
+
+  badge.appendChild(createProfessionIcon(recipe, 'mg-craft-badge-icon'));
+  if (variant !== 'tile') {
+    const label = document.createElement('span');
+    label.textContent = '可锻造';
+    badge.appendChild(label);
+  }
 
   const open = (event) => {
     event.preventDefault();
@@ -240,9 +295,12 @@ function showCraftingModal(recipe) {
   backdrop.innerHTML = `
     <div class="mg-craft-modal" role="dialog" aria-modal="true">
       <div class="mg-craft-modal-head">
-        <div>
-          <span>可锻造装备</span>
-          <h2>${escapeHtml(recipe.output)}</h2>
+        <div class="mg-craft-title-row">
+          <div class="mg-craft-title-icon-slot"></div>
+          <div>
+            <span>可锻造装备</span>
+            <h2>${escapeHtml(recipe.output)}</h2>
+          </div>
         </div>
         <button type="button" class="mg-craft-modal-close">关闭</button>
       </div>
@@ -268,6 +326,7 @@ function showCraftingModal(recipe) {
   backdrop.addEventListener('click', close);
   backdrop.querySelector('.mg-craft-modal')?.addEventListener('click', (event) => event.stopPropagation());
   backdrop.querySelector('.mg-craft-modal-close')?.addEventListener('click', close);
+  backdrop.querySelector('.mg-craft-title-icon-slot')?.appendChild(createProfessionIcon(recipe, 'mg-craft-modal-profession-icon'));
   document.body.appendChild(backdrop);
 }
 
