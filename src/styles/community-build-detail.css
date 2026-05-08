@@ -181,6 +181,33 @@
   line-height: 1.45;
 }
 
+.build-snapshot-dashboard {
+  margin: 0 auto 34px;
+}
+
+.build-snapshot-topbar {
+  display: none;
+}
+
+.build-snapshot-share {
+  max-width: 380px;
+}
+
+.build-snapshot-actions {
+  margin-top: 22px;
+}
+
+.build-snapshot-dashboard .mg-field select:disabled,
+.build-snapshot-dashboard .mg-level-btn:disabled,
+.build-snapshot-dashboard .mg-equip-tile:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.build-snapshot-dashboard .mg-equip-tile:disabled {
+  color: inherit;
+}
+
 @media (max-width: 980px) {
   .build-readable-layout {
     grid-template-columns: 1fr;
@@ -188,6 +215,10 @@
 
   .detail-actions {
     justify-content: flex-start;
+  }
+
+  .build-snapshot-dashboard {
+    width: min(100%, 760px);
   }
 }
 
