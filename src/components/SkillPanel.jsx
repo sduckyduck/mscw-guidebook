@@ -50,10 +50,10 @@ export default function SkillPanel({
       <h1 className="mg-dashboard-title">MapleGuide: 角色能力与技能分配</h1>
       <p className="mg-dashboard-subtitle">SP/AP Distribution · 当前 {classLine?.name ?? '角色'} Lv.{level}</p>
 
-      <div className="mg-character-figure1-layout">
-        <section className="mg-glass-panel mg-ap-summary-panel">
+      <div className="mg-character-figure1-layout-v2">
+        <section className="mg-glass-panel mg-ap-summary-panel-v2">
           <PanelHead kicker="AP 加点" title="能力值分配" action="系统推荐" onAction={onApReset} />
-          <div className="mg-ap-summary-inline">
+          <div className="mg-ap-summary-inline-v2">
             <p className="mg-character-note">{apNote}</p>
             <div className="mg-character-meter mg-ap-meter-compact">
               <span>可分配 AP</span>
@@ -63,8 +63,8 @@ export default function SkillPanel({
           </div>
         </section>
 
-        <section className="mg-glass-panel mg-ap-stats-panel">
-          <div className="mg-ap-grid mg-ap-grid-figure1">
+        <section className="mg-glass-panel mg-ap-stats-panel-v2">
+          <div className="mg-ap-grid mg-ap-grid-horizontal-v2">
             {STAT_KEYS.map((stat) => {
               const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
               const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
@@ -85,37 +85,39 @@ export default function SkillPanel({
           </div>
         </section>
 
-        <div className="mg-character-skill-rail mg-character-left-rail">
-          <SkillGroupCard
-            title="一转技能"
-            kicker="SP 加点"
-            action="系统推荐"
-            onAction={onSkillReset}
-            note={plan.summary}
-            remaining={plan.remainingByTier?.first ?? 0}
-            total={plan.totalSpByTier?.first ?? 0}
-            skills={firstJobSkills}
-            plan={plan}
-            onSkillChange={onSkillChange}
-            onSkillInspect={setSelectedSkill}
-            glass
-          />
-        </div>
-
-        <div className="mg-character-skill-rail mg-character-right-rail">
-          {secondJobSkills.length > 0 && (
+        <div className="mg-character-skill-row-v2">
+          <div className="mg-character-skill-rail mg-character-left-rail-v2">
             <SkillGroupCard
-              title="二转技能"
-              kicker={Number(level) > 30 ? '已开放' : 'Lv.30 后开放'}
-              remaining={plan.remainingByTier?.second ?? 0}
-              total={plan.totalSpByTier?.second ?? 0}
-              skills={secondJobSkills}
+              title="一转技能"
+              kicker="SP 加点"
+              action="系统推荐"
+              onAction={onSkillReset}
+              note={plan.summary}
+              remaining={plan.remainingByTier?.first ?? 0}
+              total={plan.totalSpByTier?.first ?? 0}
+              skills={firstJobSkills}
               plan={plan}
               onSkillChange={onSkillChange}
               onSkillInspect={setSelectedSkill}
-              className="mg-second-skill-card"
+              glass
             />
-          )}
+          </div>
+
+          <div className="mg-character-skill-rail mg-character-right-rail-v2">
+            {secondJobSkills.length > 0 && (
+              <SkillGroupCard
+                title="二转技能"
+                kicker={Number(level) > 30 ? '已开放' : 'Lv.30 后开放'}
+                remaining={plan.remainingByTier?.second ?? 0}
+                total={plan.totalSpByTier?.second ?? 0}
+                skills={secondJobSkills}
+                plan={plan}
+                onSkillChange={onSkillChange}
+                onSkillInspect={setSelectedSkill}
+                className="mg-second-skill-card"
+              />
+            )}
+          </div>
         </div>
       </div>
 
