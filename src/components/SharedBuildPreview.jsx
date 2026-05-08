@@ -11,6 +11,7 @@ import { getMapRecommendations } from '../engine/recommendationEngine.js';
 import { rankLevelingMapsByBreakpoints } from '../engine/levelingRouteAlgorithm.js';
 import { loadOfficialGuideData } from '../engine/officialDataAdapter.js';
 import { getRecommendedSkillAllocation, getSkillPlan } from '../engine/skillPlanner.js';
+import '../styles/shared-build-preview.css';
 
 const emptyData = { items: [], maps: [], monsters: [], recipes: [], materials: [], skillGroups: [] };
 const SLOTS = [
