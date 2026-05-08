@@ -52,7 +52,7 @@ function clonePlan(plan) {
     remainingByTier: { ...(plan.remainingByTier ?? {}) },
     statBonuses: plan.statBonuses,
     damageCards: plan.damageCards,
-    mainAttack: Number(plan.mainAttack ?? 0) || 0,
+    mainAttack: plan.mainAttack ?? 0,
   };
 }
 
@@ -332,9 +332,18 @@ function getPhysicalMasteryRatio(skills = []) {
   return Math.max(0.3, Math.min(0.6, 0.3 + level * 0.015));
 }
 
+function getBaseAttackRange(mainAttack, skills = []) {
+  if (mainAttack && typeof mainAttack === 'object') {
+    const max = Math.max(1, Math.round(Number(mainAttack.max ?? mainAttack.value ?? 0) || 0));
+    const min = Math.max(1, Math.round(Number(mainAttack.min ?? max * Number(mainAttack.minRatio ?? 0.3)) || 0));
+    return { min, max };
+  }
+  const max = Math.max(1, Math.round(Number(mainAttack) || 0));
+  return { min: Math.max(1, Math.round(max * getPhysicalMasteryRatio(skills))), max };
+}
+
 function buildDamageCards(skills = [], mainAttack = 0) {
-  const baseMax = Math.max(1, Math.round(Number(mainAttack) || 0));
-  const baseMin = Math.max(1, Math.round(baseMax * getPhysicalMasteryRatio(skills)));
+  const base = getBaseAttackRange(mainAttack, skills);
   const cards = skills
     .filter((row) => roundSkillValue(row.level) > 0 && !row.locked && DAMAGE_NAMES.has(row.name))
     .map((row) => {
@@ -343,23 +352,28 @@ function buildDamageCards(skills = [], mainAttack = 0) {
         hits: ['Magic Claw', 'Double Shot', 'Lucky Seven'].includes(row.name) ? 2 : 1,
         ratio: Math.max(0.5, roundSkillValue(row.level) / Math.max(1, roundSkillValue(row.max))),
       };
-      const multiplier = damage.ratio * damage.hits;
-      const min = Math.max(1, Math.round(baseMin * multiplier));
-      const max = Math.max(min + 1, Math.round(baseMax * multiplier));
+      const hits = Math.max(1, Number(damage.hits) || 1);
+      const perHitMin = Math.max(1, Math.round(base.min * damage.ratio));
+      const perHitMax = Math.max(perHitMin + 1, Math.round(base.max * damage.ratio));
+      const totalMin = perHitMin * hits;
+      const totalMax = perHitMax * hits;
       return {
         name: row.name,
         role: currentEffect || row.description || row.tierLabel,
         level: roundSkillValue(row.level),
         maxLevel: roundSkillValue(row.max),
         iconKey: row.iconKey,
-        min,
-        max,
-        hits: damage.hits,
+        min: totalMin,
+        max: totalMax,
+        perHitMin,
+        perHitMax,
+        damageText: hits > 1 ? `${perHitMin} - ${perHitMax}/hit` : `${totalMin} - ${totalMax}`,
+        hits,
       };
     })
     .sort((a, b) => b.max - a.max)
     .slice(0, 6);
-  return [{ name: 'Base Attack', role: '普通攻击', level: null, maxLevel: null, min: baseMin, max: baseMax, isBase: true }, ...cards];
+  return [{ name: 'Base Attack', role: '普通攻击', level: null, maxLevel: null, min: base.min, max: base.max, perHitMin: base.min, perHitMax: base.max, hits: 1, damageText: `${base.min} - ${base.max}`, isBase: true }, ...cards];
 }
 
 function recalcPlan(plan) {
@@ -394,7 +408,7 @@ function recalcPlan(plan) {
       second: Math.max(0, totals.second - usedByTier.second),
     },
     statBonuses: getCalculatedStatBonuses(normalizedPlan),
-    damageCards: buildDamageCards(normalizedSkills, Number(plan.mainAttack) || 0),
+    damageCards: buildDamageCards(normalizedSkills, plan.mainAttack ?? 0),
   };
 }
 
@@ -413,7 +427,7 @@ export function getSkillPlan(args = {}) {
   const hasManualAllocation = args.customSkills && !sameAllocation(args.customSkills, recommendedAllocation);
 
   const basePlan = clonePlan(getSkillPlanBase({ ...args, customSkills: undefined }));
-  basePlan.mainAttack = Number(args.mainAttack) || 0;
+  basePlan.mainAttack = args.mainAttack ?? 0;
   unlockSecondJobAtLevel30(basePlan, args.level);
   addSecondJobBonusToPlan(basePlan, args.level);
   applyFirstJobRoute(basePlan, args);
