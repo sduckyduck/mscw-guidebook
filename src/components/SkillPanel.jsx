@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import CharacterPreview from './CharacterPreview.jsx';
 import IconFallback, { baseUrl, iconSourcesFromNames } from './IconFallback.jsx';
 import SkillDetailSheet from './SkillDetailSheet.jsx';
 import '../styles/detail-sheets.css';
@@ -34,10 +33,7 @@ export default function SkillPanel({
   apNote,
   statPlan,
   classLine,
-  gender = 'female',
-  gear = [],
   level = 10,
-  weapon,
   apAllocation,
   onApChange,
   onApReset,
@@ -49,41 +45,43 @@ export default function SkillPanel({
   const secondJobSkills = plan.skills.filter((skill) => skill.tier === 'second');
 
   return (
-    <section className="mg-dashboard mg-character-dashboard">
+    <section className="mg-dashboard mg-character-dashboard mg-character-dashboard-clean">
       <h1 className="mg-dashboard-title">MapleGuide: 角色能力与技能分配</h1>
       <p className="mg-dashboard-subtitle">SP/AP Distribution · 当前 {classLine?.name ?? '角色'} Lv.{level}</p>
 
-      <div className="mg-character-grid">
-        <div className="mg-left-stack">
-          <section className="mg-glass-panel mg-ap-panel">
-            <PanelHead kicker="AP 加点" title="能力值分配" action="系统推荐" onAction={onApReset} />
+      <div className="mg-character-clean-layout">
+        <section className="mg-glass-panel mg-ap-panel mg-ap-panel-wide">
+          <PanelHead kicker="AP 加点" title="能力值分配" action="系统推荐" onAction={onApReset} />
+          <div className="mg-ap-wide-summary">
             <p className="mg-character-note">{apNote}</p>
-            <div className="mg-character-meter">
+            <div className="mg-character-meter mg-ap-meter-compact">
               <span>可分配 AP</span>
               <strong>{statPlan.remainingAp}</strong>
               <em>最低值按职业转职要求保护</em>
             </div>
-            <div className="mg-ap-grid">
-              {STAT_KEYS.map((stat) => {
-                const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
-                const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
-                return (
-                  <PointRow
-                    key={stat}
-                    label={stat}
-                    value={statPlan.stats[stat]}
-                    points={apValue}
-                    minValue={minValue}
-                    canMinus={apValue > minValue}
-                    canPlus={statPlan.remainingAp > 0}
-                    onMinus={() => onApChange(stat, -1)}
-                    onPlus={() => onApChange(stat, 1)}
-                  />
-                );
-              })}
-            </div>
-          </section>
+          </div>
+          <div className="mg-ap-grid mg-ap-grid-horizontal">
+            {STAT_KEYS.map((stat) => {
+              const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
+              const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
+              return (
+                <PointRow
+                  key={stat}
+                  label={stat}
+                  value={statPlan.stats[stat]}
+                  points={apValue}
+                  minValue={minValue}
+                  canMinus={apValue > minValue}
+                  canPlus={statPlan.remainingAp > 0}
+                  onMinus={() => onApChange(stat, -1)}
+                  onPlus={() => onApChange(stat, 1)}
+                />
+              );
+            })}
+          </div>
+        </section>
 
+        <div className="mg-skill-clean-grid">
           <SkillGroupCard
             title="一转技能"
             kicker="SP 加点"
@@ -98,18 +96,6 @@ export default function SkillPanel({
             onSkillInspect={setSelectedSkill}
             glass
           />
-        </div>
-
-        <div className="mg-right-stack">
-          <section className="mg-character-preview-card">
-            <div className="mg-character-frame-lg">
-              <CharacterPreview classLine={classLine} gender={gender} gear={gear} />
-            </div>
-            <div className="mg-character-preview-meta">
-              <strong>{classLine?.name ?? '角色'} Lv.{level}</strong>
-              <span>{weapon?.title ?? '当前装备'}</span>
-            </div>
-          </section>
 
           {secondJobSkills.length > 0 && (
             <SkillGroupCard
