@@ -29,6 +29,14 @@ function getSkillSources(name, iconKey = '') {
   ]);
 }
 
+function clearSkillTier(skills, onSkillChange) {
+  for (const skill of skills) {
+    if (skill.locked) continue;
+    const level = Math.max(0, Math.round(Number(skill.level) || 0));
+    for (let i = 0; i < level; i += 1) onSkillChange(skill.name, -1);
+  }
+}
+
 export default function SkillPanel({
   plan,
   apNote,
@@ -108,6 +116,10 @@ export default function SkillPanel({
               <SkillGroupCard
                 title="二转技能"
                 kicker={Number(level) >= 30 ? '已开放' : 'Lv.30 后开放'}
+                action="系统推荐"
+                onAction={onSkillReset}
+                secondaryAction="清空"
+                onSecondaryAction={() => clearSkillTier(secondJobSkills, onSkillChange)}
                 remaining={plan.remainingByTier?.second ?? 0}
                 total={plan.totalSpByTier?.second ?? 0}
                 skills={secondJobSkills}
@@ -132,12 +144,12 @@ export default function SkillPanel({
   );
 }
 
-function SkillGroupCard({ title, kicker, action, onAction, note, remaining, total, skills, plan, onSkillChange, onSkillInspect, glass = false, className = '' }) {
+function SkillGroupCard({ title, kicker, action, onAction, secondaryAction, onSecondaryAction, note, remaining, total, skills, plan, onSkillChange, onSkillInspect, glass = false, className = '' }) {
   const cardClass = [glass ? 'mg-glass-panel mg-sp-panel' : 'mg-skill-side-card', className].filter(Boolean).join(' ');
 
   return (
     <section className={cardClass}>
-      <PanelHead kicker={kicker} title={title} action={action} onAction={onAction} />
+      <PanelHead kicker={kicker} title={title} action={action} onAction={onAction} secondaryAction={secondaryAction} onSecondaryAction={onSecondaryAction} />
       {note && <p className="mg-character-note">{note}</p>}
       <div className="mg-character-meter mg-sp-meter">
         <span>剩余 SP</span>
@@ -170,14 +182,19 @@ function SkillList({ skills, plan, onSkillChange, onSkillInspect }) {
   );
 }
 
-function PanelHead({ kicker, title, action, onAction }) {
+function PanelHead({ kicker, title, action, onAction, secondaryAction, onSecondaryAction }) {
   return (
     <div className="mg-character-panel-head">
       <div>
         <span>{kicker}</span>
         <h2>{title}</h2>
       </div>
-      {action && <button onClick={onAction}>{action}</button>}
+      {(action || secondaryAction) && (
+        <div className="mg-panel-head-actions">
+          {action && <button onClick={onAction}>{action}</button>}
+          {secondaryAction && <button className="mg-panel-head-secondary" onClick={onSecondaryAction}>{secondaryAction}</button>}
+        </div>
+      )}
     </div>
   );
 }
