@@ -4,95 +4,101 @@ const IMAGE_EXTENSIONS = ['png', 'webp', 'gif', 'jpg', 'jpeg'];
 const REPO_ICON_API = 'https://api.github.com/repos/sduckyduck/mscw-guidebook/contents/public/icons?ref=main';
 const IMAGE_RE = /\.(png|webp|gif|jpe?g)$/i;
 
-// MSCW/GMS classic skill ids used only as fallback image candidates.
-// The app still prefers official thumbnail paths from skills.json when they exist.
-const SKILL_ICON_IDS = {
-  'base attack': '',
-  'basic attack': '',
-  '普通攻击': '',
+const SKILL_ICON_PATHS = {
+  'three snails': ['icons/skill/Beginner/Beginner/0001000_Three_Snails.png'],
+  recovery: ['icons/skill/Beginner/Beginner/0001001_Recovery.png'],
+  'nimble feet': ['icons/skill/Beginner/Beginner/0001002_Nimble_Feet.png'],
 
-  'improved hp recovery': '1000000',
-  'max hp increase': '1000001',
-  'improved max hp increase': '1000001',
-  'precise strikes': '1000002',
-  'iron body': '1001000',
-  'power strike': '1001001',
-  'slash blast': '1001002',
+  'improved hp recovery': ['icons/skill/1st_Job/Warrior/1000000_Improved_HP_Recovery.png'],
+  'max hp increase': ['icons/skill/1st_Job/Warrior/1000001_Max_HP_Increase.png'],
+  'improved max hp increase': ['icons/skill/1st_Job/Warrior/1000001_Max_HP_Increase.png'],
+  'precise strikes': ['icons/skill/1st_Job/Warrior/1000002_Precise_Strikes.png'],
+  'iron body': ['icons/skill/1st_Job/Warrior/1001000_Iron_Body.png'],
+  'power strike': ['icons/skill/1st_Job/Warrior/1001001_Power_Strike.png'],
+  'slash blast': ['icons/skill/1st_Job/Warrior/1001002_Slash_Blast.png'],
 
-  'improved mp recovery': '2000000',
-  'improved mp': '2000000',
-  'max mp increase': '2000001',
-  'max mp inc': '2000001',
-  'magic guard': '2001001',
-  'magic armor': '2001002',
-  'energy bolt': '2001003',
-  'magic claw': '2001004',
+  'improved mp recovery': ['icons/skill/1st_Job/Magician/2000000_Improved_MP_Recovery.png'],
+  'max mp increase': ['icons/skill/1st_Job/Magician/2000001_Max_MP_Increase.png'],
+  'magic guard': ['icons/skill/1st_Job/Magician/2001000_Magic_Guard.png'],
+  'magic armor': ['icons/skill/1st_Job/Magician/2001001_Magic_Armor.png'],
+  'energy bolt': ['icons/skill/1st_Job/Magician/2001002_Energy_Bolt.png'],
+  'magic claw': ['icons/skill/1st_Job/Magician/2001003_Magic_Claw.png'],
 
-  'mp eater': '2100000',
-  'meditation': '2101001',
-  'teleport': '2101002',
-  'slow': '2101003',
-  'fire arrow': '2101004',
-  'poison breath': '2101005',
-  'cold beam': '2201004',
-  'thunder bolt': '2201005',
-  'heal': '2301002',
-  'invincible': '2301003',
-  'bless': '2301004',
-  'holy arrow': '2301005',
+  'critical shot': ['icons/skill/1st_Job/Archer/3000000_Critical_Shot.png'],
+  'amazons judgement': ['icons/skill/1st_Job/Archer/3000001_Amazon\'s_Judgement.png'],
+  "amazon's judgement": ['icons/skill/1st_Job/Archer/3000001_Amazon\'s_Judgement.png'],
+  'the eye of amazon': ['icons/skill/1st_Job/Archer/3000002_The_Eye_of_Amazon.png'],
+  focus: ['icons/skill/1st_Job/Archer/3001000_Focus.png'],
+  'arrow blow': ['icons/skill/1st_Job/Archer/3001001_Arrow_Blow.png'],
+  'double shot': ['icons/skill/1st_Job/Archer/3001002_Double_Shot.png'],
 
-  'the eye of amazon': '3000000',
-  'critical shot': '3000001',
-  'amazons judgement': '3000002',
-  "amazon's judgement": '3000002',
-  'focus': '3001003',
-  'arrow blow': '3001004',
-  'double shot': '3001005',
-  'bow mastery': '3100000',
-  'final attack bow': '3100001',
-  'bow booster': '3101002',
-  'power knockback': '3101003',
-  'soul arrow bow': '3101004',
-  'arrow bomb bow': '3101005',
-  'crossbow mastery': '3200000',
-  'final attack crossbow': '3200001',
-  'crossbow booster': '3201002',
-  'soul arrow crossbow': '3201004',
-  'iron arrow crossbow': '3201005',
+  'nimble body': ['icons/skill/1st_Job/Theif/4000000_Nimble_Body.png'],
+  'keen eyes': ['icons/skill/1st_Job/Theif/4000001_Keen_Eyes.png'],
+  disorder: ['icons/skill/1st_Job/Theif/4001000_Disorder.png'],
+  'dark sight': ['icons/skill/1st_Job/Theif/4001001_Dark_Sight.png'],
+  'double stab': ['icons/skill/1st_Job/Theif/4001002_Double_Stab.png'],
+  'lucky seven': ['icons/skill/1st_Job/Theif/4001003_Lucky_Seven.png'],
 
-  'nimble body': '4000000',
-  'keen eyes': '4000001',
-  'disorder': '4001002',
-  'dark sight': '4001003',
-  'double stab': '4001334',
-  'lucky seven': '4001344',
-  'claw mastery': '4100000',
-  'critical throw': '4100001',
-  'claw booster': '4101003',
-  'haste': '4101004',
-  'drain': '4101005',
-  'dagger mastery': '4200000',
-  'dagger booster': '4201002',
-  'steal': '4201004',
-  'savage blow': '4201005',
+  'sword mastery': ['icons/skill/2nd_Job/Fighter/1100000_Sword_Mastery.png', 'icons/skill/2nd_Job/Page/1200000_Sword_Mastery.png'],
+  'axe mastery': ['icons/skill/2nd_Job/Fighter/1100001_Axe_Mastery.png'],
+  'final attack sword': ['icons/skill/2nd_Job/Fighter/1101000_Final_Attack_Sword.png', 'icons/skill/2nd_Job/Page/1201000_Final_Attack_Sword.png'],
+  'final attack axe': ['icons/skill/2nd_Job/Fighter/1101001_Final_Attack_Axe.png'],
+  'sword booster': ['icons/skill/2nd_Job/Fighter/1101002_Sword_Booster.png', 'icons/skill/2nd_Job/Page/1201002_Sword_Booster.png'],
+  'axe booster': ['icons/skill/2nd_Job/Fighter/1101003_Axe_Booster.png'],
+  rage: ['icons/skill/2nd_Job/Fighter/1101004_Rage.png'],
+  'power guard': ['icons/skill/2nd_Job/Fighter/1101005_Power_Guard.png', 'icons/skill/2nd_Job/Page/1201005_Power_Guard.png'],
+  'blunt weapon mastery': ['icons/skill/2nd_Job/Page/1200001_Blunt_Weapon_Mastery.png'],
+  'final attack blunt weapon': ['icons/skill/2nd_Job/Page/1201001_Final_Attack_Blunt_Weapon.png'],
+  'blunt weapon booster': ['icons/skill/2nd_Job/Page/1201003_Blunt_Weapon_Booster.png'],
+  threaten: ['icons/skill/2nd_Job/Page/1201004_Threaten.png'],
+  'spear mastery': ['icons/skill/2nd_Job/Spearman/1300000_Spear_Mastery.png'],
+  'polearm mastery': ['icons/skill/2nd_Job/Spearman/1300001_Polearm_Mastery.png'],
+  'pole arm mastery': ['icons/skill/2nd_Job/Spearman/1300001_Polearm_Mastery.png'],
+  'final attack spear': ['icons/skill/2nd_Job/Spearman/1301000_Final_Attack_Spear.png'],
+  'final attack polearm': ['icons/skill/2nd_Job/Spearman/1301001_Final_Attack_Polearm.png'],
+  'final attack pole arm': ['icons/skill/2nd_Job/Spearman/1301001_Final_Attack_Polearm.png'],
+  'spear booster': ['icons/skill/2nd_Job/Spearman/1301002_Spear_Booster.png'],
+  'polearm booster': ['icons/skill/2nd_Job/Spearman/1301003_Polearm_Booster.png'],
+  'pole arm booster': ['icons/skill/2nd_Job/Spearman/1301003_Polearm_Booster.png'],
+  'iron will': ['icons/skill/2nd_Job/Spearman/1301004_Iron_Will.png'],
+  'hyper body': ['icons/skill/2nd_Job/Spearman/1301005_Hyper_Body.png'],
 
-  'sword mastery': '1100000',
-  'axe mastery': '1100001',
-  'final attack sword': '1101000',
-  'final attack axe': '1101001',
-  'sword booster': '1101002',
-  'axe booster': '1101003',
-  'rage': '1101004',
-  'power guard': '1101005',
-  'threaten': '1201006',
-  'spear mastery': '1300000',
-  'pole arm mastery': '1300001',
-  'final attack spear': '1301000',
-  'final attack pole arm': '1301001',
-  'spear booster': '1301002',
-  'pole arm booster': '1301003',
-  'iron will': '1301006',
-  'hyper body': '1301007',
+  'mp eater': ['icons/skill/2nd_Job/FP_Wizard/2100000_MP_Eater.png', 'icons/skill/2nd_Job/IL_Wizard/2200000_MP_Eater.png', 'icons/skill/2nd_Job/Cleric/2300000_MP_Eater.png'],
+  meditation: ['icons/skill/2nd_Job/FP_Wizard/2101000_Meditation.png', 'icons/skill/2nd_Job/IL_Wizard/2201000_Meditation.png'],
+  teleport: ['icons/skill/2nd_Job/FP_Wizard/2101001_Teleport.png', 'icons/skill/2nd_Job/IL_Wizard/2201001_Teleport.png', 'icons/skill/2nd_Job/Cleric/2301000_Teleport.png'],
+  slow: ['icons/skill/2nd_Job/FP_Wizard/2101002_Slow.png', 'icons/skill/2nd_Job/IL_Wizard/2201002_Slow.png'],
+  'fire arrow': ['icons/skill/2nd_Job/FP_Wizard/2101003_Fire_Arrow.png'],
+  'poison breath': ['icons/skill/2nd_Job/FP_Wizard/2101004_Poison_Breath.png'],
+  'cold beam': ['icons/skill/2nd_Job/IL_Wizard/2201003_Cold_Beam.png'],
+  'thunder bolt': ['icons/skill/2nd_Job/IL_Wizard/2201004_Thunder_Bolt.png'],
+  heal: ['icons/skill/2nd_Job/Cleric/2301001_Heal.png'],
+  invincible: ['icons/skill/2nd_Job/Cleric/2301002_Invincible.png'],
+  bless: ['icons/skill/2nd_Job/Cleric/2301003_Bless.png'],
+  'holy arrow': ['icons/skill/2nd_Job/Cleric/2301004_Holy_Arrow.png'],
+
+  'bow mastery': ['icons/skill/2nd_Job/Hunter/3100000_Bow_Mastery.png'],
+  'final attack bow': ['icons/skill/2nd_Job/Hunter/3101000_Final_Attack_Bow.png'],
+  'bow booster': ['icons/skill/2nd_Job/Hunter/3101001_Bow_Booster.png'],
+  'power knockback': ['icons/skill/2nd_Job/Hunter/3101002_Power_Knockback.png', 'icons/skill/2nd_Job/Crossbowman/3201002_Power_Knockback.png'],
+  'soul arrow bow': ['icons/skill/2nd_Job/Hunter/3101003_Soul_Arrow_Bow.png'],
+  'arrow bomb bow': ['icons/skill/2nd_Job/Hunter/3101004_Arrow_Bomb_Bow.png'],
+  'crossbow mastery': ['icons/skill/2nd_Job/Crossbowman/3200000_Crossbow_Mastery.png'],
+  'final attack crossbow': ['icons/skill/2nd_Job/Crossbowman/3201000_Final_Attack_Crossbow.png'],
+  'crossbow booster': ['icons/skill/2nd_Job/Crossbowman/3201001_Crossbow_Booster.png'],
+  'soul arrow crossbow': ['icons/skill/2nd_Job/Crossbowman/3201003_Soul_Arrow_Crossbow.png'],
+  'iron arrow crossbow': ['icons/skill/2nd_Job/Crossbowman/3201004_Iron_Arrow_Crossbow.png'],
+
+  'claw mastery': ['icons/skill/2nd_Job/Assassin/4100000_Claw_Mastery.png'],
+  'critical throw': ['icons/skill/2nd_Job/Assassin/4100001_Critical_Throw.png'],
+  'critical recovery': ['icons/skill/2nd_Job/Assassin/4100002_Critical_Recovery.png'],
+  'claw booster': ['icons/skill/2nd_Job/Assassin/4101000_Claw_Booster.png'],
+  haste: ['icons/skill/2nd_Job/Assassin/4101001_Haste.png', 'icons/skill/2nd_Job/Bandit/4201001_Haste.png'],
+  drain: ['icons/skill/2nd_Job/Assassin/4101002_Drain.png'],
+  'dagger mastery': ['icons/skill/2nd_Job/Bandit/4200000_Dagger_Mastery.png'],
+  'nimble recovery': ['icons/skill/2nd_Job/Bandit/4200001_Nimble_Recovery.png'],
+  'dagger booster': ['icons/skill/2nd_Job/Bandit/4201000_Dagger_Booster.png'],
+  steal: ['icons/skill/2nd_Job/Bandit/4201002_Steal.png'],
+  'savage blow': ['icons/skill/2nd_Job/Bandit/4201003_Savage_Blow.png'],
 };
 
 let iconFilesPromise = null;
@@ -132,62 +138,21 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function padSkillId(value) {
-  return String(value ?? '').replace(/^0+/, '').padStart(7, '0');
-}
-
-function getSkillIconId(name) {
+function localSkillIconSources(name) {
   const clean = normalizeSkillName(name);
-  if (Object.prototype.hasOwnProperty.call(SKILL_ICON_IDS, clean)) return SKILL_ICON_IDS[clean];
   const withoutSuffix = clean
     .replace(/ bow$/i, '')
     .replace(/ crossbow$/i, '')
     .replace(/ sword$/i, '')
     .replace(/ axe$/i, '')
     .replace(/ spear$/i, '')
-    .replace(/ pole arm$/i, '');
-  return SKILL_ICON_IDS[withoutSuffix] ?? '';
-}
-
-function encodeFileName(value) {
-  return encodeURIComponent(String(value || '').trim().replace(/\s+/g, '_'));
-}
-
-function wikiSkillIconSources(name) {
-  const clean = stripExt(String(name || '').trim());
-  if (!clean || clean === 'Base Attack' || clean === '基础攻击') return [];
-  const variants = unique([
-    clean,
-    `Skill ${clean}`,
-    `Skill_${clean}`,
-    clean.replace(/:/g, ''),
-    clean.replace(/:/g, ' -'),
-    clean.replace(/:/g, '_'),
-  ]);
-
-  return variants.flatMap((variant) => {
-    const file = encodeFileName(`${variant}.png`);
-    return [
-      `https://maplestory.fandom.com/wiki/Special:Redirect/file/${file}`,
-      `https://strategywiki.org/wiki/Special:Redirect/file/${file}`,
-      `https://maplewiki.net/images/${file}`,
-    ];
-  });
-}
-
-function skillIconSources(name) {
-  const id = getSkillIconId(name);
-  const wikiSources = wikiSkillIconSources(name);
-  if (!id) return wikiSources;
-  const clean = String(id).replace(/^0+/, '');
-  return [
-    `${baseUrl()}AppData/images/skills/${padSkillId(clean)}.png`,
-    `${baseUrl()}AppData/images/skills/${clean}.png`,
-    `https://maplestory.io/api/MCW/1/skill/${clean}/icon`,
-    `https://maplestory.io/api/GMS/83/skill/${clean}/icon`,
-    `https://maplestory.io/api/GMS/62/skill/${clean}/icon`,
-    ...wikiSources,
+    .replace(/ pole arm$/i, '')
+    .replace(/ polearm$/i, '');
+  const paths = [
+    ...(SKILL_ICON_PATHS[clean] ?? []),
+    ...(SKILL_ICON_PATHS[withoutSuffix] ?? []),
   ];
+  return unique(paths.map((path) => `${baseUrl()}${path.replace(/^\/+/, '')}`));
 }
 
 function normalizeKey(value) {
@@ -198,7 +163,7 @@ export function iconSourcesFromNames(names, folders = ['icons'], extensions = IM
   const root = `${baseUrl()}icons`;
   const output = [];
   for (const rawName of names.filter(Boolean)) {
-    output.push(...skillIconSources(rawName));
+    output.push(...localSkillIconSources(rawName));
     const clean = stripExt(String(rawName).replace(/^\/+/, ''));
     const slug = slugifyIconName(clean);
     const variants = unique([clean, slug, slug.replace(/-/g, '_'), slug.replace(/-/g, '')]);
@@ -356,7 +321,7 @@ export default function IconFallback({
   onLoad,
   debugLabel = '',
 }) {
-  const staticList = useMemo(() => unique(sources), [sources.join('|')]);
+  const staticList = useMemo(() => unique(sources.filter((src) => !String(src).includes('maplestory.io') && !String(src).includes('fandom.com') && !String(src).includes('strategywiki.org') && !String(src).includes('maplewiki.net'))), [sources.join('|')]);
   const nameList = useMemo(() => unique(names), [names.join('|')]);
   const folderList = useMemo(() => unique(folders), [folders.join('|')]);
   const [discovered, setDiscovered] = useState([]);
@@ -377,7 +342,7 @@ export default function IconFallback({
   }, [nameList.join('|'), folderList.join('|')]);
 
   const nameGeneratedList = useMemo(() => iconSourcesFromNames(nameList, folderList), [nameList.join('|'), folderList.join('|')]);
-  const list = useMemo(() => unique([...staticList, ...nameGeneratedList, ...discovered]), [staticList.join('|'), nameGeneratedList.join('|'), discovered.join('|')]);
+  const list = useMemo(() => unique([...nameGeneratedList, ...staticList, ...discovered]), [staticList.join('|'), nameGeneratedList.join('|'), discovered.join('|')]);
 
   useEffect(() => setIndex(0), [list.join('|')]);
 
