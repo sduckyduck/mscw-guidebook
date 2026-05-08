@@ -1,0 +1,113 @@
+/* Clean layout for the Character/SP-AP tab.
+   This removes the repeated character preview card and makes AP distribute horizontally. */
+
+.mg-character-dashboard-clean {
+  max-width: 720px !important;
+}
+
+.mg-character-clean-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.mg-character-dashboard-clean .mg-ap-panel-wide {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mg-ap-wide-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 178px;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 10px;
+}
+
+.mg-ap-meter-compact {
+  margin: 0 !important;
+}
+
+.mg-ap-grid-horizontal {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.mg-skill-clean-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.mg-skill-clean-grid .mg-sp-panel,
+.mg-skill-clean-grid .mg-skill-side-card {
+  min-height: 100%;
+}
+
+.mg-character-dashboard-clean .mg-character-preview-card,
+.mg-character-dashboard-clean .mg-character-frame-lg,
+.mg-character-dashboard-clean .mg-character-preview-meta {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .mg-character-dashboard-clean {
+    max-width: 100% !important;
+  }
+
+  .mg-character-clean-layout {
+    gap: 9px;
+  }
+
+  .mg-ap-wide-summary {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .mg-ap-meter-compact {
+    display: none !important;
+  }
+
+  .mg-ap-grid-horizontal {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .mg-ap-grid-horizontal .mg-ap-box {
+    min-height: 80px;
+    grid-template-columns: 1fr;
+  }
+
+  .mg-ap-grid-horizontal .mg-mini-controls {
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .mg-ap-grid-horizontal .mg-mini-controls button {
+    width: 100% !important;
+  }
+
+  .mg-skill-clean-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+
+@media (max-width: 520px) {
+  .mg-ap-grid-horizontal {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mg-ap-grid-horizontal .mg-ap-box {
+    min-height: 72px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .mg-ap-grid-horizontal .mg-mini-controls {
+    grid-template-columns: 22px 22px;
+    width: auto;
+  }
+
+  .mg-skill-clean-grid {
+    grid-template-columns: 1fr;
+  }
+}
