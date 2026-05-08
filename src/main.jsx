@@ -9,6 +9,7 @@ import './utils/dashboardActionButtons.js';
 import './utils/mobileSwipeTabs.js';
 import './utils/removeZakumHelmet.js';
 import './utils/brandFooterName.js';
+import './utils/budgetRouteTuning.js';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
