@@ -1,6 +1,20 @@
 const BANNED_ITEM_NAMES = ['zakum helmet'];
 const DEMOTED_ROUTE_MONSTERS = ['zombie mushroom'];
 
+const ITEM_STAT_OVERRIDES = [
+  {
+    names: ['ryden'],
+    stats: {
+      incPAD: 50,
+      pad: 50,
+      watk: 50,
+      attack: 50,
+      incSTR: 1,
+      str: 1,
+    },
+  },
+];
+
 function normalizeText(value = '') {
   return String(value).toLowerCase().replace(/\s+/g, ' ').trim();
 }
@@ -20,6 +34,64 @@ function shouldDemoteRouteMonster(monster) {
 
 function getItemReqLevel(item) {
   return Number(item?.stats?.reqLevel ?? item?.reqLevel ?? 0) || 0;
+}
+
+function getItemText(item) {
+  return `${item?.name ?? ''} ${item?.title ?? ''}`;
+}
+
+function getItemStatOverride(item) {
+  return ITEM_STAT_OVERRIDES.find((override) => nameIncludesAny(getItemText(item), override.names));
+}
+
+function applyItemStatOverride(item) {
+  const override = getItemStatOverride(item);
+  if (!override) return item;
+
+  const next = {
+    ...item,
+    ...override.stats,
+    stats: {
+      ...(item.stats ?? {}),
+      ...override.stats,
+    },
+    statCorrectedForGuide: true,
+  };
+
+  next.desc = buildCorrectedItemDescription(next, item.desc);
+  return next;
+}
+
+function buildCorrectedItemDescription(item, fallback = '') {
+  const pieces = [];
+  const reqParts = [];
+  const reqLevel = Number(item.reqLevel ?? item.stats?.reqLevel ?? 0) || 0;
+  const weaponType = item.weaponType ?? item.weapon_type;
+  const reqSTR = Number(item.reqSTR ?? item.stats?.reqSTR ?? 0) || 0;
+  const reqDEX = Number(item.reqDEX ?? item.stats?.reqDEX ?? 0) || 0;
+
+  if (reqLevel) pieces.push(`Lv ${reqLevel}`);
+  if (weaponType) pieces.push(weaponType);
+  if (reqSTR) reqParts.push(`STR ${reqSTR}`);
+  if (reqDEX) reqParts.push(`DEX ${reqDEX}`);
+  if (reqParts.length) pieces.push(reqParts.join(' · '));
+
+  const statParts = [];
+  const watk = Number(item.incPAD ?? item.stats?.incPAD ?? 0) || 0;
+  const matk = Number(item.incMAD ?? item.stats?.incMAD ?? 0) || 0;
+  const str = Number(item.incSTR ?? item.stats?.incSTR ?? 0) || 0;
+  const dex = Number(item.incDEX ?? item.stats?.incDEX ?? 0) || 0;
+
+  if (watk) statParts.push(`+${watk} WATK`);
+  if (matk) statParts.push(`+${matk} MATK`);
+  if (str) statParts.push(`+${str} STR`);
+  if (dex) statParts.push(`+${dex} DEX`);
+
+  const slots = Number(item.tuc ?? item.slots ?? item.stats?.tuc ?? item.stats?.slots ?? 0) || 0;
+  if (slots) statParts.push(`${slots} slots`);
+  if (statParts.length) pieces.push(statParts.join(' · '));
+
+  return pieces.join(' · ') || fallback;
 }
 
 function normalizeEquipmentPriceForGuideScoring(item) {
@@ -46,7 +118,7 @@ function patchItemsPayload(payload) {
     ...payload,
     items: payload.items
       .filter((item) => !isBannedItem(item))
-      .map((item) => normalizeEquipmentPriceForGuideScoring(item)),
+      .map((item) => normalizeEquipmentPriceForGuideScoring(applyItemStatOverride(item))),
   };
 }
 
