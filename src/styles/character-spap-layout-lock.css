@@ -1,0 +1,285 @@
+/* Final editable Character tab layout lock.
+   Loaded after the shared styles so the SP/AP screen keeps the compact layout on mobile:
+   AP = one row with four stat cards; first-job and second-job skills = left/right columns. */
+
+.mg-character-dashboard-figure1 .mg-character-figure1-layout-v2 {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-summary-panel-v2,
+.mg-character-dashboard-figure1 .mg-ap-stats-panel-v2 {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box {
+  min-width: 0 !important;
+  min-height: 82px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 6px !important;
+  align-content: space-between !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box > div:first-child {
+  min-width: 0 !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box span,
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box strong,
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box em {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-mini-controls {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+  width: 100% !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-mini-controls button {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.mg-character-dashboard-figure1 .mg-character-skill-row-v2 {
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr) !important;
+  gap: 10px !important;
+  align-items: start !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.mg-character-dashboard-figure1 .mg-character-skill-row-v2 > *,
+.mg-character-dashboard-figure1 .mg-character-left-rail-v2,
+.mg-character-dashboard-figure1 .mg-character-right-rail-v2,
+.mg-character-dashboard-figure1 .mg-sp-panel,
+.mg-character-dashboard-figure1 .mg-skill-side-card,
+.mg-character-dashboard-figure1 .mg-second-skill-card {
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.mg-character-dashboard-figure1 .mg-character-left-rail-v2 .mg-sp-panel,
+.mg-character-dashboard-figure1 .mg-character-right-rail-v2 .mg-skill-side-card,
+.mg-character-dashboard-figure1 .mg-character-right-rail-v2 .mg-second-skill-card {
+  min-height: 100% !important;
+}
+
+@media (max-width: 760px) {
+  .mg-character-dashboard-figure1 {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-summary-inline-v2 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-note {
+    margin-bottom: 0 !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box {
+    min-height: 76px !important;
+    padding: 7px 6px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-skill-row-v2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-sp-panel,
+  .mg-character-dashboard-figure1 .mg-skill-side-card,
+  .mg-character-dashboard-figure1 .mg-second-skill-card {
+    padding: 10px !important;
+    border-radius: 18px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .mg-character-dashboard-figure1 {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-figure1-layout-v2 {
+    gap: 8px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box {
+    min-height: 72px !important;
+    padding: 7px 5px !important;
+    border-radius: 12px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box span {
+    font-size: 0.58rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box strong {
+    font-size: 1.06rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box em {
+    font-size: 0.48rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-mini-controls button {
+    height: 24px !important;
+    border-radius: 8px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-skill-row-v2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-sp-panel,
+  .mg-character-dashboard-figure1 .mg-skill-side-card,
+  .mg-character-dashboard-figure1 .mg-second-skill-card {
+    padding: 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-panel-head {
+    margin-bottom: 6px !important;
+    gap: 6px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-panel-head h2 {
+    font-size: 0.92rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-panel-head span,
+  .mg-character-dashboard-figure1 .mg-character-note,
+  .mg-character-dashboard-figure1 .mg-character-meter span,
+  .mg-character-dashboard-figure1 .mg-character-meter em {
+    font-size: 0.54rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-panel-head button {
+    min-height: 26px !important;
+    padding: 0 6px !important;
+    font-size: 0.52rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-meter {
+    margin-bottom: 6px !important;
+    padding: 5px 6px !important;
+    border-radius: 10px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-meter strong {
+    font-size: 0.9rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-stack.compact {
+    gap: 5px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto !important;
+    gap: 5px !important;
+    padding: 6px !important;
+    border-radius: 12px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-badge {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-icon-img {
+    width: 25px !important;
+    height: 25px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-main strong {
+    font-size: 0.66rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-main span {
+    font-size: 0.5rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-row .mg-mini-controls {
+    grid-template-columns: 20px 20px !important;
+    gap: 3px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-row .mg-mini-controls button {
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 7px !important;
+    font-size: 0.58rem !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .mg-character-dashboard-figure1 .mg-dashboard-title {
+    font-size: clamp(1.25rem, 7vw, 1.6rem) !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-dashboard-subtitle {
+    font-size: 0.72rem !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box em {
+    white-space: normal !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-row {
+    grid-template-columns: 26px minmax(0, 1fr) auto !important;
+    padding: 5px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-badge {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-icon-img {
+    width: 23px !important;
+    height: 23px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-row .mg-mini-controls {
+    grid-template-columns: 18px 18px !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-skill-row .mg-mini-controls button {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
