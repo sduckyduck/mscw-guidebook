@@ -18,11 +18,35 @@ function shouldDemoteRouteMonster(monster) {
   return nameIncludesAny(monster?.name ?? '', DEMOTED_ROUTE_MONSTERS);
 }
 
+function getItemReqLevel(item) {
+  return Number(item?.stats?.reqLevel ?? item?.reqLevel ?? 0) || 0;
+}
+
+function normalizeEquipmentPriceForGuideScoring(item) {
+  if (!item || item.category !== 'Equipment') return item;
+
+  const reqLevel = getItemReqLevel(item);
+  const price = Number(item.price ?? 0);
+  if (!Number.isFinite(price) || price <= 0 || reqLevel <= 20) return item;
+
+  const scoringPriceCap = Math.round(900 + reqLevel * 140);
+  if (price <= scoringPriceCap) return item;
+
+  return {
+    ...item,
+    originalPrice: item.originalPrice ?? price,
+    price: scoringPriceCap,
+    priceAdjustedForGuideScoring: true,
+  };
+}
+
 function patchItemsPayload(payload) {
   if (!payload || !Array.isArray(payload.items)) return payload;
   return {
     ...payload,
-    items: payload.items.filter((item) => !isBannedItem(item)),
+    items: payload.items
+      .filter((item) => !isBannedItem(item))
+      .map((item) => normalizeEquipmentPriceForGuideScoring(item)),
   };
 }
 
@@ -34,10 +58,6 @@ function patchMonstersPayload(payload) {
     monsters: payload.monsters.map((monster) => {
       if (!shouldDemoteRouteMonster(monster)) return monster;
 
-      // Zombie Mushroom's very high-density Ant Tunnel entries were dominating
-      // recommendations far beyond their practical leveling window. Keep the
-      // monster in the dataset, but remove its map references so it no longer
-      // becomes the route target from Lv.20 all the way to Lv.50.
       return {
         ...monster,
         maps: [],
