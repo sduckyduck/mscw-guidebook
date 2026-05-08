@@ -14,6 +14,7 @@ import './utils/brandFooterName.js';
 import './utils/budgetRouteTuning.js';
 import './utils/craftableGearBadges.js';
 import './utils/dashboardDisplayFormatter.js';
+import './utils/equipmentSlotInspect.js';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
@@ -24,6 +25,7 @@ import './styles/character-spap-layout-lock.css';
 import './styles/skill-icon-click.css';
 import './styles/skill-panel-actions.css';
 import './styles/craftable-gear.css';
+import './styles/equipment-inspect.css';
 
 const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['materials', '材料']];
 
