@@ -1,5 +1,4 @@
 import {
-  getRecommendedSkillAllocation as getRecommendedSkillAllocationBase,
   getSkillPlan as getSkillPlanBase,
   getApNote,
 } from './skillPlannerRealPlayer.js';
@@ -114,8 +113,6 @@ function getRouteWeapon(args = {}) {
   const fallbackAttack = number(args.weaponAttack ?? args.watk, 0);
   if (fallbackAttack > 0) return { weaponName: 'Equipped Weapon', weaponType: '', attack: fallbackAttack, stats: {} };
 
-  // Do not trust the previous mainAttack path as weapon attack when it is clearly
-  // a route damage estimate. Use it only as a last-resort tiny fallback.
   const maybeWeaponAttack = number(args.mainAttack, 0);
   if (maybeWeaponAttack > 0 && maybeWeaponAttack <= 120) {
     return { weaponName: 'Estimated Weapon', weaponType: '', attack: maybeWeaponAttack, stats: {} };
