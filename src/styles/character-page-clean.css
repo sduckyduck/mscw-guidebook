@@ -1,6 +1,6 @@
 /* Figure-1 layout for the Character/SP-AP tab.
-   Goal: keep the original one-screen feeling, remove the repeated character preview,
-   keep AP horizontal, and keep first/second job skills side-by-side on mobile. */
+   Goal: top AP info, then AP cards horizontally across the full width,
+   then first/second job skill panels side-by-side below. */
 
 .mg-character-dashboard-figure1 {
   max-width: 720px !important;
@@ -8,12 +8,13 @@
 
 .mg-character-figure1-layout {
   display: grid;
-  grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr);
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
   gap: 14px;
   align-items: start;
 }
 
-.mg-ap-summary-panel {
+.mg-ap-summary-panel,
+.mg-ap-stats-panel {
   grid-column: 1 / -1;
 }
 
@@ -32,12 +33,12 @@
 }
 
 .mg-ap-stats-panel {
-  padding-top: 10px;
+  padding-top: 12px;
 }
 
 .mg-ap-grid-figure1 {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 10px !important;
 }
 
@@ -80,17 +81,25 @@
   }
 
   .mg-ap-grid-figure1 {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     gap: 6px !important;
   }
 
   .mg-ap-grid-figure1 .mg-ap-box {
-    min-height: 74px;
+    min-height: 78px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mg-ap-grid-figure1 .mg-mini-controls {
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .mg-ap-grid-figure1 .mg-mini-controls button {
+    width: 100% !important;
   }
 }
 
-/* Most important mobile rule: keep the two-column figure-1 structure.
-   Do not collapse first/second job skill panels into one vertical column. */
 @media (max-width: 520px) {
   .mg-character-figure1-layout {
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
@@ -103,14 +112,41 @@
   }
 
   .mg-ap-grid-figure1 {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
   }
 
   .mg-ap-grid-figure1 .mg-ap-box {
-    min-height: 70px;
+    min-height: 74px;
+    padding: 8px 7px;
   }
 
-  .mg-ap-summary-panel {
+  .mg-ap-grid-figure1 .mg-ap-box span {
+    font-size: 0.62rem;
+  }
+
+  .mg-ap-grid-figure1 .mg-ap-box strong {
+    font-size: 1.05rem;
+  }
+
+  .mg-ap-grid-figure1 .mg-ap-box em {
+    font-size: 0.52rem;
+    line-height: 1.12;
+  }
+
+  .mg-ap-grid-figure1 .mg-mini-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+
+  .mg-ap-grid-figure1 .mg-mini-controls button {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 28px !important;
+  }
+
+  .mg-ap-summary-panel,
+  .mg-ap-stats-panel {
     grid-column: 1 / -1;
   }
 
