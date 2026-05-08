@@ -12,14 +12,13 @@ const PROFESSION_ZH = {
   Crafting: '制作',
 };
 
-const PROFESSION_ICON_FILES = {
-  Smithing: ['smithing.png', 'Smithing.png'],
-  Weaponcrafting: ['weaponcrafting.png', 'weapon.png', 'Weaponcrafting.png', 'Weapon.png'],
-  Tailoring: ['tailoring.png', 'Tailoring.png'],
-  Woodcrafting: ['woodcrafting.png', 'wood.png', 'Woodcrafting.png', 'Wood.png'],
-  Leatherworking: ['leatherwork.png', 'leatherworking.png', 'Leatherwork.png', 'Leatherworking.png'],
-  Arcforge: ['arcane_forge.png', 'arcane-forge.png', 'arcforge.png', 'Arcane_Forge.png', 'Arcforge.png'],
-  Crafting: ['smithing.png', 'Smithing.png'],
+const PROFESSION_ICON_FILE = {
+  Arcforge: 'arcforge_icon.png',
+  Leatherworking: 'leatherworking_icon.png',
+  Smithing: 'smithing_icon.png',
+  Tailoring: 'tailoring_icon.png',
+  Weaponcrafting: 'weapon_crafting_icon.png',
+  Woodcrafting: 'woodcrafting_icon.png',
 };
 
 const MATERIAL_ZH = {
@@ -117,27 +116,9 @@ function translateMaterial(value = '') {
   return MATERIAL_ZH[value] ?? MATERIAL_ZH[String(value).trim()] ?? value ?? '未知材料';
 }
 
-function getProfessionIconCandidates(profession = '') {
-  const files = PROFESSION_ICON_FILES[profession] ?? PROFESSION_ICON_FILES[String(profession).trim()] ?? PROFESSION_ICON_FILES.Crafting;
-  return [...new Set(files.flatMap((file) => [
-    publicAsset(`icons/crafting/${file}`),
-    publicAsset(`icon/crafting/${file}`),
-  ]))];
-}
-
-function wireIconFallback(img, candidates) {
-  if (!img || !candidates?.length) return;
-  img.dataset.iconIndex = '0';
-  img.src = candidates[0];
-  img.addEventListener('error', () => {
-    const nextIndex = Number(img.dataset.iconIndex ?? 0) + 1;
-    if (nextIndex >= candidates.length) {
-      img.style.display = 'none';
-      return;
-    }
-    img.dataset.iconIndex = String(nextIndex);
-    img.src = candidates[nextIndex];
-  });
+function getProfessionIconSrc(profession = '') {
+  const file = PROFESSION_ICON_FILE[profession] ?? PROFESSION_ICON_FILE[String(profession).trim()] ?? '';
+  return file ? publicAsset(`icons/crafting/${file}`) : '';
 }
 
 function createProfessionIcon(recipe, className = 'mg-craft-profession-icon') {
@@ -147,7 +128,7 @@ function createProfessionIcon(recipe, className = 'mg-craft-profession-icon') {
   icon.draggable = false;
   icon.loading = 'eager';
   icon.decoding = 'async';
-  wireIconFallback(icon, getProfessionIconCandidates(recipe.profession));
+  icon.src = getProfessionIconSrc(recipe.profession);
   return icon;
 }
 
