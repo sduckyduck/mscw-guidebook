@@ -5,7 +5,11 @@ const SWIPE_TABS = [
   { id: 'materials', label: '材料' },
 ];
 
-const SWIPE_ANIMATION_MS = 340;
+const SWIPE_EXIT_MS = 150;
+const SWIPE_ENTER_MS = 280;
+const SWIPE_TOTAL_MS = SWIPE_EXIT_MS + SWIPE_ENTER_MS;
+const SWIPE_THRESHOLD = 64;
+const SWIPE_MAX_DRAG = 96;
 
 const INTERACTIVE_SELECTOR = [
   'button',
@@ -68,39 +72,80 @@ function clickTabButton(tabId) {
   return true;
 }
 
-function resetSwipeAnimation(shell) {
-  shell.classList.remove('mg-tab-swipe-forward', 'mg-tab-swipe-backward', 'mg-tab-swipe-animating');
+function getShell() {
+  return document.querySelector('.app-shell');
 }
 
-function playSwipeAnimation(direction) {
-  window.requestAnimationFrame(() => {
-    const shell = document.querySelector('.app-shell');
-    if (!shell) return;
+function resetSwipeAnimation(shell = getShell()) {
+  if (!shell) return;
+  shell.classList.remove(
+    'mg-tab-swipe-dragging',
+    'mg-tab-swipe-cancel',
+    'mg-tab-swipe-exit-left',
+    'mg-tab-swipe-exit-right',
+    'mg-tab-swipe-enter-left',
+    'mg-tab-swipe-enter-right',
+    'mg-tab-swipe-animating',
+  );
+  shell.style.removeProperty('--mscw-swipe-drag');
+}
 
-    resetSwipeAnimation(shell);
-    // Force a new animation frame even when the user swipes quickly multiple times.
-    void shell.offsetWidth;
+function setDragOffset(dx) {
+  const shell = getShell();
+  if (!shell) return;
+  const clamped = Math.max(-SWIPE_MAX_DRAG, Math.min(SWIPE_MAX_DRAG, dx));
+  shell.classList.add('mg-tab-swipe-dragging');
+  shell.style.setProperty('--mscw-swipe-drag', `${clamped}px`);
+}
 
-    const className = direction > 0 ? 'mg-tab-swipe-forward' : 'mg-tab-swipe-backward';
-    shell.classList.add('mg-tab-swipe-animating', className);
+function playCancelAnimation() {
+  const shell = getShell();
+  if (!shell) return;
+  shell.classList.remove('mg-tab-swipe-dragging');
+  shell.classList.add('mg-tab-swipe-cancel');
+  window.setTimeout(() => resetSwipeAnimation(shell), 180);
+}
 
-    window.setTimeout(() => {
+function playSwipeTabChange(delta, nextTabId) {
+  const shell = getShell();
+  if (!shell) return;
+
+  const exitClass = delta > 0 ? 'mg-tab-swipe-exit-left' : 'mg-tab-swipe-exit-right';
+  const enterClass = delta > 0 ? 'mg-tab-swipe-enter-right' : 'mg-tab-swipe-enter-left';
+
+  shell.classList.remove('mg-tab-swipe-dragging');
+  shell.classList.add('mg-tab-swipe-animating', exitClass);
+  shell.style.removeProperty('--mscw-swipe-drag');
+
+  window.setTimeout(() => {
+    const changed = clickTabButton(nextTabId);
+    if (!changed) {
       resetSwipeAnimation(shell);
-    }, SWIPE_ANIMATION_MS + 90);
-  });
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const nextShell = getShell();
+      if (!nextShell) return;
+      nextShell.classList.remove(exitClass);
+      void nextShell.offsetWidth;
+      nextShell.classList.add('mg-tab-swipe-animating', enterClass);
+
+      window.setTimeout(() => {
+        resetSwipeAnimation(nextShell);
+      }, SWIPE_ENTER_MS + 80);
+    });
+  }, SWIPE_EXIT_MS);
 }
 
-function goToAdjacentTab(delta) {
+function getAdjacentTab(delta) {
   const currentId = getCurrentTabId();
   const currentIndex = SWIPE_TABS.findIndex((tab) => tab.id === currentId);
-  if (currentIndex < 0) return;
+  if (currentIndex < 0) return null;
 
   const nextIndex = Math.max(0, Math.min(SWIPE_TABS.length - 1, currentIndex + delta));
-  if (nextIndex === currentIndex) return;
-
-  const nextTab = SWIPE_TABS[nextIndex];
-  const changed = clickTabButton(nextTab.id);
-  if (changed) playSwipeAnimation(delta);
+  if (nextIndex === currentIndex) return null;
+  return SWIPE_TABS[nextIndex];
 }
 
 function installSwipeAnimationStyles() {
@@ -121,67 +166,88 @@ function installSwipeAnimationStyles() {
       }
 
       .top-tabs .top-tab.active {
-        transform: translateY(-1px) scale(1.015);
-        box-shadow: inset 0 0 0 1px rgba(25, 128, 108, 0.12), 0 8px 18px rgba(14, 92, 88, 0.10);
+        transform: translateY(-1px) scale(1.018);
+        box-shadow: inset 0 0 0 1px rgba(25, 128, 108, 0.15), 0 8px 18px rgba(14, 92, 88, 0.12);
       }
 
-      .app-shell.mg-tab-swipe-animating {
+      .app-shell.mg-tab-swipe-animating,
+      .app-shell.mg-tab-swipe-dragging,
+      .app-shell.mg-tab-swipe-cancel {
         overflow-x: hidden !important;
       }
 
-      .app-shell.mg-tab-swipe-forward > :not(.top-tabs) {
-        animation: mscwSwipeTabForward ${SWIPE_ANIMATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both;
-        will-change: transform, opacity, filter;
+      .app-shell.mg-tab-swipe-dragging > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-cancel > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-exit-left > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-exit-right > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-enter-left > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-enter-right > :not(.top-tabs) {
+        will-change: transform, opacity;
+        backface-visibility: hidden;
+        transform-style: preserve-3d;
       }
 
-      .app-shell.mg-tab-swipe-backward > :not(.top-tabs) {
-        animation: mscwSwipeTabBackward ${SWIPE_ANIMATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both;
-        will-change: transform, opacity, filter;
+      .app-shell.mg-tab-swipe-dragging > :not(.top-tabs) {
+        transform: translate3d(var(--mscw-swipe-drag, 0px), 0, 0) scale(0.992);
+        opacity: 0.92;
+        transition: none !important;
+      }
+
+      .app-shell.mg-tab-swipe-cancel > :not(.top-tabs) {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 1;
+        transition: transform 170ms cubic-bezier(0.2, 0.9, 0.25, 1), opacity 170ms ease;
+      }
+
+      .app-shell.mg-tab-swipe-exit-left > :not(.top-tabs) {
+        animation: mscwSwipeExitLeft ${SWIPE_EXIT_MS}ms cubic-bezier(0.45, 0, 0.9, 0.55) both;
+      }
+
+      .app-shell.mg-tab-swipe-exit-right > :not(.top-tabs) {
+        animation: mscwSwipeExitRight ${SWIPE_EXIT_MS}ms cubic-bezier(0.45, 0, 0.9, 0.55) both;
+      }
+
+      .app-shell.mg-tab-swipe-enter-left > :not(.top-tabs) {
+        animation: mscwSwipeEnterLeft ${SWIPE_ENTER_MS}ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      .app-shell.mg-tab-swipe-enter-right > :not(.top-tabs) {
+        animation: mscwSwipeEnterRight ${SWIPE_ENTER_MS}ms cubic-bezier(0.16, 1, 0.3, 1) both;
       }
     }
 
-    @keyframes mscwSwipeTabForward {
-      0% {
-        opacity: 0.18;
-        transform: translate3d(34px, 0, 0) scale(0.985);
-        filter: blur(2px);
-      }
-      58% {
-        opacity: 1;
-        filter: blur(0);
-      }
-      100% {
-        opacity: 1;
-        transform: translate3d(0, 0, 0) scale(1);
-        filter: blur(0);
-      }
+    @keyframes mscwSwipeExitLeft {
+      from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+      to { opacity: 0.10; transform: translate3d(-90px, 0, 0) scale(0.975); }
     }
 
-    @keyframes mscwSwipeTabBackward {
-      0% {
-        opacity: 0.18;
-        transform: translate3d(-34px, 0, 0) scale(0.985);
-        filter: blur(2px);
-      }
-      58% {
-        opacity: 1;
-        filter: blur(0);
-      }
-      100% {
-        opacity: 1;
-        transform: translate3d(0, 0, 0) scale(1);
-        filter: blur(0);
-      }
+    @keyframes mscwSwipeExitRight {
+      from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+      to { opacity: 0.10; transform: translate3d(90px, 0, 0) scale(0.975); }
+    }
+
+    @keyframes mscwSwipeEnterLeft {
+      from { opacity: 0.10; transform: translate3d(-100px, 0, 0) scale(0.975); }
+      to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    @keyframes mscwSwipeEnterRight {
+      from { opacity: 0.10; transform: translate3d(100px, 0, 0) scale(0.975); }
+      to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .top-tabs .top-tab,
-      .app-shell.mg-tab-swipe-forward > :not(.top-tabs),
-      .app-shell.mg-tab-swipe-backward > :not(.top-tabs) {
+      .app-shell.mg-tab-swipe-dragging > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-cancel > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-exit-left > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-exit-right > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-enter-left > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-enter-right > :not(.top-tabs) {
         animation: none !important;
         transition: none !important;
         transform: none !important;
-        filter: none !important;
+        opacity: 1 !important;
       }
     }
   `;
@@ -195,9 +261,11 @@ function installMobileSwipeTabs() {
   installSwipeAnimationStyles();
 
   let start = null;
+  let isDragging = false;
+  let isAnimating = false;
 
   window.addEventListener('touchstart', (event) => {
-    if (!isPhoneSwipeEnabled() || !isMainGuidePage()) return;
+    if (isAnimating || !isPhoneSwipeEnabled() || !isMainGuidePage()) return;
     if (event.touches.length !== 1) return;
     if (isInteractiveStart(event.target)) return;
 
@@ -207,17 +275,39 @@ function installMobileSwipeTabs() {
       y: touch.clientY,
       time: Date.now(),
     };
+    isDragging = false;
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (event) => {
+    if (!start || isAnimating || !isPhoneSwipeEnabled() || !isMainGuidePage()) return;
+    if (event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    if (!isDragging && absX > 12 && absX > absY * 1.35) isDragging = true;
+    if (!isDragging) return;
+
+    const delta = dx < 0 ? 1 : -1;
+    const adjacent = getAdjacentTab(delta);
+    const resistance = adjacent ? 1 : 0.32;
+    setDragOffset(dx * resistance);
   }, { passive: true });
 
   window.addEventListener('touchend', (event) => {
-    if (!start || !isPhoneSwipeEnabled() || !isMainGuidePage()) {
+    if (!start || isAnimating || !isPhoneSwipeEnabled() || !isMainGuidePage()) {
       start = null;
+      isDragging = false;
       return;
     }
 
     const touch = event.changedTouches?.[0];
     if (!touch) {
       start = null;
+      isDragging = false;
       return;
     }
 
@@ -228,12 +318,34 @@ function installMobileSwipeTabs() {
 
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
-    const isHorizontalSwipe = absX >= 72 && absX > absY * 1.45 && elapsed <= 900;
-    if (!isHorizontalSwipe) return;
+    const isHorizontalSwipe = absX >= SWIPE_THRESHOLD && absX > absY * 1.35 && elapsed <= 1100;
 
-    // Swipe left moves forward: 总览 → 角色 → 地图 → 材料.
-    // Swipe right moves backward: 材料 → 地图 → 角色 → 总览.
-    goToAdjacentTab(dx < 0 ? 1 : -1);
+    if (!isHorizontalSwipe) {
+      if (isDragging) playCancelAnimation();
+      isDragging = false;
+      return;
+    }
+
+    const delta = dx < 0 ? 1 : -1;
+    const adjacent = getAdjacentTab(delta);
+    if (!adjacent) {
+      playCancelAnimation();
+      isDragging = false;
+      return;
+    }
+
+    isAnimating = true;
+    isDragging = false;
+    playSwipeTabChange(delta, adjacent.id);
+    window.setTimeout(() => {
+      isAnimating = false;
+    }, SWIPE_TOTAL_MS + 160);
+  }, { passive: true });
+
+  window.addEventListener('touchcancel', () => {
+    start = null;
+    if (isDragging) playCancelAnimation();
+    isDragging = false;
   }, { passive: true });
 }
 
