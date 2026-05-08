@@ -4,6 +4,7 @@ import AppMediaEnhanced from './AppMediaEnhanced.jsx';
 import CoverIntro from './components/CoverIntro.jsx';
 import CraftingMaterialsPageSafe from './components/CraftingMaterialsPageSafe.jsx';
 import CommunityBuildsPage from './components/CommunityBuildsPage.jsx';
+import './utils/dashboardActionButtons.js';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
@@ -72,7 +73,6 @@ function GuidebookRouter() {
     }
   }}>
     <AppMediaEnhanced />
-    <button className="community-builds-link" onClick={goToBuilds}>玩家 Build 库</button>
   </div>;
 }
 
