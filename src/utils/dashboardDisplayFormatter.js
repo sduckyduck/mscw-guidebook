@@ -51,34 +51,36 @@ function formatPerHit(totalRange, hits) {
   return `${min} - ${max}/hit`;
 }
 
+function formatMultiHitValue({ name, value, owner }) {
+  if (!value) return;
+  if (/\/\s*hit/i.test(value.textContent ?? '')) return;
+
+  const hits = getSkillHits(name);
+  if (hits <= 1) return;
+
+  const range = parseRange(value.textContent);
+  if (!range) return;
+
+  value.textContent = formatPerHit(range, hits);
+  value.dataset.displayDamageFormatted = '1';
+  if (owner) owner.dataset.skillHits = String(hits);
+}
+
 function formatDamageRows(root = document) {
   root.querySelectorAll?.('.mg-overview-damage-row')?.forEach((row) => {
-    const name = row.querySelector('strong')?.textContent?.trim() ?? '';
-    const value = row.querySelector('em');
-    if (!value) return;
-
-    const hits = getSkillHits(name);
-    if (hits <= 1) return;
-
-    const range = parseRange(value.textContent);
-    if (!range) return;
-
-    value.textContent = formatPerHit(range, hits);
-    row.dataset.skillHits = String(hits);
+    formatMultiHitValue({
+      name: row.querySelector('strong')?.textContent?.trim() ?? '',
+      value: row.querySelector('em'),
+      owner: row,
+    });
   });
 
   root.querySelectorAll?.('.mg-detail-sheet')?.forEach((sheet) => {
-    const name = sheet.querySelector('.mg-detail-head h2')?.textContent?.trim() ?? '';
-    const value = sheet.querySelector('.mg-detail-damage strong');
-    if (!value) return;
-
-    const hits = getSkillHits(name);
-    if (hits <= 1) return;
-
-    const range = parseRange(value.textContent);
-    if (!range) return;
-
-    value.textContent = formatPerHit(range, hits);
+    formatMultiHitValue({
+      name: sheet.querySelector('.mg-detail-head h2')?.textContent?.trim() ?? '',
+      value: sheet.querySelector('.mg-detail-damage strong'),
+      owner: sheet.querySelector('.mg-detail-damage'),
+    });
   });
 }
 
