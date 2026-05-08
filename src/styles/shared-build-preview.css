@@ -1,0 +1,172 @@
+.shared-detail-panel {
+  max-width: 780px;
+  padding: 14px;
+}
+
+.compact-detail-head {
+  margin-bottom: 12px;
+}
+
+.compact-detail-head h2 {
+  font-size: 1.8rem;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.shared-build-dashboard {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.shared-build-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.shared-build-meta-row span {
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(241, 250, 250, 0.94);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.shared-build-grid {
+  display: grid;
+  grid-template-columns: 0.82fr 1.18fr;
+  gap: 16px;
+}
+
+.saved-build-config-panel,
+.saved-build-equipment-board,
+.saved-map-card,
+.saved-character-preview-card,
+.saved-damage-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.saved-build-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.saved-readonly-field {
+  min-height: 58px;
+  border-radius: 15px;
+  padding: 10px 12px;
+  background: rgba(244, 249, 249, 0.94);
+  color: #21383d;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.saved-readonly-field span {
+  color: #567177;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.saved-readonly-field strong {
+  display: block;
+  margin-top: 4px;
+  color: #10252b;
+  font-size: 1rem;
+  font-weight: 1000;
+}
+
+.saved-equip-tile {
+  text-align: left;
+  cursor: default;
+}
+
+.saved-equip-tile.empty {
+  opacity: 0.86;
+}
+
+.saved-equip-tile:disabled,
+.saved-equip-tile[disabled] {
+  opacity: 1;
+}
+
+.saved-map-card {
+  cursor: default;
+}
+
+.saved-map-card:hover {
+  transform: none;
+}
+
+.saved-character-preview-card .mg-character-frame {
+  min-height: 215px;
+}
+
+.saved-character-preview-card .real-character-preview {
+  transform: scale(1.08);
+}
+
+.saved-damage-card {
+  margin-top: 0;
+}
+
+.shared-build-dashboard .mg-panel-title,
+.shared-build-dashboard .mg-stats-title,
+.shared-build-dashboard .mg-overview-damage-head h2 {
+  color: #ffffff;
+}
+
+.shared-build-dashboard .mg-overview-damage-row {
+  background: rgba(248, 251, 251, 0.96);
+}
+
+.shared-build-dashboard .mg-stat-box {
+  background: rgba(248, 251, 251, 0.96);
+}
+
+.shared-build-dashboard .preview-meta {
+  color: #11262c;
+}
+
+.shared-build-dashboard .preview-meta strong {
+  color: #10252b;
+}
+
+.shared-build-dashboard .preview-meta span {
+  color: #5f6f88;
+}
+
+.shared-build-dashboard .mg-equipment-grid {
+  gap: 8px;
+}
+
+.shared-build-dashboard .mg-equip-tile {
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .shared-detail-panel {
+    max-width: 100%;
+  }
+
+  .shared-build-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-actions {
+    justify-content: flex-start;
+  }
+}
