@@ -30,16 +30,25 @@ function setSelectValue(select, value) {
   return true;
 }
 
-function biasHighBudgetTowardHigherMonsters({ onlyWhenNotTouched = false } = {}) {
+function biasBudgetTowardRouteStyle({ onlyWhenNotTouched = false } = {}) {
   const budgetSelect = getSelectByLabel('资金');
   const prioritySelect = getSelectByLabel('优先');
   if (!budgetSelect || !prioritySelect) return;
-  if (budgetSelect.value !== 'high') return;
   if (onlyWhenNotTouched && prioritySelect.dataset.userTouched === '1') return;
 
-  // High-budget route should act like a risk-tolerant training route:
-  // the existing exp/high profile accepts about 80% hit and favors higher-level mobs.
-  if (prioritySelect.value !== 'exp') setSelectValue(prioritySelect, 'exp');
+  if (budgetSelect.value === 'low') {
+    // 穷鬼流 should not chase the highest monster just because ACC is high.
+    // Default it to the safety-first profile so route scoring weighs HP cost,
+    // monster damage, and stable farming before EXP/density.
+    if (prioritySelect.value !== 'stable') setSelectValue(prioritySelect, 'stable');
+    return;
+  }
+
+  if (budgetSelect.value === 'high') {
+    // 有钱流 should act like a risk-tolerant training route:
+    // the exp/high profile accepts lower hit rates and favors higher EXP/density.
+    if (prioritySelect.value !== 'exp') setSelectValue(prioritySelect, 'exp');
+  }
 }
 
 function installBudgetRouteTuning() {
@@ -49,7 +58,7 @@ function installBudgetRouteTuning() {
 
   replaceLowBudgetLabels();
 
-  window.setTimeout(() => biasHighBudgetTowardHigherMonsters(), 120);
+  window.setTimeout(() => biasBudgetTowardRouteStyle(), 120);
 
   document.addEventListener('change', (event) => {
     const target = event.target;
@@ -63,7 +72,7 @@ function installBudgetRouteTuning() {
     if (fieldLabel === '资金') {
       const prioritySelect = getSelectByLabel('优先');
       if (prioritySelect) prioritySelect.dataset.userTouched = '';
-      biasHighBudgetTowardHigherMonsters();
+      biasBudgetTowardRouteStyle();
     }
   }, true);
 
@@ -81,7 +90,7 @@ function installBudgetRouteTuning() {
         }
       }
     }
-    window.setTimeout(() => biasHighBudgetTowardHigherMonsters({ onlyWhenNotTouched: true }), 0);
+    window.setTimeout(() => biasBudgetTowardRouteStyle({ onlyWhenNotTouched: true }), 0);
   });
 
   observer.observe(document.body, {
