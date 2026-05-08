@@ -15,7 +15,6 @@ import './utils/budgetRouteTuning.js';
 import './utils/craftableGearBadges.js';
 import './utils/dashboardDisplayFormatter.js';
 import './utils/equipmentSlotInspect.js';
-import './utils/skillRangeFormatter.js';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
