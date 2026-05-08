@@ -264,3 +264,189 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .gear-card { grid-template-columns: 48px minmax(0, 1fr); }
   .gear-thumb { width: 46px; height: 46px; }
 }
+
+.ms-equip-card {
+  width: 100%;
+  max-width: 360px;
+  border: 2px solid #c7c9ee;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(126, 130, 184, 0.95) 0%, rgba(82, 85, 138, 0.98) 48%, rgba(68, 70, 119, 0.98) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    inset 0 -18px 28px rgba(35, 36, 75, 0.18),
+    0 3px 0 rgba(30, 30, 55, 0.32);
+  color: #ffffff;
+  padding: 7px;
+  overflow: hidden;
+  font-family: "Noto Sans SC", "Microsoft YaHei", Arial, sans-serif;
+}
+
+.ms-equip-header {
+  margin: 0 0 4px;
+  color: #d8daf5;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+  text-shadow: 1px 1px 0 rgba(30, 30, 60, 0.7);
+}
+
+.ms-equip-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.ms-equip-dot {
+  color: #7fc8ff;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ms-equip-title h3 {
+  margin: 0;
+  color: #ffd166;
+  font-size: 15px;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-shadow: 1px 1px 0 #2e2d5d;
+}
+
+.ms-equip-main {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.ms-equip-icon-box {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 1px solid #eff0ff;
+  background: #e8e8ec;
+  box-shadow:
+    inset 0 0 0 1px #a0a2bd,
+    1px 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.ms-equip-icon-box img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.ms-equip-reqs {
+  display: grid;
+  gap: 1px;
+  padding-top: 1px;
+}
+
+.ms-equip-req-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 5px;
+  min-height: 12px;
+  align-items: center;
+  font-size: 10px;
+  line-height: 1.05;
+}
+
+.ms-equip-req-row span {
+  color: #d7daf5;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.ms-equip-req-row strong {
+  color: #ffffff;
+  font-weight: 900;
+  text-align: left;
+}
+
+.ms-equip-job-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 7px;
+  border: 1px solid #393b67;
+  background: #32345f;
+}
+
+.ms-equip-job-tabs span {
+  padding: 2px 1px;
+  border-right: 1px solid #4b4e7d;
+  color: #8f92b9;
+  font-size: 9px;
+  line-height: 1.15;
+  text-align: center;
+  font-weight: 900;
+}
+
+.ms-equip-job-tabs span:last-child {
+  border-right: 0;
+}
+
+.ms-equip-job-tabs span.active {
+  color: #ffcf5a;
+  background: #4f5280;
+}
+
+.ms-equip-divider {
+  height: 1px;
+  margin: 7px 0 6px;
+  background: #e1e3ff;
+  opacity: 0.9;
+}
+
+.ms-equip-stats {
+  display: grid;
+  gap: 2px;
+}
+
+.ms-equip-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 800;
+  text-shadow: 1px 1px 0 rgba(35, 35, 70, 0.55);
+}
+
+.ms-equip-stat-row span {
+  color: #ffffff;
+}
+
+.ms-equip-stat-row strong {
+  color: #ffffff;
+  font-weight: 900;
+}
+
+@media (max-width: 430px) {
+  .ms-equip-card {
+    max-width: 100%;
+  }
+
+  .ms-equip-main {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .ms-equip-icon-box {
+    width: 60px;
+    height: 60px;
+  }
+
+  .ms-equip-icon-box img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .ms-equip-req-row {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+}
