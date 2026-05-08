@@ -1,0 +1,52 @@
+.mg-character-dashboard-figure1 .mg-skill-icon-button {
+  display: grid !important;
+  place-items: center !important;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  padding: 0 !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mg-character-dashboard-figure1 .mg-skill-icon-button:not(:disabled):active {
+  transform: scale(0.92);
+}
+
+.mg-character-dashboard-figure1 .mg-skill-icon-button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.mg-character-dashboard-figure1 .mg-skill-icon-button .mg-skill-badge {
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .mg-character-dashboard-figure1 .mg-skill-icon-button {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .mg-character-dashboard-figure1 .mg-skill-icon-button {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .mg-character-dashboard-figure1 .mg-skill-icon-button {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+  }
+}
