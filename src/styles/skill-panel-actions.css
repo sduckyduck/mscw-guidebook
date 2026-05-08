@@ -1,0 +1,57 @@
+.mg-character-dashboard-figure1 .mg-panel-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mg-character-dashboard-figure1 .mg-panel-head-actions button {
+  min-height: 36px;
+  border: 1px solid rgba(255,255,255,.26);
+  border-radius: 12px;
+  background: rgba(255,255,255,.16);
+  color: #fff;
+  padding: 0 10px;
+  font-size: .76rem;
+  font-weight: 1000;
+  white-space: nowrap;
+}
+
+.mg-character-dashboard-figure1 .mg-panel-head-actions .mg-panel-head-secondary {
+  background: rgba(255,255,255,.09);
+  border-color: rgba(255,255,255,.18);
+}
+
+.mg-character-dashboard-figure1 .mg-second-skill-card .mg-panel-head-actions button {
+  color: #0f172a;
+  border-color: #d7e0dc;
+  background: #f7faf8;
+}
+
+.mg-character-dashboard-figure1 .mg-second-skill-card .mg-panel-head-actions .mg-panel-head-secondary {
+  color: #176d5b;
+  background: #ecfffb;
+  border-color: #afe7dd;
+}
+
+@media (max-width: 760px) {
+  .mg-character-dashboard-figure1 .mg-panel-head-actions {
+    gap: 4px;
+  }
+
+  .mg-character-dashboard-figure1 .mg-panel-head-actions button {
+    min-height: 28px;
+    border-radius: 9px;
+    padding: 0 7px;
+    font-size: .54rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .mg-character-dashboard-figure1 .mg-panel-head-actions button {
+    min-height: 26px;
+    padding: 0 6px;
+    font-size: 0.52rem;
+  }
+}
