@@ -6,9 +6,10 @@ const MULTI_HIT_SKILLS = {
   'Savage Blow': 6,
 };
 
-// Some official AppData rows store multi-hit skill damage as total skill damage.
-// Example: Double Shot can appear as "Attack 2x with 260% damage", meaning 130% per hit.
-const TOTAL_DAMAGE_MULTI_HIT_SKILLS = new Set([
+// Current official data for Double Shot exposes the level effect as "Damage 120%".
+// The calculator already turns that into the per-arrow range, so display should only
+// append /hit rather than dividing again.
+const ALREADY_PER_HIT_DAMAGE_SKILLS = new Set([
   'Double Shot',
 ]);
 
@@ -29,35 +30,72 @@ function getSkillHitCount(name = '') {
 
 function getDamageDenominator(name = '', hits = 1) {
   const normalized = normalizeSkillName(name);
-  const safeHits = Math.max(1, Number(hits) || 1);
-  return TOTAL_DAMAGE_MULTI_HIT_SKILLS.has(normalized) ? safeHits * safeHits : safeHits;
+  if (ALREADY_PER_HIT_DAMAGE_SKILLS.has(normalized)) return 1;
+  return Math.max(1, Number(hits) || 1);
 }
 
-function patchDamageRows(root = document) {
-  root.querySelectorAll?.('.mg-overview-damage-row')?.forEach((row) => {
-    const name = normalizeSkillName(row.querySelector('strong')?.textContent ?? '');
-    const value = row.querySelector('em');
-    if (!name || !value || value.dataset.perHitPatched === '1') return;
+function formatPerHitRange(range, denominator = 1) {
+  const safeDenominator = Math.max(1, Number(denominator) || 1);
+  const perHitMin = Math.max(1, Math.round(range.min / safeDenominator));
+  const perHitMax = Math.max(perHitMin, Math.round(range.max / safeDenominator));
+  return `${perHitMin} - ${perHitMax}/hit`;
+}
 
-    if (/\/\s*hit/i.test(value.textContent ?? '')) {
-      value.dataset.perHitPatched = '1';
-      return;
-    }
+function patchDamageValue({ name, value, owner }) {
+  const normalizedName = normalizeSkillName(name);
+  if (!normalizedName || !value || value.dataset.perHitPatched === '1') return;
 
-    const hits = getSkillHitCount(name);
-    if (hits <= 1) return;
-
-    const range = parseRange(value.textContent);
-    if (!range) return;
-
-    const denominator = getDamageDenominator(name, hits);
-    const perHitMin = Math.max(1, Math.round(range.min / denominator));
-    const perHitMax = Math.max(perHitMin, Math.round(range.max / denominator));
-    value.textContent = `${perHitMin} - ${perHitMax}/hit`;
+  if (/\/\s*hit/i.test(value.textContent ?? '')) {
     value.dataset.perHitPatched = '1';
-    row.dataset.skillHits = String(hits);
-    row.dataset.damageDenominator = String(denominator);
+    return;
+  }
+
+  const hits = getSkillHitCount(normalizedName);
+  if (hits <= 1) return;
+
+  const range = parseRange(value.textContent);
+  if (!range) return;
+
+  const denominator = getDamageDenominator(normalizedName, hits);
+  value.textContent = formatPerHitRange(range, denominator);
+  value.dataset.perHitPatched = '1';
+  if (owner) {
+    owner.dataset.skillHits = String(hits);
+    owner.dataset.damageDenominator = String(denominator);
+  }
+}
+
+function patchOverviewDamageRows(root = document) {
+  root.querySelectorAll?.('.mg-overview-damage-row')?.forEach((row) => {
+    patchDamageValue({
+      name: row.querySelector('strong')?.textContent ?? '',
+      value: row.querySelector('em'),
+      owner: row,
+    });
   });
+}
+
+function patchSkillDetailSheets(root = document) {
+  root.querySelectorAll?.('.mg-detail-sheet')?.forEach((sheet) => {
+    patchDamageValue({
+      name: sheet.querySelector('.mg-detail-head h2')?.textContent ?? '',
+      value: sheet.querySelector('.mg-detail-damage strong'),
+      owner: sheet.querySelector('.mg-detail-damage'),
+    });
+  });
+}
+
+function patchDamageDisplays(root = document) {
+  patchOverviewDamageRows(root);
+  patchSkillDetailSheets(root);
+}
+
+function resetPatchedFlagFromCharacterData(target) {
+  const row = target?.parentElement?.closest?.('.mg-overview-damage-row');
+  const detailDamage = target?.parentElement?.closest?.('.mg-detail-damage');
+  const value = row?.querySelector?.('em') ?? detailDamage?.querySelector?.('strong');
+  if (value) delete value.dataset.perHitPatched;
+  return row?.parentElement ?? detailDamage?.parentElement ?? document;
 }
 
 function installOverviewDamageDisplayPatch() {
@@ -69,21 +107,16 @@ function installOverviewDamageDisplayPatch() {
     for (const mutation of mutations) {
       if (mutation.type === 'childList') {
         for (const node of mutation.addedNodes) {
-          if (node instanceof Element) patchDamageRows(node);
+          if (node instanceof Element) patchDamageDisplays(node);
         }
       }
       if (mutation.type === 'characterData') {
-        const row = mutation.target?.parentElement?.closest?.('.mg-overview-damage-row');
-        if (row) {
-          const value = row.querySelector('em');
-          if (value) delete value.dataset.perHitPatched;
-          patchDamageRows(row.parentElement ?? document);
-        }
+        patchDamageDisplays(resetPatchedFlagFromCharacterData(mutation.target));
       }
     }
   });
 
-  patchDamageRows();
+  patchDamageDisplays();
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 }
 
