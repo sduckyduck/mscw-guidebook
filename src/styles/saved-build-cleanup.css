@@ -2,20 +2,19 @@
    Keep this file loaded last so it can override the editable character-page styles. */
 
 .saved-spap-panel {
-  margin-top: 18px;
+  margin-top: 10px;
 }
 
+/* The main saved-build dashboard already says what this page is.
+   Hide the second giant section title so the detail page reads as one clean build card. */
 .saved-spap-title {
-  margin: 0 0 12px;
-  font-size: clamp(1.28rem, 4.8vw, 2rem);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
+  display: none !important;
 }
 
 .saved-spap-grid {
   display: flex !important;
   flex-direction: column !important;
-  gap: 14px !important;
+  gap: 10px !important;
   align-items: stretch !important;
   grid-template-columns: none !important;
 }
@@ -26,7 +25,7 @@
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
-  gap: 14px !important;
+  gap: 10px !important;
 }
 
 .saved-spap-panel .mg-ap-panel,
@@ -34,51 +33,48 @@
 .saved-spap-panel .mg-skill-side-card {
   width: 100% !important;
   box-sizing: border-box;
-  border-radius: 22px !important;
-  padding: 16px !important;
+  border-radius: 20px !important;
+  padding: 14px !important;
 }
 
+/* Remove repeated status/edit-looking UI in read-only build details. */
 .saved-readonly-chip,
 .saved-spap-panel .mg-character-meter,
 .saved-spap-panel .mg-sp-meter,
 .saved-spap-panel .readonly-controls,
-.saved-spap-panel .mg-mini-controls {
+.saved-spap-panel .mg-mini-controls,
+.saved-spap-panel .mg-character-note,
+.saved-skill-note {
   display: none !important;
 }
 
 .saved-spap-panel .mg-character-panel-head {
   margin-bottom: 10px;
+  align-items: center !important;
 }
 
 .saved-spap-panel .mg-character-panel-head h2 {
-  font-size: clamp(1.22rem, 3.8vw, 1.72rem) !important;
+  font-size: clamp(1.08rem, 3.2vw, 1.42rem) !important;
   line-height: 1.08 !important;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.025em;
 }
 
 .saved-spap-panel .mg-character-panel-head span {
-  font-size: 0.76rem;
+  font-size: 0.7rem !important;
+  opacity: 0.86;
 }
 
-.saved-spap-panel .mg-character-note,
-.saved-skill-note {
-  margin: 4px 0 12px !important;
-  max-width: 100%;
-  color: rgba(240, 250, 250, 0.9) !important;
-  font-size: 0.82rem !important;
-  line-height: 1.4 !important;
-}
-
+/* Make AP read like a compact summary, not a second dashboard. */
 .saved-spap-panel .mg-ap-grid {
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 10px !important;
+  gap: 8px !important;
 }
 
 .saved-spap-panel .mg-ap-box {
-  min-height: 86px !important;
-  padding: 12px !important;
-  border-radius: 18px !important;
+  min-height: 70px !important;
+  padding: 10px !important;
+  border-radius: 16px !important;
   display: flex !important;
   align-items: center !important;
 }
@@ -88,33 +84,34 @@
 }
 
 .saved-spap-panel .mg-ap-box span {
-  font-size: 0.72rem !important;
+  font-size: 0.66rem !important;
 }
 
 .saved-spap-panel .mg-ap-box strong {
-  font-size: 1.36rem !important;
+  font-size: 1.18rem !important;
   line-height: 1 !important;
 }
 
 .saved-spap-panel .mg-ap-box em {
-  margin-top: 4px;
-  font-size: 0.66rem !important;
-  line-height: 1.15;
+  margin-top: 3px;
+  font-size: 0.58rem !important;
+  line-height: 1.12;
 }
 
+/* Saved skills: clean cards, no empty meter box and no edit controls. */
 .saved-spap-panel .mg-skill-stack.compact {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 10px !important;
+  gap: 8px !important;
 }
 
 .saved-spap-panel .mg-skill-row {
-  min-height: 72px !important;
-  padding: 10px 12px !important;
-  border-radius: 18px !important;
+  min-height: 62px !important;
+  padding: 9px 10px !important;
+  border-radius: 16px !important;
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
+  gap: 9px !important;
   cursor: default !important;
 }
 
@@ -123,14 +120,14 @@
 }
 
 .saved-spap-panel .mg-skill-badge {
-  width: 42px !important;
-  height: 42px !important;
-  min-width: 42px !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
 }
 
 .saved-spap-panel .mg-skill-icon-img {
-  width: 36px !important;
-  height: 36px !important;
+  width: 33px !important;
+  height: 33px !important;
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -144,7 +141,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.88rem !important;
+  font-size: 0.82rem !important;
   line-height: 1.08 !important;
 }
 
@@ -153,20 +150,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.66rem !important;
+  font-size: 0.6rem !important;
+  opacity: 0.78;
 }
 
 @media (max-width: 700px) {
+  .saved-spap-panel {
+    margin-top: 8px;
+  }
+
+  .saved-spap-grid,
+  .saved-spap-grid > .mg-left-stack,
+  .saved-spap-grid > .mg-right-stack,
+  .saved-spap-right-stack {
+    gap: 8px !important;
+  }
+
   .saved-spap-panel .mg-ap-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   .saved-spap-panel .mg-skill-stack.compact {
-    grid-template-columns: 1fr !important;
-  }
-
-  .saved-spap-panel .mg-skill-row {
-    min-height: 64px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
@@ -174,31 +179,56 @@
   .saved-spap-panel .mg-ap-panel,
   .saved-spap-panel .mg-sp-panel,
   .saved-spap-panel .mg-skill-side-card {
-    padding: 12px !important;
-    border-radius: 18px !important;
+    padding: 10px !important;
+    border-radius: 17px !important;
+  }
+
+  .saved-spap-panel .mg-character-panel-head {
+    margin-bottom: 8px;
+  }
+
+  .saved-spap-panel .mg-character-panel-head h2 {
+    font-size: 0.96rem !important;
+  }
+
+  .saved-spap-panel .mg-character-panel-head span {
+    font-size: 0.62rem !important;
   }
 
   .saved-spap-panel .mg-ap-box {
-    min-height: 76px !important;
-    padding: 10px !important;
+    min-height: 66px !important;
+    padding: 8px !important;
   }
 
   .saved-spap-panel .mg-ap-box strong {
-    font-size: 1.18rem !important;
+    font-size: 1.08rem !important;
+  }
+
+  .saved-spap-panel .mg-ap-box em {
+    font-size: 0.54rem !important;
+  }
+
+  .saved-spap-panel .mg-skill-stack.compact {
+    grid-template-columns: 1fr !important;
+  }
+
+  .saved-spap-panel .mg-skill-row {
+    min-height: 58px !important;
+    padding: 8px !important;
   }
 
   .saved-spap-panel .mg-skill-badge {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
   }
 
   .saved-spap-panel .mg-skill-icon-img {
-    width: 33px !important;
-    height: 33px !important;
+    width: 31px !important;
+    height: 31px !important;
   }
 
   .saved-spap-panel .mg-skill-main strong {
-    font-size: 0.8rem !important;
+    font-size: 0.78rem !important;
   }
 }
