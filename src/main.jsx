@@ -9,6 +9,7 @@ import './styles/cover-intro.css';
 import './styles/materials-page.css';
 import './styles/layout-unify.css';
 import './styles/community-build-detail.css';
+import './styles/saved-build-cleanup.css';
 
 const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['materials', '材料']];
 
