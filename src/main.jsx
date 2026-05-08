@@ -5,6 +5,7 @@ import CoverIntro from './components/CoverIntro.jsx';
 import CraftingMaterialsPageSafe from './components/CraftingMaterialsPageSafe.jsx';
 import CommunityBuildsPage from './components/CommunityBuildsPage.jsx';
 import AdminBuildsPage from './components/AdminBuildsPage.jsx';
+import './utils/officialDataSanityPatch.js';
 import './utils/dashboardActionButtons.js';
 import './utils/mobileSwipeTabs.js';
 import './utils/removeZakumHelmet.js';
