@@ -8,6 +8,7 @@ import AdminBuildsPage from './components/AdminBuildsPage.jsx';
 import './utils/dashboardActionButtons.js';
 import './utils/mobileSwipeTabs.js';
 import './utils/removeZakumHelmet.js';
+import './utils/brandFooterName.js';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
