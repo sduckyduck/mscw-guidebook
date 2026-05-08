@@ -2,6 +2,7 @@ import { useState } from 'react';
 import IconFallback, { baseUrl, iconSourcesFromNames } from './IconFallback.jsx';
 import SkillDetailSheet from './SkillDetailSheet.jsx';
 import '../styles/detail-sheets.css';
+import '../styles/character-page-clean.css';
 
 const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
 const MIN_STAT_AP = 4;
