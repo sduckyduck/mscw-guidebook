@@ -22,14 +22,26 @@ const MAGIC_DAMAGE_SKILLS = new Set([
   'energy bolt', 'magic claw', 'fire arrow', 'poison breath', 'cold beam', 'thunder bolt', 'heal', 'holy arrow',
 ]);
 
-const PHYSICAL_RANGE_TUNING = {
-  warrior: { maxScale: 0.55, minRatio: 0.32 },
-  bowman: { maxScale: 0.54, minRatio: 0.38 },
-  thief: { maxScale: 0.49, minRatio: 0.44 },
-  pirate: { maxScale: 0.52, minRatio: 0.36 },
+const WEAPON_MULTIPLIERS = {
+  warrior: { min: 4.0, max: 4.6 },
+  bowman: { min: 3.4, max: 3.4 },
+  thief: { min: 3.6, max: 3.6 },
+  pirate: { min: 3.6, max: 3.6 },
 };
 
-const DEFAULT_PHYSICAL_RANGE_TUNING = { maxScale: 0.54, minRatio: 0.35 };
+const SKILL_WEAPON_MULTIPLIERS = {
+  'lucky seven': { min: 2.6, max: 2.6 },
+};
+
+const LEGACY_MAIN_ATTACK_SCALE = {
+  warrior: 0.55,
+  bowman: 0.54,
+  thief: 0.49,
+  pirate: 0.52,
+};
+
+const DEFAULT_WEAPON_MULTIPLIER = { min: 4.0, max: 4.0 };
+const DEFAULT_LEGACY_SCALE = 0.54;
 
 function number(value, fallback = 0) {
   const numeric = Number(value);
@@ -75,7 +87,13 @@ function parseDamageProfile(skill) {
   const multi = effect.match(/attack\s+(\d+)x\s+with\s+(\d+(?:\.\d+)?)%\s+damage/i);
   const percent = effect.match(/\bdamage\s+(\d+(?:\.\d+)?)%/i);
   const basicAttack = effect.match(/\bbasic attack\s+(\d+(?:\.\d+)?)/i)?.[1];
+  const healRecovery = effect.match(/\brecovery\s+(\d+(?:\.\d+)?)%/i)?.[1]
+    ?? effect.match(/\bheal\s+(\d+(?:\.\d+)?)%/i)?.[1];
   const hits = multi ? number(multi[1], 1) : (MULTI_HIT_SKILLS.get(name) ?? 1);
+
+  if (healRecovery !== undefined && name === 'heal') {
+    return { kind: 'heal', effect, hits, recoveryRate: number(healRecovery, 100), ratio: 1 };
+  }
 
   if (basicAttack !== undefined && MAGIC_DAMAGE_SKILLS.has(name)) {
     return { kind: 'magic', effect, hits, basicAttack: number(basicAttack, 0), ratio: 1 };
@@ -110,40 +128,133 @@ function getSkillLevel(skills = [], pattern) {
   return roundSkillValue((skills ?? []).find((skill) => pattern.test(String(skill.name ?? '')))?.level);
 }
 
-function getPhysicalMasteryRatio(skills = []) {
-  const mastery = getSkillLevel(skills, /mastery/i);
-  if (!mastery) return 0;
-  return Math.min(0.6, Math.max(0.3, 0.15 + mastery * 0.02));
+function getMasteryRatio(skills = []) {
+  const masteryLevel = getSkillLevel(skills, /mastery/i);
+  if (!masteryLevel) return 0.1 * 0.8;
+  return (0.1 + masteryLevel / 10) * 0.8;
 }
 
-function getClassPhysicalTuning(classId) {
-  return PHYSICAL_RANGE_TUNING[classId] ?? DEFAULT_PHYSICAL_RANGE_TUNING;
+function getStats(args = {}) {
+  const stats = args.statPlan?.stats ?? args.stats ?? {};
+  return {
+    STR: number(stats.STR),
+    DEX: number(stats.DEX),
+    INT: number(stats.INT),
+    LUK: number(stats.LUK),
+  };
 }
 
-function getBasePhysicalRange(args = {}, skills = []) {
-  // mainAttack arrives from AppMediaEnhanced's old dashboard estimator. That value
-  // was too high to use directly as Maple max damage, which caused 2-hit skills
-  // such as Lucky Seven and Double Shot to appear massively inflated. Until the
-  // UI passes raw STR/DEX/INT/LUK + weapon data into this module, keep this
-  // class-aware normalization here so every class uses the same corrected core.
-  const oldEstimatedMax = Math.max(1, number(args.mainAttack, 1));
-  const tuning = getClassPhysicalTuning(args.classId);
-  const max = Math.max(1, Math.round(oldEstimatedMax * tuning.maxScale));
-  const masteryRatio = getPhysicalMasteryRatio(skills) || tuning.minRatio;
-  const min = Math.max(1, Math.round(max * masteryRatio));
-  return { min: Math.min(min, max), max };
+function getPrimaryStat(classId, stats) {
+  if (classId === 'magician') return stats.INT;
+  if (classId === 'bowman') return stats.DEX;
+  if (classId === 'thief') return stats.LUK;
+  if (classId === 'pirate') return Math.max(stats.STR, stats.DEX);
+  return stats.STR;
 }
 
-function getMagicRange(args = {}, profile) {
-  const max = Math.max(1, Math.round(number(args.mainAttack, 1) * number(profile.ratio, 1)));
-  return { min: Math.max(1, Math.round(max * 0.65)), max };
+function getSecondaryStat(classId, stats) {
+  if (classId === 'thief') return stats.STR + stats.DEX;
+  if (classId === 'bowman') return stats.STR;
+  if (classId === 'pirate') return Math.min(stats.STR, stats.DEX);
+  if (classId === 'magician') return stats.LUK;
+  return stats.DEX;
 }
 
-function getPhysicalSkillRange(base, profile) {
+function getPhysicalMultipliers(classId, skillName) {
+  return SKILL_WEAPON_MULTIPLIERS[normalizeName(skillName)]
+    ?? WEAPON_MULTIPLIERS[classId]
+    ?? DEFAULT_WEAPON_MULTIPLIER;
+}
+
+function getExplicitWeaponAttack(args = {}) {
+  const direct = number(args.weaponAttack, 0) || number(args.watk, 0) || number(args.attackPower, 0);
+  if (direct > 0) return direct;
+
+  const weapon = args.weapon ?? args.gear?.find?.((item) => item?.slot === 'weapon');
+  const fromWeapon = number(weapon?.incPAD, 0) || number(weapon?.stats?.incPAD, 0);
+  const fromGear = (args.gear ?? []).reduce((sum, item) => (
+    sum + number(item?.incPAD, 0) + number(item?.stats?.incPAD, 0)
+  ), 0);
+  return fromWeapon || fromGear;
+}
+
+function deriveWeaponAttackFromLegacyMax({ args, stats, multiplier, skillMult = 1 }) {
+  const legacyMax = Math.max(1, number(args.mainAttack, 1));
+  const classScale = LEGACY_MAIN_ATTACK_SCALE[args.classId] ?? DEFAULT_LEGACY_SCALE;
+  const normalizedMax = Math.max(1, legacyMax * classScale);
+  const primary = getPrimaryStat(args.classId, stats);
+  const secondary = getSecondaryStat(args.classId, stats);
+  const attackPower = number(args.attackPower, 0);
+  const denominator = skillMult * ((100 + primary * multiplier.max + secondary + attackPower) / 100);
+  if (denominator <= 0) return Math.max(1, normalizedMax);
+  return Math.max(1, normalizedMax / denominator);
+}
+
+function getWeaponAttack(args, stats, multiplier, skillMult = 1) {
+  return getExplicitWeaponAttack(args) || deriveWeaponAttackFromLegacyMax({ args, stats, multiplier, skillMult });
+}
+
+function getBasePhysicalRange(args = {}, skills = [], skillName = 'Base Attack', skillMult = 1) {
+  const stats = getStats(args);
+  if (!stats.STR && !stats.DEX && !stats.INT && !stats.LUK) {
+    const max = Math.max(1, Math.round(number(args.mainAttack, 1) * (LEGACY_MAIN_ATTACK_SCALE[args.classId] ?? DEFAULT_LEGACY_SCALE)));
+    const min = Math.max(1, Math.round(max * getMasteryRatio(skills)));
+    return { min: Math.min(min, max), max };
+  }
+
+  const multiplier = getPhysicalMultipliers(args.classId, skillName);
+  const primary = getPrimaryStat(args.classId, stats);
+  const secondary = getSecondaryStat(args.classId, stats);
+  const attackPower = number(args.attackPower, 0);
+  const mastery = getMasteryRatio(skills);
+  const weaponAttack = getWeaponAttack(args, stats, multiplier, skillMult);
+
+  const min = skillMult * ((80 + primary * multiplier.min * mastery + secondary + attackPower) / 100) * weaponAttack;
+  const max = skillMult * ((100 + primary * multiplier.max + secondary + attackPower) / 100) * weaponAttack;
+
+  return {
+    min: Math.max(1, Math.round(Math.min(min, max))),
+    max: Math.max(1, Math.round(Math.max(min, max))),
+  };
+}
+
+function getMagicAttack(args = {}) {
+  return number(args.magicAttack, 0)
+    || number(args.matk, 0)
+    || number(args.mainAttack, 1);
+}
+
+function getMagicRange(args = {}, profile, skills = []) {
+  const magicAttack = Math.max(1, getMagicAttack(args));
+  const mastery = getMasteryRatio(skills);
+  const basicAttack = Math.max(0, number(profile.basicAttack, 0));
+  const min = (basicAttack + magicAttack / 7.0) * ((magicAttack * 2 * mastery + magicAttack) / 100.0 + 1.0);
+  const max = (basicAttack + magicAttack / 7.0) * ((magicAttack * 2 + magicAttack) / 100.0 + 1.0);
+  return {
+    min: Math.max(1, Math.round(Math.min(min, max))),
+    max: Math.max(1, Math.round(Math.max(min, max))),
+  };
+}
+
+function getMagicPercentRange(args = {}, profile, skills = []) {
+  const range = getMagicRange(args, { ...profile, basicAttack: 0 }, skills);
   const ratio = Math.max(0.01, number(profile.ratio, 1));
   return {
-    min: Math.max(1, Math.round(base.min * ratio)),
-    max: Math.max(1, Math.round(base.max * ratio)),
+    min: Math.max(1, Math.round(range.min * ratio)),
+    max: Math.max(1, Math.round(range.max * ratio)),
+  };
+}
+
+function getHealRange(args = {}, profile) {
+  const stats = getStats(args);
+  const magicAttack = Math.max(1, getMagicAttack(args));
+  const targetsHit = Math.max(1, number(args.targetsHit, 1));
+  const recoveryRate = Math.max(1, number(profile.recoveryRate, 100));
+  const min = ((stats.INT * 0.5 + stats.LUK) / 200.0 + 3.0) * magicAttack * (recoveryRate / 100.0) * (targetsHit * 0.1 + 1.0) / targetsHit * 0.5;
+  const max = ((stats.INT * 0.8 + stats.LUK) / 200.0 + 3.0) * magicAttack * (recoveryRate / 100.0) * (targetsHit * 0.1 + 1.0) / targetsHit * 0.5;
+  return {
+    min: Math.max(1, Math.round(Math.min(min, max))),
+    max: Math.max(1, Math.round(Math.max(min, max))),
   };
 }
 
@@ -173,15 +284,19 @@ function makeDamageCard({ skill, profile, range, isBase = false }) {
 }
 
 function buildDamageCards(skills = [], args = {}) {
-  const base = getBasePhysicalRange(args, skills);
+  const base = getBasePhysicalRange(args, skills, 'Base Attack', 1);
   const cards = skills
     .filter(isDamageSkill)
     .map((skill) => {
       const profile = parseDamageProfile(skill);
       if (!profile) return null;
       const range = profile.kind === 'magic'
-        ? getMagicRange(args, profile)
-        : getPhysicalSkillRange(base, profile);
+        ? getMagicRange(args, profile, skills)
+        : profile.kind === 'magic-percent'
+          ? getMagicPercentRange(args, profile, skills)
+          : profile.kind === 'heal'
+            ? getHealRange(args, profile)
+            : getBasePhysicalRange(args, skills, skill.name, profile.ratio);
       return makeDamageCard({ skill, profile, range });
     })
     .filter(Boolean)
