@@ -8,7 +8,21 @@ const JOB_AP_MINIMUMS = {
   thief: { DEX: 25 },
   pirate: { DEX: 20 },
 };
+
+const ROUTE_HIT_TARGETS = {
+  low: { stable: 0.96, exp: 0.92, material: 0.94, meso: 0.95 },
+  mid: { stable: 0.9, exp: 0.84, material: 0.88, meso: 0.89 },
+  high: { stable: 0.82, exp: 0.78, material: 0.8, meso: 0.8 },
+};
+
+const FLOW_SECONDARY_RATIOS = {
+  warrior: { high: 0.18, mid: 0.32 },
+  thief: { high: 0.2, mid: 0.34 },
+  pirate: { high: 0.18, mid: 0.3 },
+};
+
 const clamp = (value, min, max) => Math.min(Math.max(Number(value) || min, min), max);
+const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
 
 function normalizeSkillBonuses(raw = {}) {
   return {
@@ -91,35 +105,43 @@ export function getTotalApPool(level) {
 
 export function getRecommendedApAllocation(classLine, level, custom = {}) {
   const safeLevel = clamp(level, 1, 200);
-  const levelUpAp = getTotalApFromLevel(safeLevel);
   const totalAp = getTotalApPool(safeLevel);
   const primary = classLine.primaryStat;
   const secondary = classLine.secondaryStat;
   const budget = custom.budget ?? 'mid';
-  const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget);
-  const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget);
   const minStats = getMinimumStatsForClass(classLine.id);
-  const allocation = normalizeLevel10BaseStats(classLine.baseStats, primary, classLine.id);
+  const baseStats = normalizeLevel10BaseStats(classLine.baseStats, primary, classLine.id);
 
-  const secondaryNeeded = Math.max(0, secondaryTarget - (allocation[secondary] ?? minStats[secondary]));
-  let secondaryAdded = Math.min(levelUpAp, secondaryNeeded);
-  let primaryAdded = Math.max(0, levelUpAp - secondaryAdded);
-
-  if (classLine.id !== 'magician' && accuracyTarget > 0) {
-    let safety = 0;
-    while (secondaryAdded < levelUpAp && safety < levelUpAp) {
-      const currentStats = buildStatsForAccuracy(allocation, primary, primaryAdded, secondary, secondaryAdded);
-      const currentAccuracy = estimateAccuracy(classLine.id, currentStats, safeLevel);
-      if (currentAccuracy >= accuracyTarget) break;
-      secondaryAdded += 1;
-      primaryAdded = Math.max(0, primaryAdded - 1);
-      safety += 1;
-    }
+  if (classLine.id === 'magician') {
+    const targetLuk = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget, custom);
+    return allocatePrimaryAfterSecondary({ baseStats, primary, secondary, secondaryTarget: targetLuk, totalAp, minStats });
   }
 
-  allocation[secondary] = (allocation[secondary] ?? minStats[secondary]) + secondaryAdded;
-  allocation[primary] = (allocation[primary] ?? minStats[primary]) + primaryAdded;
-  return sanitizeFinalApAllocation(allocation, totalAp, minStats);
+  const conventionalSecondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget, custom);
+  const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget, custom);
+  const skillBonuses = normalizeSkillBonuses(custom.skillBonuses);
+  const estimatedGearAcc = estimateBudgetGearAccuracy(classLine.id, safeLevel, budget);
+  const routeSecondaryTarget = chooseSecondaryForAccuracy({
+    classLine,
+    baseStats,
+    primary,
+    secondary,
+    conventionalSecondaryTarget,
+    totalAp,
+    minStats,
+    accuracyTarget,
+    bonusAccuracy: skillBonuses.accuracy + estimatedGearAcc,
+    budget,
+  });
+
+  return allocatePrimaryAfterSecondary({
+    baseStats,
+    primary,
+    secondary,
+    secondaryTarget: routeSecondaryTarget,
+    totalAp,
+    minStats,
+  });
 }
 
 export function buildStatPlan(classLine, level, custom = {}) {
@@ -134,10 +156,10 @@ export function buildStatPlan(classLine, level, custom = {}) {
   const levelUpAp = getTotalApFromLevel(safeLevel);
   const totalAp = getTotalApPool(safeLevel);
   const budget = custom.budget ?? 'mid';
-  const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget);
-  const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget);
+  const secondaryTarget = custom.secondaryTarget ?? inferSecondaryTarget(classLine.id, safeLevel, budget, custom);
+  const accuracyTarget = custom.accuracyTarget ?? inferAccuracyTarget(classLine.id, safeLevel, budget, custom);
   const recommendedAllocation = getRecommendedApAllocation(classLine, safeLevel, custom);
-  const allocation = resolveFinalApAllocation(custom.apAllocation, baseStats, recommendedAllocation, totalAp, minStats);
+  const allocation = resolveFinalApAllocation(custom.apAllocation, baseStats, recommendedAllocation, totalAp, minStats, classLine, safeLevel, custom);
   const stats = { ...allocation };
 
   for (const key of STAT_KEYS) {
@@ -185,23 +207,88 @@ export function buildStatPlan(classLine, level, custom = {}) {
   };
 }
 
-function resolveFinalApAllocation(customAllocation, baseStats, recommendedAllocation, totalAp, minStats) {
+function allocatePrimaryAfterSecondary({ baseStats, primary, secondary, secondaryTarget, totalAp, minStats }) {
+  const allocation = { ...baseStats };
+  const baseSecondary = allocation[secondary] ?? minStats[secondary];
+  const targetSecondary = Math.max(baseSecondary, Math.floor(Number(secondaryTarget ?? baseSecondary)));
+  const extraAp = Math.max(0, Number(totalAp) - getStatTotal(allocation));
+  const addSecondary = Math.min(extraAp, Math.max(0, targetSecondary - baseSecondary));
+
+  allocation[secondary] = baseSecondary + addSecondary;
+  allocation[primary] = (allocation[primary] ?? minStats[primary]) + Math.max(0, extraAp - addSecondary);
+  return sanitizeFinalApAllocation(allocation, totalAp, minStats);
+}
+
+function chooseSecondaryForAccuracy({ classLine, baseStats, primary, secondary, conventionalSecondaryTarget, totalAp, minStats, accuracyTarget, bonusAccuracy, budget }) {
+  if (budget !== 'low') return conventionalSecondaryTarget;
+
+  const extraAp = Math.max(0, Number(totalAp) - getStatTotal(baseStats));
+  const baseSecondary = baseStats[secondary] ?? minStats[secondary];
+  const maxSecondary = baseSecondary + extraAp;
+  const floorTarget = Math.max(baseSecondary, Math.floor(Number(conventionalSecondaryTarget ?? baseSecondary)));
+
+  for (let candidate = floorTarget; candidate <= maxSecondary; candidate += 1) {
+    const allocation = allocatePrimaryAfterSecondary({ baseStats, primary, secondary, secondaryTarget: candidate, totalAp, minStats });
+    const acc = estimateAccuracy(classLine.id, allocation) + Number(bonusAccuracy ?? 0);
+    if (acc >= accuracyTarget) return candidate;
+  }
+
+  return maxSecondary;
+}
+
+function resolveFinalApAllocation(customAllocation, baseStats, recommendedAllocation, totalAp, minStats, classLine, level, custom = {}) {
   if (!customAllocation || typeof customAllocation !== 'object') {
     return sanitizeFinalApAllocation(recommendedAllocation, totalAp, minStats);
   }
 
   const values = STAT_KEYS.map((key) => Number(customAllocation?.[key] ?? 0) || 0);
   const looksLikeFinalStats = values.every((value, index) => value >= minStats[STAT_KEYS[index]]);
+  const requested = looksLikeFinalStats ? customAllocation : migrateAddedApToFinalStats(customAllocation, baseStats, minStats);
+  const sanitized = sanitizeFinalApAllocation(requested, totalAp, minStats);
 
-  if (looksLikeFinalStats) {
-    return sanitizeFinalApAllocation(customAllocation, totalAp, minStats);
+  if (shouldUseCurrentRecommendationInsteadOfSaved(sanitized, recommendedAllocation, classLine, level, custom)) {
+    return sanitizeFinalApAllocation(recommendedAllocation, totalAp, minStats);
   }
 
+  return sanitized;
+}
+
+function migrateAddedApToFinalStats(customAllocation, baseStats, minStats) {
   const migrated = { ...baseStats };
   for (const key of STAT_KEYS) {
     migrated[key] = (migrated[key] ?? minStats[key]) + Math.max(0, Math.floor(Number(customAllocation?.[key] ?? 0)));
   }
-  return sanitizeFinalApAllocation(migrated, totalAp, minStats);
+  return migrated;
+}
+
+function shouldUseCurrentRecommendationInsteadOfSaved(saved, recommended, classLine, level, custom = {}) {
+  const budget = custom.budget ?? 'mid';
+  const primary = classLine.primaryStat;
+  const secondary = classLine.secondaryStat;
+  if (sameApAllocation(saved, recommended)) return false;
+
+  for (const otherBudget of ['low', 'mid', 'high']) {
+    if (otherBudget === budget) continue;
+    const otherRecommended = getRecommendedApAllocation(classLine, level, { ...custom, budget: otherBudget, apAllocation: undefined });
+    if (sameApAllocation(saved, otherRecommended)) return true;
+  }
+
+  const savedSecondary = Number(saved?.[secondary] ?? 0);
+  const recommendedSecondary = Number(recommended?.[secondary] ?? 0);
+  const savedPrimary = Number(saved?.[primary] ?? 0);
+  const recommendedPrimary = Number(recommended?.[primary] ?? 0);
+
+  // Saved AP from earlier versions can make 有钱流 and 穷鬼流 look identical.
+  // If the saved distribution clearly fights the current budget profile, treat it
+  // as stale system output and let the route-specific recommendation win.
+  if (budget === 'high' && savedSecondary > recommendedSecondary + 8 && savedPrimary < recommendedPrimary) return true;
+  if (budget === 'low' && savedSecondary + 8 < recommendedSecondary && savedPrimary > recommendedPrimary) return true;
+
+  return false;
+}
+
+function sameApAllocation(left = {}, right = {}) {
+  return STAT_KEYS.every((key) => Math.floor(Number(left?.[key] ?? 0)) === Math.floor(Number(right?.[key] ?? 0)));
 }
 
 function sanitizeFinalApAllocation(allocation, totalAp, minStats = getMinimumStatsForClass('')) {
@@ -234,73 +321,135 @@ function sanitizeFinalApAllocation(allocation, totalAp, minStats = getMinimumSta
   return next;
 }
 
-function buildStatsForAccuracy(baseStats, primary, primaryAdded, secondary, secondaryAdded) {
-  const stats = { ...baseStats };
-  stats[primary] = (stats[primary] ?? 0) + (primaryAdded ?? 0);
-  stats[secondary] = (stats[secondary] ?? 0) + (secondaryAdded ?? 0);
-  return stats;
-}
+function inferSecondaryTarget(classId, level, budget = 'mid', custom = {}) {
+  const safeLevel = Number(level) || 1;
+  const levelUpAp = getTotalApFromLevel(safeLevel);
+  const base = getNormalizedBaseSecondary(classId);
 
-function inferSecondaryTarget(classId, level, budget = 'mid') {
   if (classId === 'magician') {
-    if (budget === 'low') return Math.max(8, Math.round(level * 0.78));
-    if (budget === 'high') return Math.max(8, level + 3);
-    return Math.max(8, Math.round(level * 0.92));
-  }
-
-  if (classId === 'warrior') {
-    if (budget === 'low') return Math.min(100, Math.max(24, Math.round(level * 1.42)));
-    if (budget === 'high') return Math.min(85, Math.max(18, Math.round(level * 1.08)));
-    return Math.min(92, Math.max(20, Math.round(level * 1.25)));
+    if (budget === 'low') return Math.max(8, Math.round(safeLevel * 0.72));
+    if (budget === 'high') return Math.max(8, Math.round(safeLevel * 0.95));
+    return Math.max(8, Math.round(safeLevel * 0.84));
   }
 
   if (classId === 'bowman') {
-    // Bowman secondary STR gates bow upgrades. 穷鬼流 should lag a little,
-    // but at Lv.50 it still needs enough STR to see/use mid-late bows instead of
-    // being stuck on Lv.20 Hunter's Bow.
-    if (budget === 'low') return Math.min(70, Math.max(15, Math.round(level * 0.86) + 2));
-    if (budget === 'high') return Math.min(90, Math.max(20, level + 5));
-    return Math.min(85, Math.max(18, level + 3));
+    if (budget === 'low') return Math.min(70, Math.max(15, Math.round(safeLevel * 0.86) + 2));
+    if (budget === 'high') return Math.min(90, Math.max(20, safeLevel + 5));
+    return Math.min(85, Math.max(18, safeLevel + 3));
   }
 
-  if (classId === 'thief') {
-    if (budget === 'low') return Math.min(110, Math.max(28, Math.round(level * 1.48)));
-    if (budget === 'high') return Math.min(95, Math.max(24, Math.round(level * 1.22)));
-    return Math.min(100, Math.max(25, Math.round(level * 1.36)));
-  }
+  const ratio = FLOW_SECONDARY_RATIOS[classId]?.[budget];
+  if (ratio !== undefined) return Math.max(base, Math.round(base + levelUpAp * ratio));
 
-  if (classId === 'pirate') {
-    if (budget === 'low') return Math.min(95, Math.max(20, Math.round(level * 1.12)));
-    if (budget === 'high') return Math.min(95, Math.max(20, Math.round(level * 0.92)));
-    return Math.min(90, Math.max(20, Math.round(level * 1.0)));
-  }
-
-  return Math.max(20, level);
+  if (budget === 'high') return Math.max(base, Math.round(safeLevel * 0.55));
+  return Math.max(base, Math.round(safeLevel * 0.9));
 }
 
-function inferAccuracyTarget(classId, level, budget = 'mid') {
+function inferAccuracyTarget(classId, level, budget = 'mid', custom = {}) {
   if (classId === 'magician') return 0;
-  if (classId === 'warrior') {
-    if (budget === 'low') return Math.round(level * 0.62 + 12);
-    if (budget === 'high') return Math.round(level * 0.52 + 10);
-    return Math.round(level * 0.56 + 11);
+  const safeLevel = Number(level) || 1;
+  const priority = custom.priority ?? 'stable';
+  const routeTarget = inferRouteTargetMonster(classId, safeLevel, budget, priority);
+  const desiredHit = ROUTE_HIT_TARGETS[budget]?.[priority] ?? ROUTE_HIT_TARGETS[budget]?.stable ?? 0.9;
+  const requiredTotalAcc = getAccuracyForHitRate({
+    characterLevel: safeLevel,
+    monsterLevel: routeTarget.level,
+    avoid: routeTarget.avoid,
+    desiredHitRate: desiredHit,
+  });
+  const skillAcc = normalizeSkillBonuses(custom.skillBonuses).accuracy;
+  const gearAcc = estimateBudgetGearAccuracy(classId, safeLevel, budget);
+  return Math.max(0, Math.ceil(requiredTotalAcc - skillAcc - gearAcc));
+}
+
+function getNormalizedBaseSecondary(classId) {
+  if (classId === 'warrior') return 15;
+  if (classId === 'thief') return 25;
+  if (classId === 'pirate') return 20;
+  return 4;
+}
+
+function inferRouteTargetMonster(classId, level, budget, priority) {
+  const overLevel = getTargetOverLevel(classId, level, budget, priority);
+  const targetLevel = Math.max(1, Math.round(level + overLevel));
+  return {
+    level: targetLevel,
+    avoid: estimateMonsterAvoid(targetLevel),
+  };
+}
+
+function getTargetOverLevel(classId, level, budget, priority) {
+  if (budget === 'low') {
+    if (priority === 'exp') return level >= 30 ? 3 : level >= 18 ? 2 : 1;
+    if (classId === 'warrior') return level >= 25 ? 2 : 1;
+    return level >= 25 ? 2 : 1;
   }
-  if (classId === 'bowman') {
-    if (budget === 'low') return Math.round(level * 0.42 + 11);
-    if (budget === 'high') return Math.round(level * 0.34 + 9);
-    return Math.round(level * 0.38 + 10);
+  if (budget === 'high') {
+    if (priority === 'exp') return level >= 30 ? 6 : 4;
+    return level >= 30 ? 4 : 3;
   }
-  if (classId === 'thief') {
-    if (budget === 'low') return Math.round(level * 0.48 + 13);
-    if (budget === 'high') return Math.round(level * 0.38 + 10);
-    return Math.round(level * 0.43 + 12);
+  return level >= 30 ? 3 : 2;
+}
+
+function estimateMonsterAvoid(monsterLevel) {
+  const level = Math.max(1, Number(monsterLevel) || 1);
+  if (level <= 10) return Math.max(1, Math.round(level * 0.28));
+  if (level <= 25) return Math.round(2 + level * 0.38);
+  if (level <= 45) return Math.round(4 + level * 0.42);
+  return Math.round(7 + level * 0.45);
+}
+
+function estimateBudgetGearAccuracy(classId, level, budget) {
+  if (budget === 'low') {
+    if (classId === 'warrior') return level >= 25 ? 3 : 0;
+    if (classId === 'thief') return level >= 25 ? 2 : 0;
+    return level >= 30 ? 2 : 0;
   }
-  if (classId === 'pirate') {
-    if (budget === 'low') return Math.round(level * 0.46 + 11);
-    if (budget === 'high') return Math.round(level * 0.36 + 9);
-    return Math.round(level * 0.4 + 10);
+  if (budget === 'high') {
+    if (classId === 'warrior') return level >= 25 ? 8 : level >= 15 ? 4 : 1;
+    if (classId === 'thief') return level >= 25 ? 5 : 2;
+    return level >= 25 ? 4 : 2;
   }
-  return Math.round(level * 0.4 + 10);
+  return level >= 25 ? 4 : level >= 15 ? 2 : 0;
+}
+
+function getAccuracyForHitRate({ characterLevel, monsterLevel, avoid, desiredHitRate }) {
+  const desired = clamp01(desiredHitRate);
+  if (desired <= 0) return 0;
+  if (Number(avoid) <= 0) return 0;
+
+  let low = 0;
+  let high = 260;
+  while (getPhysicalHitRate({ accuracy: high, characterLevel, monsterLevel, avoid }) < desired && high < 2000) {
+    high *= 2;
+  }
+
+  for (let i = 0; i < 32; i += 1) {
+    const mid = (low + high) / 2;
+    if (getPhysicalHitRate({ accuracy: mid, characterLevel, monsterLevel, avoid }) >= desired) high = mid;
+    else low = mid;
+  }
+
+  return Math.ceil(high);
+}
+
+function getPhysicalHitRate({ accuracy, characterLevel, monsterLevel, avoid }) {
+  const acc = Number(accuracy) || 0;
+  const eva = Math.max(0, Number(avoid) || 0);
+  if (eva <= 0) return 1;
+  if (acc <= 0) return 0;
+
+  const levelGap = Math.max(0, Number(monsterLevel ?? 1) - Number(characterLevel ?? 1));
+  const a = acc * 100 / ((levelGap + 51) * 5);
+  if (a <= 0) return 0;
+
+  const f = 0.3 / (1 + Math.exp((a - eva) / 12));
+  const minRoll = 0.95 - f;
+  const maxRoll = 1.05 + f;
+  const requiredRoll = eva / a;
+  if (requiredRoll <= minRoll) return 1;
+  if (requiredRoll >= maxRoll) return 0;
+  return clamp01((maxRoll - requiredRoll) / (maxRoll - minRoll));
 }
 
 function inferHpGrowth(classId) {
@@ -318,9 +467,6 @@ function inferMpGrowth(classId, intValue) {
 }
 
 function estimateAccuracy(_classId, stats) {
-  // Physical ACC is universal across classes and weapons:
-  // floor(DEX / 3) + floor(LUK / 6) + 5.
-  // Gear ACC and skill ACC are added separately on top.
   return Math.floor((Number(stats?.DEX) || 0) / 3)
     + Math.floor((Number(stats?.LUK) || 0) / 6)
     + 5;
