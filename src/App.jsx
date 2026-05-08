@@ -629,22 +629,121 @@ function DamageCard({ damageRows }) {
 }
 
 function GearCard({ item }) {
+  const jobLabel = translateJobLabel(item.reqJobLabel);
+  const jobs = ['新手', '战士', '魔法师', '弓箭手', '飞侠'];
+  const activeJobs = getActiveJobs(jobLabel);
+
+  const reqRows = [
+    ['需求等级', item.reqLevel ?? '-'],
+    ['需求力量', item.reqSTR ?? '-'],
+    ['需求敏捷', item.reqDEX ?? '-'],
+    ['需求智力', item.reqINT ?? '-'],
+    ['需求运气', item.reqLUK ?? '-'],
+  ];
+
+  const statRows = [
+    item.weaponType ? ['类型', translateWeaponType(item.weaponType)] : null,
+    item.attackSpeed ? ['攻击速度', translateAttackSpeed(item.attackSpeed)] : null,
+    item.incPAD ? ['武器攻击力', `+${item.incPAD}`] : null,
+    item.incMAD ? ['魔法攻击力', `+${item.incMAD}`] : null,
+    item.incACC ? ['命中率', `+${item.incACC}`] : null,
+    item.tuc != null ? ['可升级次数', item.tuc] : null,
+    item.scoreLabel ? ['参考价格', item.scoreLabel] : null,
+  ].filter(Boolean);
+
   return (
-    <article className="gear-card">
-      {item.thumbnail && <img className="gear-thumb" src={item.thumbnail} alt="" />}
-      <div>
-        <span className="item-label">{item.label} · Lv.{item.reqLevel ?? '-'}</span>
+    <article className="ms-equip-card">
+      <div className="ms-equip-header">装备</div>
+
+      <div className="ms-equip-title">
+        <span className="ms-equip-dot">•</span>
         <h3>{item.title}</h3>
-        <p>{item.desc}</p>
-        <div className="small-tags">
-          {item.weaponType && <span>{item.weaponType}</span>}
-          {item.attackSpeed && <span>{item.attackSpeed}</span>}
-          {item.reqJobLabel && <span>{item.reqJobLabel}</span>}
-          {item.scoreLabel && <span>{item.scoreLabel}</span>}
+      </div>
+
+      <div className="ms-equip-main">
+        <div className="ms-equip-icon-box">
+          {item.thumbnail && <img src={item.thumbnail} alt="" />}
         </div>
+
+        <div className="ms-equip-reqs">
+          {reqRows.map(([label, value]) => (
+            <div className="ms-equip-req-row" key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="ms-equip-job-tabs">
+        {jobs.map((job) => (
+          <span key={job} className={activeJobs.includes(job) ? 'active' : ''}>
+            {job}
+          </span>
+        ))}
+      </div>
+
+      <div className="ms-equip-divider" />
+
+      <div className="ms-equip-stats">
+        {statRows.map(([label, value]) => (
+          <div className="ms-equip-stat-row" key={label}>
+            <span>· {label}：</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
       </div>
     </article>
   );
+}
+
+function translateJobLabel(label) {
+  const value = String(label ?? 'All').toLowerCase();
+  if (value.includes('warrior')) return '战士';
+  if (value.includes('mage') || value.includes('magician')) return '魔法师';
+  if (value.includes('bowman')) return '弓箭手';
+  if (value.includes('thief')) return '飞侠';
+  if (value.includes('pirate')) return '海盗';
+  return '全职业';
+}
+
+function getActiveJobs(jobLabel) {
+  if (jobLabel === '全职业') return ['新手', '战士', '魔法师', '弓箭手', '飞侠'];
+  return [jobLabel];
+}
+
+function translateAttackSpeed(speed) {
+  const map = {
+    Fast: '快',
+    Faster: '更快',
+    Normal: '普通',
+    Slow: '慢',
+    Slower: '较慢',
+    'Very Fast': '非常快',
+    'Very Slow': '非常慢',
+  };
+  return map[speed] ?? speed;
+}
+
+function translateWeaponType(type) {
+  const value = String(type ?? '');
+  const map = {
+    '1H Sword': '单手剑',
+    '2H Sword': '双手剑',
+    Claw: '拳套',
+    Dagger: '短刀',
+    Bow: '弓',
+    Crossbow: '弩',
+    Wand: '短杖',
+    Staff: '长杖',
+    Spear: '枪',
+    Polearm: '长枪',
+    Axe: '斧',
+    Blunt: '钝器',
+    Gun: '枪械',
+    Knuckle: '指节',
+  };
+  return map[value] ?? value;
 }
 
 function SectionCard({ title, children }) {
@@ -870,13 +969,20 @@ function toGearRecommendation(item, slot, classLine) {
     title: item.name,
     desc: `${attackLabel} · 需求 ${formatRequirements(item)}`,
     reqLevel: item.reqLevel,
+    reqSTR: item.reqSTR,
+    reqDEX: item.reqDEX,
+    reqINT: item.reqINT,
+    reqLUK: item.reqLUK,
+    incPAD: item.incPAD,
+    incMAD: item.incMAD,
+    incACC: item.incACC,
+    tuc: item.tuc ?? item.slots ?? item.upgrade_slots,
     thumbnail: item.thumbnail,
     weaponType: item.weapon_type,
     attackSpeed: item.attack_speed_label,
     reqJobLabel: item.req_job_label,
     scoreLabel: item.price ? `${item.price.toLocaleString()} meso` : '无价格数据',
   };
-}
 
 function formatRequirements(item) {
   const reqs = [
