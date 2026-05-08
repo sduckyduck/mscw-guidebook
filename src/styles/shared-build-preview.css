@@ -1,14 +1,19 @@
 .shared-detail-panel {
   max-width: 780px;
-  padding: 14px;
+  padding: 12px;
 }
 
 .compact-detail-head {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .compact-detail-head h2 {
-  font-size: 1.8rem;
+  font-size: 1.42rem;
+  line-height: 1.08;
+}
+
+.compact-detail-head p {
+  font-size: 0.78rem;
 }
 
 .detail-actions {
@@ -30,22 +35,22 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 
 .shared-build-meta-row span {
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   background: rgba(255, 255, 255, 0.12);
   color: rgba(241, 250, 250, 0.94);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 900;
 }
 
 .shared-build-grid {
   display: grid;
   grid-template-columns: 0.82fr 1.18fr;
-  gap: 16px;
+  gap: 12px;
 }
 
 .saved-build-config-panel,
@@ -57,16 +62,22 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.saved-build-config-panel,
+.saved-build-equipment-board {
+  padding: 12px;
+  border-radius: 18px;
+}
+
 .saved-build-config-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
 }
 
 .saved-readonly-field {
-  min-height: 58px;
-  border-radius: 15px;
-  padding: 10px 12px;
+  min-height: 46px;
+  border-radius: 12px;
+  padding: 8px 9px;
   background: rgba(244, 249, 249, 0.94);
   color: #21383d;
   box-sizing: border-box;
@@ -77,15 +88,16 @@
 
 .saved-readonly-field span {
   color: #567177;
-  font-size: 0.76rem;
+  font-size: 0.62rem;
   font-weight: 900;
 }
 
 .saved-readonly-field strong {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: #10252b;
-  font-size: 1rem;
+  font-size: 0.82rem;
+  line-height: 1.08;
   font-weight: 1000;
 }
 
@@ -105,22 +117,30 @@
 
 .saved-map-card {
   cursor: default;
+  padding: 12px;
+  border-radius: 18px;
 }
 
 .saved-map-card:hover {
   transform: none;
 }
 
+.saved-character-preview-card {
+  border-radius: 18px;
+}
+
 .saved-character-preview-card .mg-character-frame {
-  min-height: 215px;
+  min-height: 185px;
 }
 
 .saved-character-preview-card .real-character-preview {
-  transform: scale(1.08);
+  transform: scale(1.02);
 }
 
 .saved-damage-card {
   margin-top: 0;
+  padding: 12px;
+  border-radius: 18px;
 }
 
 .shared-build-dashboard .mg-panel-title,
@@ -129,16 +149,94 @@
   color: #ffffff;
 }
 
+.shared-build-dashboard .mg-panel-title {
+  font-size: 1.18rem !important;
+  line-height: 1.08 !important;
+}
+
+.shared-build-dashboard .mg-stats-title {
+  font-size: 0.9rem !important;
+}
+
+.shared-build-dashboard .mg-status-line,
+.shared-build-dashboard .mg-equipment-head span,
+.shared-build-dashboard .mg-overview-damage-head span {
+  font-size: 0.68rem;
+}
+
+.shared-build-dashboard .mg-status-line strong {
+  font-size: 0.88rem;
+}
+
+.shared-build-dashboard .mg-overview-damage-head h2 {
+  font-size: 1.14rem !important;
+}
+
 .shared-build-dashboard .mg-overview-damage-row {
+  min-height: 48px;
+  padding: 8px 10px;
   background: rgba(248, 251, 251, 0.96);
 }
 
+.shared-build-dashboard .mg-overview-damage-row strong {
+  font-size: 0.82rem;
+}
+
+.shared-build-dashboard .mg-overview-damage-row span {
+  font-size: 0.62rem;
+}
+
+.shared-build-dashboard .mg-overview-damage-row em {
+  font-size: 0.82rem;
+}
+
+.shared-build-dashboard .mg-overview-damage-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.shared-build-dashboard .mg-overview-damage-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.shared-build-dashboard .mg-overview-damage-icon span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: 0.64rem;
+  line-height: 1;
+}
+
 .shared-build-dashboard .mg-stat-box {
+  min-height: 48px;
+  padding: 8px 10px;
   background: rgba(248, 251, 251, 0.96);
+}
+
+.shared-build-dashboard .mg-stat-box span {
+  font-size: 0.62rem;
+}
+
+.shared-build-dashboard .mg-stat-box strong {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.shared-build-dashboard .mg-stat-breakdown {
+  font-size: 0.68rem;
 }
 
 .shared-build-dashboard .preview-meta {
   color: #11262c;
+  font-size: 0.82rem;
 }
 
 .shared-build-dashboard .preview-meta strong {
@@ -150,23 +248,64 @@
 }
 
 .shared-build-dashboard .mg-equipment-grid {
-  gap: 8px;
+  gap: 7px;
 }
 
 .shared-build-dashboard .mg-equip-tile {
   border: 0;
+  min-height: 64px;
+  padding: 7px;
+}
+
+.shared-build-dashboard .mg-equip-tile span {
+  font-size: 0.58rem;
+}
+
+.shared-build-dashboard .mg-equip-tile strong {
+  font-size: 0.66rem;
+  line-height: 1.05;
+}
+
+.shared-build-dashboard .mg-left-stack,
+.shared-build-dashboard .mg-right-stack {
+  gap: 12px;
+}
+
+.shared-build-dashboard .mg-map-thumb {
+  max-width: 92px;
+  max-height: 58px;
 }
 
 @media (max-width: 900px) {
   .shared-detail-panel {
     max-width: 100%;
+    padding: 10px;
   }
 
   .shared-build-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 0.82fr 1.18fr;
+    gap: 10px;
   }
 
   .detail-actions {
     justify-content: flex-start;
+  }
+
+  .compact-detail-head h2 {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .shared-build-grid {
+    grid-template-columns: 0.82fr 1.18fr;
+  }
+
+  .shared-build-dashboard .mg-panel-title {
+    font-size: 1.02rem !important;
+  }
+
+  .saved-readonly-field strong {
+    font-size: 0.76rem;
   }
 }
