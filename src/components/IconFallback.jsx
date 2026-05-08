@@ -4,30 +4,33 @@ const IMAGE_EXTENSIONS = ['png', 'webp', 'gif', 'jpg', 'jpeg'];
 const REPO_ICON_API = 'https://api.github.com/repos/sduckyduck/mscw-guidebook/contents/public/icons?ref=main';
 const IMAGE_RE = /\.(png|webp|gif|jpe?g)$/i;
 
+// MSCW/GMS classic skill ids used only as fallback image candidates.
+// The app still prefers official thumbnail paths from skills.json when they exist.
 const SKILL_ICON_IDS = {
   'base attack': '',
+  'basic attack': '',
   '普通攻击': '',
 
   'improved hp recovery': '1000000',
-  'improved max hp increase': '1000001',
   'max hp increase': '1000001',
-  'iron body': '1001003',
-  'power strike': '1001004',
-  'slash blast': '1001005',
+  'improved max hp increase': '1000001',
   'precise strikes': '1000002',
+  'iron body': '1001000',
+  'power strike': '1001001',
+  'slash blast': '1001002',
 
   'improved mp recovery': '2000000',
   'improved mp': '2000000',
   'max mp increase': '2000001',
   'max mp inc': '2000001',
-  'magic guard': '2001002',
-  'magic armor': '2001003',
-  'energy bolt': '2001004',
-  'magic claw': '2001005',
+  'magic guard': '2001001',
+  'magic armor': '2001002',
+  'energy bolt': '2001003',
+  'magic claw': '2001004',
 
   'mp eater': '2100000',
   'meditation': '2101001',
-  'teleport': '2001009',
+  'teleport': '2101002',
   'slow': '2101003',
   'fire arrow': '2101004',
   'poison breath': '2101005',
@@ -40,6 +43,7 @@ const SKILL_ICON_IDS = {
 
   'the eye of amazon': '3000000',
   'critical shot': '3000001',
+  'amazons judgement': '3000002',
   "amazon's judgement": '3000002',
   'focus': '3001003',
   'arrow blow': '3001004',
@@ -74,19 +78,19 @@ const SKILL_ICON_IDS = {
 
   'sword mastery': '1100000',
   'axe mastery': '1100001',
-  'final attack sword': '1100002',
-  'final attack axe': '1100003',
-  'sword booster': '1101004',
-  'axe booster': '1101005',
-  'rage': '1101006',
-  'power guard': '1101007',
+  'final attack sword': '1101000',
+  'final attack axe': '1101001',
+  'sword booster': '1101002',
+  'axe booster': '1101003',
+  'rage': '1101004',
+  'power guard': '1101005',
   'threaten': '1201006',
   'spear mastery': '1300000',
   'pole arm mastery': '1300001',
-  'final attack spear': '1300002',
-  'final attack pole arm': '1300003',
-  'spear booster': '1301004',
-  'pole arm booster': '1301005',
+  'final attack spear': '1301000',
+  'final attack pole arm': '1301001',
+  'spear booster': '1301002',
+  'pole arm booster': '1301003',
   'iron will': '1301006',
   'hyper body': '1301007',
 };
@@ -120,6 +124,14 @@ function normalizeSkillName(value) {
     .trim();
 }
 
+function stripExt(value) {
+  return String(value || '').replace(/\.(png|webp|gif|jpe?g)$/i, '');
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
 function padSkillId(value) {
   return String(value ?? '').replace(/^0+/, '').padStart(7, '0');
 }
@@ -137,28 +149,49 @@ function getSkillIconId(name) {
   return SKILL_ICON_IDS[withoutSuffix] ?? '';
 }
 
+function encodeFileName(value) {
+  return encodeURIComponent(String(value || '').trim().replace(/\s+/g, '_'));
+}
+
+function wikiSkillIconSources(name) {
+  const clean = stripExt(String(name || '').trim());
+  if (!clean || clean === 'Base Attack' || clean === '基础攻击') return [];
+  const variants = unique([
+    clean,
+    `Skill ${clean}`,
+    `Skill_${clean}`,
+    clean.replace(/:/g, ''),
+    clean.replace(/:/g, ' -'),
+    clean.replace(/:/g, '_'),
+  ]);
+
+  return variants.flatMap((variant) => {
+    const file = encodeFileName(`${variant}.png`);
+    return [
+      `https://maplestory.fandom.com/wiki/Special:Redirect/file/${file}`,
+      `https://strategywiki.org/wiki/Special:Redirect/file/${file}`,
+      `https://maplewiki.net/images/${file}`,
+    ];
+  });
+}
+
 function skillIconSources(name) {
   const id = getSkillIconId(name);
-  if (!id) return [];
+  const wikiSources = wikiSkillIconSources(name);
+  if (!id) return wikiSources;
   const clean = String(id).replace(/^0+/, '');
   return [
     `${baseUrl()}AppData/images/skills/${padSkillId(clean)}.png`,
     `${baseUrl()}AppData/images/skills/${clean}.png`,
     `https://maplestory.io/api/MCW/1/skill/${clean}/icon`,
     `https://maplestory.io/api/GMS/83/skill/${clean}/icon`,
+    `https://maplestory.io/api/GMS/62/skill/${clean}/icon`,
+    ...wikiSources,
   ];
 }
 
 function normalizeKey(value) {
   return slugifyIconName(value).replace(/-/g, '');
-}
-
-function stripExt(value) {
-  return String(value || '').replace(/\.(png|webp|gif|jpe?g)$/i, '');
-}
-
-function unique(values) {
-  return [...new Set(values.filter(Boolean))];
 }
 
 export function iconSourcesFromNames(names, folders = ['icons'], extensions = IMAGE_EXTENSIONS) {
@@ -172,15 +205,11 @@ export function iconSourcesFromNames(names, folders = ['icons'], extensions = IM
     for (const folder of folders) {
       const folderPath = folder.replace(/^\/+|\/+$/g, '');
       for (const variant of variants) {
-        for (const ext of extensions) {
-          output.push(`${baseUrl()}${folderPath}/${variant}.${ext}`);
-        }
+        for (const ext of extensions) output.push(`${baseUrl()}${folderPath}/${variant}.${ext}`);
       }
     }
     for (const variant of variants) {
-      for (const ext of extensions) {
-        output.push(`${root}/${variant}.${ext}`);
-      }
+      for (const ext of extensions) output.push(`${root}/${variant}.${ext}`);
     }
   }
   return unique(output);
@@ -202,22 +231,15 @@ async function walkGithubContents(url, depth = 0) {
   const entries = await fetchJson(url);
   if (!Array.isArray(entries)) return [];
   const files = [];
-
   for (const entry of entries) {
     if (entry.type === 'file' && IMAGE_RE.test(entry.name)) {
-      files.push({
-        name: entry.name,
-        path: entry.path,
-        url: sameOriginPublicIconUrl(entry),
-        folder: entry.path.split('/').slice(0, -1).join('/'),
-      });
+      files.push({ name: entry.name, path: entry.path, url: sameOriginPublicIconUrl(entry), folder: entry.path.split('/').slice(0, -1).join('/') });
     }
     if (entry.type === 'dir' && entry.url) {
       const nested = await walkGithubContents(entry.url, depth + 1).catch(() => []);
       files.push(...nested);
     }
   }
-
   return files;
 }
 
@@ -233,11 +255,7 @@ export async function getIconFiles({ force = false } = {}) {
 }
 
 function cleanFolder(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/^public\//, '')
-    .replace(/\/+/g, '/')
-    .replace(/^\/+|\/+$/g, '');
+  return String(value || '').toLowerCase().replace(/^public\//, '').replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
 }
 
 function folderMatches(file, folders) {
@@ -260,7 +278,6 @@ function scoreFile(file, names, folders) {
   const filePath = normalizeKey(stripExt(file.path));
   const queryKeys = unique(names.map((name) => normalizeKey(name)).filter(Boolean));
   if (!queryKeys.length) return -1;
-
   let score = -1;
   for (const key of queryKeys) {
     if (!key) continue;
@@ -269,7 +286,6 @@ function scoreFile(file, names, folders) {
     else if (fileBase.includes(key) || key.includes(fileBase)) score = Math.max(score, 76);
     else if (filePath.includes(key)) score = Math.max(score, 58);
   }
-
   const folderBonus = folders?.some((folder) => cleanFolder(file.folder).startsWith(cleanFolder(folder))) ? 8 : 0;
   return score < 0 ? score : score + folderBonus;
 }
@@ -287,7 +303,6 @@ export async function discoverIconSources(names, folders = ['icons'], { limit = 
 export function installIconDebugger() {
   if (typeof window === 'undefined' || debugInstalled) return;
   debugInstalled = true;
-
   window.MSCWIcons = {
     list: async (force = false) => {
       const files = await getIconFiles({ force });
@@ -313,7 +328,7 @@ export function installIconDebugger() {
         try {
           const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
           return { ok: res.ok, status: res.status, url };
-        } catch (error) {
+        } catch {
           return { ok: false, status: 'ERR', url };
         }
       }));
@@ -326,8 +341,6 @@ export function installIconDebugger() {
       console.log('MSCW icon cache cleared');
     },
   };
-
-  console.info('MSCW icon debug ready. Try: await MSCWIcons.list(), await MSCWIcons.find("book"), await MSCWIcons.test("Zombie Mushroom", ["icons/monsters", "icons"])');
 }
 
 installIconDebugger();
