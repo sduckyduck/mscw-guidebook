@@ -10,10 +10,15 @@ import { applyGearOverrides, getGearCandidatesBySlot, selectGear } from '../engi
 import { getMapRecommendations } from '../engine/recommendationEngine.js';
 import { rankLevelingMapsByBreakpoints } from '../engine/levelingRouteAlgorithm.js';
 import { loadOfficialGuideData } from '../engine/officialDataAdapter.js';
-import { getRecommendedSkillAllocation, getSkillPlan } from '../engine/skillPlanner.js';
+import { getApNote, getRecommendedSkillAllocation, getSkillPlan } from '../engine/skillPlanner.js';
+import '../styles/dashboard.css';
+import '../styles/character-dashboard.css';
 import '../styles/shared-build-preview.css';
 
 const emptyData = { items: [], maps: [], monsters: [], recipes: [], materials: [], skillGroups: [] };
+const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
+const MIN_STAT_AP = 4;
+const SKILL_ICON_FOLDERS = ['icons/skill', 'icons/skills', 'icons'];
 const SLOTS = [
   ['weapon', '武器'], ['cap', '头盔'], ['overall', '套服'], ['top', '上衣'], ['bottom', '下衣'],
   ['shoes', '鞋子'], ['glove', '手套'], ['shield', '盾牌'], ['cape', '披风'], ['earring', '耳环'],
@@ -75,10 +80,10 @@ function calcMainAttack(classLine, statPlan, gear = []) {
   return Math.max(1, Math.round(primary * 1.32 + secondary * 0.42 + level * 0.7 + bonuses.WATK * 2.6));
 }
 
-function statRow(label, base, bonus = 0) {
+function statRow(labelText, base, bonus = 0) {
   const roundedBase = Math.round(Number(base) || 0);
   const roundedBonus = Math.round(Number(bonus) || 0);
-  return { label, base: roundedBase, bonus: roundedBonus, value: roundedBase + roundedBonus };
+  return { label: labelText, base: roundedBase, bonus: roundedBonus, value: roundedBase + roundedBonus };
 }
 
 function compactStats(statPlan, classLine, gear = []) {
@@ -170,6 +175,7 @@ export default function SharedBuildPreview({ build }) {
   const bestMap = maps[0];
   const bestMonster = bestMap?.monsters?.[0];
   const weapon = gear.find((item) => item.slot === 'weapon');
+  const apNote = useMemo(() => getApNote({ classLine, statPlan, budget: saved.budget }), [classLine, statPlan, saved.budget]);
 
   return <section className="shared-build-dashboard mg-dashboard">
     <div className="shared-build-meta-row">
@@ -189,6 +195,7 @@ export default function SharedBuildPreview({ build }) {
         <SavedBuildDamagePanel classLine={classLine} skillPlan={skillPlan} />
       </div>
     </div>
+    <SavedBuildSpApPanel classLine={classLine} branch={branch} saved={saved} statPlan={statPlan} skillPlan={skillPlan} apNote={apNote} />
     {error && <p className="community-error">官方数据读取提示：{error}</p>}
   </section>;
 }
@@ -206,9 +213,9 @@ function SavedBuildConfigPanel({ classLine, branch, saved }) {
   </section>;
 }
 
-function ReadonlyField({ label, value }) {
+function ReadonlyField({ label: labelText, value }) {
   return <div className="saved-readonly-field">
-    <span>{label}</span>
+    <span>{labelText}</span>
     <strong>{value}</strong>
   </div>;
 }
@@ -294,7 +301,7 @@ function SavedDamageRow({ card }) {
         className="mg-overview-damage-img"
         sources={card.iconKey ? [`${baseUrl()}${String(card.iconKey).replace(/^\/+/, '')}`] : []}
         names={[card.name]}
-        folders={['icons/skill', 'icons']}
+        folders={SKILL_ICON_FOLDERS}
         alt=""
         fallback={<span>{letters}</span>}
       />
@@ -305,4 +312,124 @@ function SavedDamageRow({ card }) {
     </div>
     <em>{card.min} - {card.max}</em>
   </article>;
+}
+
+function SavedBuildSpApPanel({ classLine, branch, saved, statPlan, skillPlan, apNote }) {
+  const firstJobSkills = skillPlan.skills.filter((skill) => skill.tier !== 'second');
+  const secondJobSkills = skillPlan.skills.filter((skill) => skill.tier === 'second');
+
+  return <section className="saved-spap-panel mg-character-dashboard">
+    <h2 className="saved-spap-title">SP/AP Distribution · 当前 {classLine.name} Lv.{saved.level}</h2>
+    <div className="saved-spap-grid">
+      <div className="mg-left-stack">
+        <section className="mg-glass-panel mg-ap-panel saved-readonly-ap-panel">
+          <ReadonlyPanelHead kicker="AP 加点" title="能力值分配" action="保存配置" />
+          <p className="mg-character-note">{apNote}</p>
+          <div className="mg-character-meter">
+            <span>可分配 AP</span>
+            <strong>{statPlan.remainingAp}</strong>
+            <em>最低值按职业转职要求保护</em>
+          </div>
+          <div className="mg-ap-grid">
+            {STAT_KEYS.map((stat) => {
+              const apValue = statPlan.apAllocation?.[stat] ?? MIN_STAT_AP;
+              const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
+              return <ReadonlyPointRow key={stat} label={stat} value={statPlan.stats?.[stat]} points={apValue} minValue={minValue} />;
+            })}
+          </div>
+        </section>
+
+        <SavedSkillGroupCard
+          title="一转技能"
+          kicker="SP 加点"
+          action="保存配置"
+          note={skillPlan.summary}
+          remaining={skillPlan.remainingByTier?.first ?? 0}
+          total={skillPlan.totalSpByTier?.first ?? 0}
+          skills={firstJobSkills}
+          glass
+        />
+      </div>
+
+      <div className="mg-right-stack saved-spap-right-stack">
+        {secondJobSkills.length > 0 && <SavedSkillGroupCard
+          title="二转技能"
+          kicker={Number(saved.level) > 30 ? '已开放' : 'Lv.30 后开放'}
+          remaining={skillPlan.remainingByTier?.second ?? 0}
+          total={skillPlan.totalSpByTier?.second ?? 0}
+          skills={secondJobSkills}
+          className="mg-second-skill-card"
+        />}
+      </div>
+    </div>
+  </section>;
+}
+
+function ReadonlyPanelHead({ kicker, title, action }) {
+  return <div className="mg-character-panel-head">
+    <div>
+      <span>{kicker}</span>
+      <h2>{title}</h2>
+    </div>
+    {action && <span className="saved-readonly-chip">{action}</span>}
+  </div>;
+}
+
+function ReadonlyPointRow({ label: labelText, value, points, minValue }) {
+  return <article className="mg-ap-box saved-ap-box-readonly">
+    <div>
+      <span>{labelText}</span>
+      <strong>{value}</strong>
+      <em>AP {points} · 最低 {minValue}</em>
+    </div>
+    <div className="mg-mini-controls readonly-controls" aria-hidden="true">
+      <span>-</span>
+      <span>+</span>
+    </div>
+  </article>;
+}
+
+function SavedSkillGroupCard({ title, kicker, action, note, remaining, total, skills, glass = false, className = '' }) {
+  const cardClass = [glass ? 'mg-glass-panel mg-sp-panel' : 'mg-skill-side-card', 'saved-skill-card-readonly', className].filter(Boolean).join(' ');
+  return <section className={cardClass}>
+    <ReadonlyPanelHead kicker={kicker} title={title} action={action} />
+    {note && <p className="mg-character-note saved-skill-note">{note}</p>}
+    <div className="mg-character-meter mg-sp-meter">
+      <span>剩余 SP</span>
+      <strong>{remaining}</strong>
+      <em>{title} {remaining}/{total}</em>
+    </div>
+    <div className="mg-skill-stack compact">
+      {skills.map((skill) => <ReadonlySkillPointRow key={skill.name} skill={skill} />)}
+    </div>
+  </section>;
+}
+
+function ReadonlySkillPointRow({ skill }) {
+  const rowClass = ['mg-skill-row saved-skill-row-readonly', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
+  return <article className={rowClass}>
+    <SkillBadge name={skill.name} iconKey={skill.iconKey} />
+    <div className="mg-skill-main">
+      <strong>{skill.name}</strong>
+      <span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · 已保存'}</span>
+    </div>
+    <div className="mg-mini-controls readonly-controls" aria-hidden="true">
+      <span>-</span>
+      <span>+</span>
+    </div>
+  </article>;
+}
+
+function SkillBadge({ name, iconKey = '' }) {
+  const letters = String(name || '?').replace(/\s+/g, '').slice(0, 2);
+  return <div className="mg-skill-badge">
+    <IconFallback
+      className="mg-skill-icon-img"
+      names={[name]}
+      folders={SKILL_ICON_FOLDERS}
+      sources={iconKey ? [`${baseUrl()}${String(iconKey).replace(/^\/+/, '')}`] : []}
+      alt=""
+      fallback={<span>{letters}</span>}
+    />
+  </div>;
 }
