@@ -10,9 +10,6 @@ function numericLevel(level) {
 }
 
 function secondJobBonusSp(level) {
-  // Job advancement at Lv.30 gives 1 second-job SP immediately.
-  // After that, every new level gives 3 more SP:
-  // Lv.30 = 1, Lv.31 = 4, Lv.32 = 7, ...
   return numericLevel(level) >= 30 ? 1 : 0;
 }
 
@@ -84,46 +81,173 @@ function getSkill(plan, name) {
   return (plan.skills ?? []).find((skill) => skill.name === name);
 }
 
-function addToSkill(plan, name, amount) {
+function addToSkill(plan, name, amount, maxOverride = null) {
   const skill = getSkill(plan, name);
   if (!skill || skill.locked || amount <= 0) return 0;
-  const add = Math.min(amount, Math.max(0, roundSkillValue(skill.max) - roundSkillValue(skill.level)));
+  const cap = maxOverride === null ? roundSkillValue(skill.max) : Math.min(roundSkillValue(skill.max), roundSkillValue(maxOverride));
+  const add = Math.min(amount, Math.max(0, cap - roundSkillValue(skill.level)));
   skill.level = roundSkillValue(skill.level) + add;
   return add;
 }
 
-function applyBowmanFirstJobPrereqRoute(plan, args = {}) {
-  if (args.classId !== 'bowman') return plan;
+function resetFirstJob(plan) {
+  for (const skill of plan.skills ?? []) {
+    if (skill.tier !== 'second') skill.level = 0;
+  }
+}
 
-  const firstSkills = (plan.skills ?? []).filter((skill) => skill.tier !== 'second');
-  if (!firstSkills.some((skill) => skill.name === 'Arrow Blow') || !firstSkills.some((skill) => skill.name === 'Double Shot')) return plan;
-
-  const total = roundSkillValue(plan.totalSpByTier?.first);
-  let left = total;
-  for (const skill of firstSkills) skill.level = 0;
-
-  const lowRoute = args.budget === 'low' && args.priority !== 'exp';
-  const order = lowRoute
-    ? ['Critical Shot', 'The Eye of Amazon', 'Arrow Blow', 'Focus', "Amazon's Judgement", 'Double Shot']
-    : ['Critical Shot', 'The Eye of Amazon', 'Arrow Blow', 'Double Shot', 'Focus', "Amazon's Judgement"];
-  const caps = lowRoute ? { 'Double Shot': 0 } : { 'Arrow Blow': 1 };
-
+function fillFirstJob(plan, total, order, caps = {}) {
+  let left = Math.max(0, roundSkillValue(total));
   for (const name of order) {
     if (!left) break;
-    const skill = getSkill(plan, name);
-    if (!skill) continue;
-    const cap = Object.prototype.hasOwnProperty.call(caps, name) ? caps[name] : roundSkillValue(skill.max);
-    const add = Math.min(left, Math.max(0, cap - roundSkillValue(skill.level)));
-    left -= addToSkill(plan, name, add);
+    const cap = Object.prototype.hasOwnProperty.call(caps, name) ? caps[name] : null;
+    left -= addToSkill(plan, name, left, cap);
   }
-
   for (const name of order) {
     if (!left) break;
     if (Object.prototype.hasOwnProperty.call(caps, name)) continue;
     left -= addToSkill(plan, name, left);
   }
+}
 
-  return recalcPlan(plan);
+function applyWarriorFirstJobRoute(plan, args = {}) {
+  if (args.classId !== 'warrior') return false;
+  if (!getSkill(plan, 'Power Strike') || !getSkill(plan, 'Slash Blast')) return false;
+
+  const total = roundSkillValue(plan.totalSpByTier?.first);
+  resetFirstJob(plan);
+
+  if (args.budget === 'low') {
+    fillFirstJob(plan, total, [
+      'Precise Strikes',
+      'Improved HP Recovery',
+      'Max HP Increase',
+      'Power Strike',
+      'Slash Blast',
+      'Iron Body',
+    ], {});
+    return true;
+  }
+
+  if (args.budget === 'high') {
+    fillFirstJob(plan, total, [
+      'Power Strike',
+      'Slash Blast',
+      'Precise Strikes',
+      'Max HP Increase',
+      'Iron Body',
+      'Improved HP Recovery',
+    ], { 'Improved HP Recovery': 0, 'Max HP Increase': 0 });
+    return true;
+  }
+
+  fillFirstJob(plan, total, [
+    'Precise Strikes',
+    'Power Strike',
+    'Slash Blast',
+    'Max HP Increase',
+    'Improved HP Recovery',
+    'Iron Body',
+  ], { 'Improved HP Recovery': 3 });
+  return true;
+}
+
+function applyMagicianFirstJobRoute(plan, args = {}) {
+  if (args.classId !== 'magician') return false;
+  if (!getSkill(plan, 'Energy Bolt') || !getSkill(plan, 'Magic Claw')) return false;
+
+  const total = roundSkillValue(plan.totalSpByTier?.first);
+  resetFirstJob(plan);
+
+  if (args.budget === 'low') {
+    fillFirstJob(plan, total, [
+      'Energy Bolt',
+      'Improved MP Recovery',
+      'Max MP Increase',
+      'Magic Guard',
+      'Magic Armor',
+      'Magic Claw',
+    ], { 'Magic Claw': 0 });
+    return true;
+  }
+
+  fillFirstJob(plan, total, [
+    'Energy Bolt',
+    'Improved MP Recovery',
+    'Max MP Increase',
+    'Magic Claw',
+    'Magic Guard',
+    'Magic Armor',
+  ], { 'Energy Bolt': 1, 'Improved MP Recovery': args.budget === 'high' ? 5 : 10 });
+  return true;
+}
+
+function applyBowmanFirstJobRoute(plan, args = {}) {
+  if (args.classId !== 'bowman') return false;
+  if (!getSkill(plan, 'Arrow Blow') || !getSkill(plan, 'Double Shot')) return false;
+
+  const total = roundSkillValue(plan.totalSpByTier?.first);
+  resetFirstJob(plan);
+
+  if (args.budget === 'low') {
+    fillFirstJob(plan, total, [
+      'Critical Shot',
+      'The Eye of Amazon',
+      'Arrow Blow',
+      'Focus',
+      "Amazon's Judgement",
+      'Double Shot',
+    ], { 'Double Shot': 0 });
+    return true;
+  }
+
+  fillFirstJob(plan, total, [
+    'Critical Shot',
+    'The Eye of Amazon',
+    'Arrow Blow',
+    'Double Shot',
+    'Focus',
+    "Amazon's Judgement",
+  ], { 'Arrow Blow': 1 });
+  return true;
+}
+
+function applyThiefFirstJobRoute(plan, args = {}) {
+  if (args.classId !== 'thief') return false;
+  if (!getSkill(plan, 'Lucky Seven') || !getSkill(plan, 'Keen Eyes')) return false;
+
+  const total = roundSkillValue(plan.totalSpByTier?.first);
+  resetFirstJob(plan);
+
+  if (args.budget === 'low') {
+    fillFirstJob(plan, total, [
+      'Lucky Seven',
+      'Keen Eyes',
+      'Nimble Body',
+      'Dark Sight',
+      'Disorder',
+      'Double Stab',
+    ], { 'Double Stab': 0 });
+    return true;
+  }
+
+  fillFirstJob(plan, total, [
+    'Lucky Seven',
+    'Keen Eyes',
+    'Nimble Body',
+    'Dark Sight',
+    'Disorder',
+    'Double Stab',
+  ], { 'Double Stab': 0 });
+  return true;
+}
+
+function applyFirstJobRoute(plan, args = {}) {
+  const changed = applyWarriorFirstJobRoute(plan, args)
+    || applyMagicianFirstJobRoute(plan, args)
+    || applyBowmanFirstJobRoute(plan, args)
+    || applyThiefFirstJobRoute(plan, args);
+  return changed ? recalcPlan(plan) : recalcPlan(plan);
 }
 
 function applyManualAllocation(plan, customSkills = {}) {
@@ -149,6 +273,33 @@ function applyManualAllocation(plan, customSkills = {}) {
   return recalcPlan(plan);
 }
 
+function getLevel(plan, name) {
+  return roundSkillValue(getSkill(plan, name)?.level);
+}
+
+function getCalculatedStatBonuses(plan) {
+  const precise = getLevel(plan, 'Precise Strikes');
+  const nimble = getLevel(plan, 'Nimble Body');
+  const focus = getLevel(plan, 'Focus');
+  const bowMastery = getLevel(plan, 'Bow Mastery');
+  const crossbowMastery = getLevel(plan, 'Crossbow Mastery');
+
+  return {
+    stats: { STR: 0, DEX: 0, INT: 0, LUK: 0 },
+    maxHpPercent: 0,
+    maxMpPercent: 0,
+    accuracy: precise + nimble + focus + Math.floor((bowMastery + crossbowMastery) / 2),
+    magicAccuracy: 0,
+    avoidability: nimble + focus,
+    weaponAttack: 0,
+    magicAttack: 0,
+    speed: 0,
+    jump: 0,
+    criticalRate: 0,
+    criticalDamage: 0,
+  };
+}
+
 function recalcPlan(plan) {
   const usedByTier = (plan.skills ?? []).reduce((sum, skill) => {
     const tier = skill.tier === 'second' ? 'second' : 'first';
@@ -163,17 +314,15 @@ function recalcPlan(plan) {
 
   const usedSp = usedByTier.first + usedByTier.second;
   const totalSp = totals.first + totals.second;
+  const normalizedSkills = (plan.skills ?? []).map((skill) => ({
+    ...skill,
+    level: roundSkillValue(skill.level),
+  }));
+  const normalizedPlan = { ...plan, skills: normalizedSkills };
 
   return {
-    ...plan,
-    skills: (plan.skills ?? []).map((skill) => ({
-      ...skill,
-      level: roundSkillValue(skill.level),
-    })),
-    current: (plan.skills ?? []).filter((skill) => roundSkillValue(skill.level) > 0).map((skill) => ({
-      ...skill,
-      level: roundSkillValue(skill.level),
-    })),
+    ...normalizedPlan,
+    current: normalizedSkills.filter((skill) => roundSkillValue(skill.level) > 0),
     totalSpByTier: totals,
     totalSp,
     usedSp,
@@ -182,18 +331,17 @@ function recalcPlan(plan) {
       first: Math.max(0, totals.first - usedByTier.first),
       second: Math.max(0, totals.second - usedByTier.second),
     },
+    statBonuses: getCalculatedStatBonuses(normalizedPlan),
   };
 }
 
 export function getRecommendedSkillAllocation(args = {}) {
   const base = getRecommendedSkillAllocationBase(args);
-  const plan = applyBowmanFirstJobPrereqRoute(addSecondJobBonusToPlan(
+  const plan = applyFirstJobRoute(addSecondJobBonusToPlan(
     unlockSecondJobAtLevel30(clonePlan(getSkillPlanBase({ ...args, customSkills: undefined })), args.level),
     args.level,
   ), args);
 
-  // Use the recalculated plan as the source of truth so the Lv.30 bonus SP is
-  // included as an integer and never saved as 3.999999999-style floating values.
   return Object.fromEntries((plan.skills ?? []).map((skill) => [skill.name, roundSkillValue(skill.level ?? base[skill.name]) ]));
 }
 
@@ -204,7 +352,7 @@ export function getSkillPlan(args = {}) {
   const basePlan = clonePlan(getSkillPlanBase({ ...args, customSkills: undefined }));
   unlockSecondJobAtLevel30(basePlan, args.level);
   addSecondJobBonusToPlan(basePlan, args.level);
-  applyBowmanFirstJobPrereqRoute(basePlan, args);
+  applyFirstJobRoute(basePlan, args);
 
   if (!hasManualAllocation) return recalcPlan(basePlan);
   return applyManualAllocation(basePlan, args.customSkills);
