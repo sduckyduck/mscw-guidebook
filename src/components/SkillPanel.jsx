@@ -63,29 +63,29 @@ export default function SkillPanel({
           </div>
         </section>
 
-        <div className="mg-character-left-rail">
-          <section className="mg-glass-panel mg-ap-stats-panel">
-            <div className="mg-ap-grid mg-ap-grid-figure1">
-              {STAT_KEYS.map((stat) => {
-                const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
-                const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
-                return (
-                  <PointRow
-                    key={stat}
-                    label={stat}
-                    value={statPlan.stats[stat]}
-                    points={apValue}
-                    minValue={minValue}
-                    canMinus={apValue > minValue}
-                    canPlus={statPlan.remainingAp > 0}
-                    onMinus={() => onApChange(stat, -1)}
-                    onPlus={() => onApChange(stat, 1)}
-                  />
-                );
-              })}
-            </div>
-          </section>
+        <section className="mg-glass-panel mg-ap-stats-panel">
+          <div className="mg-ap-grid mg-ap-grid-figure1">
+            {STAT_KEYS.map((stat) => {
+              const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
+              const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
+              return (
+                <PointRow
+                  key={stat}
+                  label={stat}
+                  value={statPlan.stats[stat]}
+                  points={apValue}
+                  minValue={minValue}
+                  canMinus={apValue > minValue}
+                  canPlus={statPlan.remainingAp > 0}
+                  onMinus={() => onApChange(stat, -1)}
+                  onPlus={() => onApChange(stat, 1)}
+                />
+              );
+            })}
+          </div>
+        </section>
 
+        <div className="mg-character-skill-rail mg-character-left-rail">
           <SkillGroupCard
             title="一转技能"
             kicker="SP 加点"
@@ -102,7 +102,7 @@ export default function SkillPanel({
           />
         </div>
 
-        <div className="mg-character-right-rail">
+        <div className="mg-character-skill-rail mg-character-right-rail">
           {secondJobSkills.length > 0 && (
             <SkillGroupCard
               title="二转技能"
