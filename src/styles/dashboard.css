@@ -495,95 +495,152 @@
   inset: 0;
   z-index: 100;
   display: grid;
-  align-items: end;
+  place-items: center;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(84px, env(safe-area-inset-bottom));
   background: rgba(15, 23, 42, .42);
+  backdrop-filter: blur(7px);
 }
 
 .mg-picker-sheet {
-  max-height: 72vh;
+  width: min(92vw, 360px);
+  max-height: min(70vh, 560px);
   overflow: auto;
-  border-radius: 24px 24px 0 0;
-  background: white;
-  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
-  box-shadow: 0 -18px 50px rgba(0,0,0,.22);
+  border: 2px solid rgba(255, 255, 255, .86);
+  border-radius: 9px;
+  background:
+    linear-gradient(180deg, rgba(99, 104, 166, .96) 0%, rgba(77, 80, 137, .96) 100%);
+  color: #eef2ff;
+  padding: 10px 12px 12px;
+  box-shadow:
+    0 0 0 1px rgba(18, 22, 55, .95),
+    inset 0 0 0 1px rgba(183, 194, 255, .22),
+    0 20px 52px rgba(0,0,0,.28);
+  image-rendering: pixelated;
 }
 
 .mg-picker-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(230, 235, 255, .85);
 }
 
 .mg-picker-head h2 {
   margin: 0;
-  color: #111827;
-  font-size: 1.45rem;
+  color: #ffc857;
+  font-size: 1.08rem;
+  line-height: 1.08;
   font-weight: 1000;
+  letter-spacing: .01em;
+  text-shadow: 0 1px 0 rgba(0,0,0,.38);
+}
+
+.mg-picker-head h2::before {
+  content: '• 装备预览';
+  display: block;
+  margin-bottom: 4px;
+  color: #5bc7ff;
+  font-size: .72rem;
+  line-height: 1;
 }
 
 .mg-picker-head button {
-  border: 1px solid #d8e1dc;
-  border-radius: 999px;
-  background: #f8fbf9;
-  color: #111827;
-  padding: 8px 12px;
+  min-width: 54px;
+  min-height: 34px;
+  border: 1px solid rgba(255,255,255,.75);
+  border-radius: 6px;
+  background: linear-gradient(180deg, #f9fbff, #e7edf6);
+  color: #101936;
+  padding: 0 10px;
+  font-size: .72rem;
   font-weight: 1000;
+  box-shadow: inset 0 1px rgba(255,255,255,.8);
 }
 
 .mg-picker-hint {
-  margin: -4px 0 12px;
-  border: 1px solid #bdece3;
-  border-radius: 12px;
-  background: #ecfffb;
-  color: #0f766e;
-  padding: 9px 10px;
-  font-size: .82rem;
-  line-height: 1.35;
+  margin: 0 0 8px;
+  border: 1px solid rgba(230,235,255,.56);
+  border-radius: 4px;
+  background: rgba(18, 22, 55, .22);
+  color: #f8fafc;
+  padding: 6px 8px;
+  font-size: .68rem;
+  line-height: 1.28;
   font-weight: 900;
 }
 
 .mg-picker-list {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .mg-picker-item {
+  position: relative;
   display: grid;
-  grid-template-columns: 52px minmax(0,1fr) auto;
-  gap: 12px;
+  grid-template-columns: 44px minmax(0,1fr) auto;
+  gap: 8px;
   align-items: center;
-  border: 1px solid #d8e1dc;
-  border-radius: 16px;
-  background: #fff;
-  padding: 12px;
+  border: 1px solid rgba(226,232,255,.52);
+  border-radius: 5px;
+  background: rgba(18, 22, 55, .24);
+  color: #f8fafc;
+  padding: 7px 8px;
   text-align: left;
 }
 
+.mg-picker-item::before {
+  content: '•';
+  position: absolute;
+  left: 5px;
+  color: #ffb24d;
+  font-weight: 1000;
+}
+
 .mg-picker-item.active {
-  border: 2px solid #21806b;
-  background: #dceee7;
+  border: 1px solid #ffc857;
+  background: rgba(255, 200, 87, .12);
+}
+
+.mg-picker-item > div:first-child {
+  width: 38px !important;
+  height: 38px !important;
+  margin-left: 8px;
+  border: 1px solid rgba(238,242,255,.72);
+  background: rgba(242,246,255,.94);
+}
+
+.mg-picker-item img {
+  image-rendering: pixelated;
 }
 
 .mg-picker-item strong {
   display: block;
-  color: #1987f5;
-  font-size: 1rem;
+  color: #ffc857;
+  font-size: .86rem;
+  line-height: 1.08;
+  font-weight: 1000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 0 rgba(0,0,0,.32);
 }
 
 .mg-picker-item span {
-  color: #667085;
-  font-weight: 850;
-  font-size: .82rem;
+  display: block;
+  margin-top: 2px;
+  color: rgba(238,242,255,.9);
+  font-weight: 900;
+  font-size: .66rem;
+  line-height: 1.2;
 }
 
 .mg-picker-item em {
-  color: #176d5b;
+  color: #ffb24d;
   font-style: normal;
+  font-size: .66rem;
   font-weight: 1000;
 }
 
@@ -671,7 +728,19 @@
   .mg-overview-damage-row strong { font-size: .58rem; }
   .mg-overview-damage-row span { font-size: .43rem; }
   .mg-overview-damage-row em { font-size: .56rem; }
-  .mg-picker-hint { font-size: .76rem; }
+  .mg-picker-backdrop { align-items: center; padding: max(10px, env(safe-area-inset-top)) 10px max(84px, env(safe-area-inset-bottom)); }
+  .mg-picker-sheet { width: min(88vw, 315px); max-height: min(66vh, 500px); padding: 9px 10px 10px; border-radius: 8px; }
+  .mg-picker-head { gap: 8px; margin-bottom: 7px; padding-bottom: 7px; }
+  .mg-picker-head h2 { font-size: .92rem; }
+  .mg-picker-head h2::before { font-size: .58rem; }
+  .mg-picker-head button { min-width: 48px; min-height: 30px; border-radius: 6px; font-size: .62rem; padding: 0 8px; }
+  .mg-picker-hint { margin-bottom: 7px; padding: 5px 7px; font-size: .56rem; }
+  .mg-picker-list { gap: 5px; }
+  .mg-picker-item { grid-template-columns: 38px minmax(0,1fr) auto; gap: 7px; padding: 6px 7px; border-radius: 4px; }
+  .mg-picker-item > div:first-child { width: 32px !important; height: 32px !important; }
+  .mg-picker-item strong { font-size: .72rem; }
+  .mg-picker-item span { font-size: .54rem; }
+  .mg-picker-item em { font-size: .54rem; }
   .mg-actions { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 7px; margin-top: 8px; }
   .mg-action-small, .mg-action-main { min-height: 36px; border-radius: 12px; }
   .mg-action-small { font-size: .52rem; }
