@@ -6,9 +6,9 @@ const PRIORITY_PROFILES = {
 };
 
 const BUDGET_PROFILES = {
-  low: { maxComfortHits: 2, minHit: 0.92, mpCostWeight: 1.35, potionCostWeight: 1.35, overLevelTolerance: 3, underLevelTolerance: 8, gearUpgradeAggression: 0.45 },
-  mid: { maxComfortHits: 3, minHit: 0.88, mpCostWeight: 1, potionCostWeight: 1, overLevelTolerance: 5, underLevelTolerance: 10, gearUpgradeAggression: 0.7 },
-  high: { maxComfortHits: 4, minHit: 0.86, mpCostWeight: 0.65, potionCostWeight: 0.7, overLevelTolerance: 7, underLevelTolerance: 12, gearUpgradeAggression: 1 },
+  low: { maxComfortHits: 2, minHit: 0.92, mpCostWeight: 1.35, potionCostWeight: 1.35, overLevelTolerance: 3, underLevelTolerance: 7, gearUpgradeAggression: 0.45 },
+  mid: { maxComfortHits: 3, minHit: 0.88, mpCostWeight: 1, potionCostWeight: 1, overLevelTolerance: 5, underLevelTolerance: 8, gearUpgradeAggression: 0.7 },
+  high: { maxComfortHits: 4, minHit: 0.86, mpCostWeight: 0.65, potionCostWeight: 0.7, overLevelTolerance: 7, underLevelTolerance: 10, gearUpgradeAggression: 1 },
 };
 
 const PRIORITY_HIT_FLOORS = {
@@ -43,6 +43,8 @@ const SKILL_COST_HINTS = {
   'Iron Arrow: Crossbow': { mp: 28, lines: 1, role: 'line-aoe' },
   'Savage Blow': { mp: 28, lines: 6, role: 'single' },
   'Drain': { mp: 28, lines: 1, role: 'single-sustain' },
+  'Energy Blast': { mp: 25, lines: 4, role: 'line-aoe' },
+  'Somersault Kick': { mp: 20, lines: 6, role: 'aoe' },
   '魔力弹': { mp: 7, lines: 1, role: 'single' },
   '魔法双击': { mp: 14, lines: 2, role: 'single' },
   '火箭术': { mp: 20, lines: 1, role: 'single' },
@@ -89,6 +91,7 @@ export function scoreLevelingTarget({
   const bestSkill = pickBestSkillForMonster({ monster, skills: usableSkills, budgetProfile, priorityProfile, hitRate });
   const levelDelta = Number(monster?.level ?? 1) - Number(level ?? 1);
   const density = normalizeSpawnDensity(map, monster);
+  const densityFit = scoreDensityFit({ density, map, monster, bestSkill, profile, budget, priority });
   const survival = estimateSurvival({
     monster,
     level,
@@ -106,7 +109,7 @@ export function scoreLevelingTarget({
   const hitFloor = getHitFloorPercent(budget, priority, budgetProfile);
   const hitPenalty = Math.max(0, hitFloor - Number(hitPercent ?? 100)) * (budget === 'low' ? 3.4 : budget === 'mid' ? 2.2 : 1.35)
     + (hitRate <= 0 ? 120 : hitRate < 0.6 ? 58 : 0);
-  const expScore = normalizeExpScore(monster, bestSkill, density);
+  const expScore = normalizeExpScore(monster, bestSkill, densityFit);
   const mpScore = normalizeMpEfficiency(monster, bestSkill, priorityProfile, budgetProfile);
   const potionPenalty = scorePotionBurden({
     monster,
@@ -118,9 +121,9 @@ export function scoreLevelingTarget({
   const rawTotal = clamp(
     expScore * priorityProfile.expWeight
       + safety * priorityProfile.safetyWeight * 0.32
-      + levelFit * 0.34
-      + density * 0.18
-      + mpScore * 0.18
+      + levelFit * 0.38
+      + densityFit * 0.14
+      + mpScore * 0.16
       - overkillPenalty
       - underLevelPenalty
       - hitPenalty
@@ -134,7 +137,8 @@ export function scoreLevelingTarget({
   const survivalCap = survival.deathRisk > 0.02
     ? clamp(100 - survival.deathRisk * (budget === 'low' ? 165 : 125), 0, 100)
     : survival.safetyScore < 35 ? survival.safetyScore : 100;
-  const total = Math.min(rawTotal, reliabilityCap, survivalCap);
+  const levelCap = scoreLevelBandCap({ levelDelta, budgetProfile, hitRate, bestSkill });
+  const total = Math.min(rawTotal, reliabilityCap, survivalCap, levelCap);
 
   return {
     monster,
@@ -158,7 +162,9 @@ export function scoreLevelingTarget({
       exp: Math.round(expScore),
       safety: Math.round(safety),
       levelFit: Math.round(levelFit),
-      density: Math.round(density),
+      levelCap: Math.round(levelCap),
+      density: Math.round(densityFit),
+      rawDensity: Math.round(density),
       mp: Math.round(mpScore),
       potionPenalty: Math.round(potionPenalty),
       deathPenalty: Math.round(deathPenalty),
@@ -166,7 +172,7 @@ export function scoreLevelingTarget({
       underLevelPenalty: Math.round(underLevelPenalty),
       hitPenalty: Math.round(hitPenalty),
     },
-    reason: buildTargetReason({ monster, bestSkill, levelDelta, expScore, mpScore, safety, survival }),
+    reason: buildTargetReason({ monster, bestSkill, levelDelta, expScore, mpScore, safety, levelCap }),
   };
 }
 
@@ -190,7 +196,8 @@ export function rankLevelingMapsByBreakpoints({ maps = [], level, budget, priori
         consumables: consumableProfile,
       })).sort((a, b) => b.score - a.score);
       const best = targets[0];
-      const mapScore = best ? Math.round(best.score * 0.72 + normalizeSpawnDensity(map, best.monster) * 0.28) : 0;
+      const mapDensityFit = best?.scoreParts?.density ?? 0;
+      const mapScore = best ? Math.round(best.score * 0.86 + mapDensityFit * 0.14) : 0;
       return {
         ...map,
         monsters: targets.map((target) => ({
@@ -208,11 +215,13 @@ export function rankLevelingMapsByBreakpoints({ maps = [], level, budget, priori
           avgIncomingDamage: target.avgIncomingDamage,
           hitsTaken: target.hitsTaken,
           breakpointReason: target.reason,
+          breakpointScoreParts: target.scoreParts,
         })),
         score: mapScore,
         breakpointMeta: best,
       };
     })
+    .filter((map) => Number(map.score ?? 0) > 0)
     .sort((a, b) => b.score - a.score || Number(b.spawnTotal ?? 0) - Number(a.spawnTotal ?? 0));
 }
 
@@ -239,7 +248,7 @@ function getUsableDamageSkills(skillPlan, mainAttack) {
   const cards = (skillPlan?.damageCards ?? [])
     .filter((card) => !card.isBase && Number(card.level ?? 0) > 0)
     .map((card) => {
-      const hint = SKILL_COST_HINTS[card.name] ?? { mp: Math.max(4, Math.round(Number(card.level ?? 1) * 0.8 + 5)), lines: card.hits ?? 1, role: 'single' };
+      const hint = SKILL_COST_HINTS[card.name] ?? { mp: Math.max(4, Math.round(Number(card.level ?? 1) * 0.8 + 5)), lines: card.hits ?? 1, role: inferSkillRole(card.name, card.hits) };
       const avgDamage = (Number(card.min ?? 0) + Number(card.max ?? 0)) / 2;
       const mpCost = Number(card.mpCost ?? 0) || parseMpCost(card.role) || hint.mp;
       return {
@@ -258,6 +267,13 @@ function getUsableDamageSkills(skillPlan, mainAttack) {
 
   const base = Math.max(1, Number(mainAttack ?? 0));
   return [{ name: '普通攻击', level: 1, min: Math.round(base * 0.55), max: Math.round(base * 1.1), avgDamage: Math.max(1, base * 0.82), mpCost: 0, lines: 1, role: 'basic' }];
+}
+
+function inferSkillRole(name, hits = 1) {
+  const text = lower(name);
+  if (/slash|blast|bomb|thunder|heal|iron arrow|群体|雷|治愈|爆/.test(text)) return 'aoe';
+  if (Number(hits) >= 4 && !/savage|lucky|double stab/.test(text)) return 'aoe';
+  return 'single';
 }
 
 function pickBestSkillForMonster({ monster, skills, budgetProfile, priorityProfile, hitRate = 1 }) {
@@ -288,9 +304,9 @@ function skillEfficiencyAgainstMonster(skill, monster) {
   return 1;
 }
 
-function normalizeExpScore(monster, skill, density) {
+function normalizeExpScore(monster, skill, densityFit) {
   const expPerCast = Number(monster?.exp ?? 0) / Math.max(1, skill.expectedCastsToKill ?? skill.hitsToKill);
-  const densityMultiplier = 0.7 + density / 220;
+  const densityMultiplier = 0.76 + densityFit / 260;
   return clamp(Math.log2(expPerCast + 1) * 18 * densityMultiplier, 0, 100);
 }
 
@@ -305,6 +321,34 @@ function normalizeSpawnDensity(map, monster) {
   const monsterCount = Number(monster?.spawnCount ?? 0);
   const count = monsterCount || spawnTotal || 1;
   return clamp(Math.log2(count + 1) * 14 + Math.log2(spawnTotal + 1) * 4, 0, 100);
+}
+
+function scoreDensityFit({ density, map, monster, bestSkill, profile = {}, budget, priority }) {
+  const role = lower(bestSkill?.role);
+  const rangeType = profile.rangeType ?? 'hybrid';
+  const mobbingStyle = lower(profile.mobbingStyle);
+  const spawnTotal = Number(map?.spawnTotal ?? 0);
+  const monsterShare = spawnTotal ? Number(monster?.spawnCount ?? 0) / spawnTotal : 1;
+  const isAoe = role.includes('aoe');
+  const isLineAoe = role.includes('line');
+  const isControl = role.includes('control') || role.includes('sustain');
+  let score = Number(density) || 0;
+
+  if (isAoe) score = score * 1.24 + 12;
+  else if (isLineAoe) score = score * 1.12 + 8;
+  else if (rangeType === 'melee') score = score * 0.72 + 5;
+  else if (rangeType === 'ranged') score = score * 0.58 + 6;
+  else if (rangeType === 'magic') score = score * 0.82 + 7;
+  else score = score * 0.68 + 5;
+
+  if (mobbingStyle.includes('aoe') || mobbingStyle.includes('密集')) score += 6;
+  if (mobbingStyle.includes('longlane') || mobbingStyle.includes('safeplatform')) score += 4;
+  if (isControl) score += 5;
+  if (!isAoe && !isLineAoe && spawnTotal >= 55 && rangeType !== 'melee') score -= 8;
+  if (monsterShare < 0.45) score -= (0.45 - monsterShare) * 28;
+  if (budget === 'low' && rangeType === 'melee' && !isAoe && priority !== 'exp') score -= 4;
+
+  return clamp(score, 0, 100);
 }
 
 export function buildConsumableProfile(items = []) {
@@ -444,34 +488,59 @@ function scorePotionBurden({ monster, survival, budgetProfile, priorityProfile }
 }
 
 function scoreLevelFitByBreakpoint({ levelDelta, hitsToKill, budgetProfile }) {
-  let score = 72;
-  if (levelDelta >= -3 && levelDelta <= budgetProfile.overLevelTolerance) score += 20;
-  if (levelDelta > budgetProfile.overLevelTolerance) score -= (levelDelta - budgetProfile.overLevelTolerance) * 7;
-  if (levelDelta < -budgetProfile.underLevelTolerance) score -= Math.abs(levelDelta + budgetProfile.underLevelTolerance) * 5;
-  if (hitsToKill === 1) score += 4;
+  const underGap = Math.max(0, -levelDelta);
+  const overGap = Math.max(0, levelDelta);
+  let score = 74;
+
+  if (levelDelta >= -3 && levelDelta <= budgetProfile.overLevelTolerance) score += 22;
+  if (overGap > budgetProfile.overLevelTolerance) score -= (overGap - budgetProfile.overLevelTolerance) * 8.5;
+  if (underGap > budgetProfile.underLevelTolerance) score -= (underGap - budgetProfile.underLevelTolerance) * 8;
+  if (hitsToKill === 1 && underGap <= budgetProfile.underLevelTolerance) score += 4;
   if (hitsToKill === 2) score += 8;
   if (hitsToKill === 3) score += 2;
   if (hitsToKill > budgetProfile.maxComfortHits) score -= (hitsToKill - budgetProfile.maxComfortHits) * 10;
   return clamp(score, 0, 100);
 }
 
+function scoreLevelBandCap({ levelDelta, budgetProfile, hitRate, bestSkill }) {
+  const underGap = Math.max(0, -levelDelta);
+  const overGap = Math.max(0, levelDelta);
+  let cap = 100;
+
+  if (underGap > budgetProfile.underLevelTolerance) {
+    cap = Math.min(cap, 100 - (underGap - budgetProfile.underLevelTolerance) * 9);
+    if (underGap > budgetProfile.underLevelTolerance + 8) cap = Math.min(cap, 22);
+    if (underGap > budgetProfile.underLevelTolerance + 14) cap = Math.min(cap, 8);
+  }
+
+  if (overGap > budgetProfile.overLevelTolerance) {
+    cap = Math.min(cap, 100 - (overGap - budgetProfile.overLevelTolerance) * 7);
+    if (hitRate < budgetProfile.minHit) cap = Math.min(cap, Number(hitRate) * 100 - 8);
+  }
+
+  if ((bestSkill?.expectedCastsToKill ?? 99) > budgetProfile.maxComfortHits + 3) cap = Math.min(cap, 58);
+  return clamp(cap, 0, 100);
+}
+
 function scoreOverkillWaste({ monster, level, bestSkill }) {
   const levelGap = Number(level ?? 1) - Number(monster?.level ?? 1);
-  if ((bestSkill.expectedCastsToKill ?? bestSkill.hitsToKill) > 1 || levelGap <= 8) return 0;
-  return Math.min(28, (levelGap - 8) * 4);
+  if ((bestSkill.expectedCastsToKill ?? bestSkill.hitsToKill) > 1 || levelGap <= 6) return 0;
+  return Math.min(36, (levelGap - 6) * 5);
 }
 
 function scoreUnderleveledFarming({ monster, level, bestSkill, budgetProfile }) {
   const levelGap = Number(level ?? 1) - Number(monster?.level ?? 1);
   const tolerance = budgetProfile.underLevelTolerance;
   if (levelGap <= tolerance) return 0;
-  const penalty = (levelGap - tolerance) * ((bestSkill.expectedCastsToKill ?? bestSkill.hitsToKill) === 1 ? 6 : 4);
-  return Math.min(42, penalty);
+  const oneShotExtra = (bestSkill.expectedCastsToKill ?? bestSkill.hitsToKill) === 1 ? 10 : 0;
+  const penalty = (levelGap - tolerance) * 8 + oneShotExtra;
+  return Math.min(92, penalty);
 }
 
-function buildTargetReason({ monster, bestSkill, levelDelta, expScore, mpScore, safety }) {
+function buildTargetReason({ monster, bestSkill, levelDelta, expScore, mpScore, safety, levelCap }) {
   const direction = levelDelta > 0 ? `高你 ${levelDelta} 级` : levelDelta < 0 ? `低你 ${Math.abs(levelDelta)} 级` : '同级';
-  return `${bestSkill.name} 约 ${bestSkill.expectedCastsToKill ?? bestSkill.hitsToKill} 次击杀，${direction}，经验评分 ${Math.round(expScore)}，蓝耗效率 ${Math.round(mpScore)}，安全 ${Math.round(safety)}`;
+  const capText = Number(levelCap) < 100 ? `，等级区间上限 ${Math.round(levelCap)}` : '';
+  return `${bestSkill.name} 约 ${bestSkill.expectedCastsToKill ?? bestSkill.hitsToKill} 次击杀，${direction}，经验评分 ${Math.round(expScore)}，蓝耗效率 ${Math.round(mpScore)}，安全 ${Math.round(safety)}${capText}`;
 }
 
 function safeArray(value) {
