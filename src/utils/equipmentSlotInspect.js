@@ -2,12 +2,11 @@ const STAT_LABELS = [
   ['incSTR', 'STR'], ['incDEX', 'DEX'], ['incINT', 'INT'], ['incLUK', 'LUK'],
   ['incMHP', 'Max HP'], ['incMMP', 'Max MP'], ['incPAD', 'Weapon Attack'], ['incMAD', 'Magic Attack'],
   ['incPDD', 'Weapon Defense'], ['incMDD', 'Magic Defense'], ['incACC', 'Accuracy'], ['incEVA', 'Avoidability'],
-  ['incSpeed', 'Speed'], ['incJump', 'Jump'], ['tuc', 'Slots'],
+  ['incSpeed', 'Speed'], ['incJump', 'Jump'], ['attackSpeedLabel', 'Attack Speed'], ['tuc', 'Slots'],
 ];
 
 const REQUIREMENT_LABELS = [
-  ['reqLevel', 'Required Level'], ['reqSTR', 'Required STR'], ['reqDEX', 'Required DEX'],
-  ['reqINT', 'Required INT'], ['reqLUK', 'Required LUK'],
+  ['reqLevel', 'Level'], ['reqSTR', 'STR'], ['reqDEX', 'DEX'], ['reqINT', 'INT'], ['reqLUK', 'LUK'],
 ];
 
 const JOB_LABELS = [
@@ -17,7 +16,6 @@ const JOB_LABELS = [
 let clickTimer = null;
 let bypassNextClick = false;
 let itemIndexPromise = null;
-let currentItem = null;
 
 function normalize(value = '') {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -78,7 +76,7 @@ function getRequirementRows(item) {
     .map(([key, label]) => [label, readField(item, key)])
     .filter(([, value]) => value !== undefined && value !== null && value !== '' && readNumber(value) !== 0);
 
-  rows.push(['Job', getJobClasses(item).join(', ')]);
+  rows.unshift(['Job', getJobClasses(item).join(', ')]);
   return rows;
 }
 
@@ -87,6 +85,12 @@ function getStatRows(item) {
   for (const [key, label] of STAT_LABELS) {
     const value = readField(item, key);
     if (value === undefined || value === null || value === '') continue;
+
+    if (key === 'attackSpeedLabel') {
+      rows.push([label, String(value)]);
+      continue;
+    }
+
     const numeric = readNumber(value);
     if (!numeric) continue;
     const display = key === 'tuc' ? String(numeric) : `${numeric > 0 ? '+' : ''}${numeric}`;
@@ -108,28 +112,23 @@ function normalizeItemForDisplay(item, fallbackSlot = '') {
     reqRows: getRequirementRows(item),
     statRows: getStatRows(item),
     description: buildDescription(item),
-    raw: item,
   };
 }
 
 function getFallbackItem(tile) {
   const slot = getSlot(tile);
-  const name = getItemName(tile) || '未装备';
+  const name = getItemName(tile) || 'Empty Slot';
   return {
     name,
     type: slot || 'Equipment',
     reqRows: [['Job', 'Unknown']],
     statRows: [],
-    description: 'No matching item record was found in AppData/items.json. Double click this slot to open the equipment picker.',
+    description: 'No item details available.',
   };
 }
 
 async function fetchItemsPayload() {
-  const candidates = [
-    './AppData/items.json',
-    '/AppData/items.json',
-    'AppData/items.json',
-  ];
+  const candidates = ['./AppData/items.json', '/AppData/items.json', 'AppData/items.json'];
 
   for (const url of candidates) {
     try {
@@ -139,7 +138,7 @@ async function fetchItemsPayload() {
       if (Array.isArray(payload?.items)) return payload.items;
       if (Array.isArray(payload)) return payload;
     } catch {
-      // try the next relative path
+      // Try the next path.
     }
   }
   return [];
@@ -194,15 +193,10 @@ async function getItemFromTile(tile) {
 
 function removeSheet() {
   document.querySelector('.mg-item-inspect-backdrop')?.remove();
-  currentItem = null;
 }
 
-function statRow([label, value]) {
+function infoRow([label, value]) {
   return `<div class="mg-item-inspect-stat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
-}
-
-function reqRow([label, value]) {
-  return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
 function escapeHtml(value = '') {
@@ -216,27 +210,28 @@ function escapeHtml(value = '') {
 
 function renderLoadingSheet(iconSrc = '') {
   renderItemSheet({
-    name: 'Loading item...',
+    name: 'Loading...',
     type: 'Equipment',
     reqRows: [],
     statRows: [],
-    description: 'Reading AppData/items.json...',
+    description: '',
   }, iconSrc);
 }
 
 function renderItemSheet(item, iconSrc = '') {
   removeSheet();
-  currentItem = item;
+  const requirements = item.reqRows?.length
+    ? item.reqRows.map(infoRow).join('')
+    : '<p class="mg-item-inspect-muted">No requirements.</p>';
   const stats = item.statRows?.length
-    ? item.statRows.map(statRow).join('')
-    : '<p class="mg-item-inspect-muted">No bonus stats recorded in items.json.</p>';
-  const reqs = item.reqRows?.length ? item.reqRows.map(reqRow).join('') : '<div><span>Job</span><strong>Unknown</strong></div>';
+    ? item.statRows.map(infoRow).join('')
+    : '<p class="mg-item-inspect-muted">No bonus stats.</p>';
   const backdrop = document.createElement('div');
   backdrop.className = 'mg-item-inspect-backdrop';
   backdrop.innerHTML = `
     <section class="mg-item-inspect-card" role="dialog" aria-modal="true">
       <button class="mg-item-inspect-close" type="button" aria-label="Close">关闭</button>
-      <div class="mg-item-inspect-titlebar">Equipment Info</div>
+      <div class="mg-item-inspect-titlebar">Equipment</div>
       <div class="mg-item-inspect-top">
         <div class="mg-item-inspect-icon">${iconSrc ? `<img src="${escapeHtml(iconSrc)}" alt="" />` : '<span>?</span>'}</div>
         <div>
@@ -244,10 +239,13 @@ function renderItemSheet(item, iconSrc = '') {
           <p>${escapeHtml(item.type ?? 'Equipment')}</p>
         </div>
       </div>
-      <div class="mg-item-inspect-reqs">${reqs}</div>
-      <div class="mg-item-inspect-section">
-        <h3>Stats from items.json</h3>
-        ${stats}
+      <div class="mg-item-inspect-section compact">
+        <h3>Requirements</h3>
+        <div class="mg-item-inspect-rows">${requirements}</div>
+      </div>
+      <div class="mg-item-inspect-section compact">
+        <h3>Stats</h3>
+        <div class="mg-item-inspect-rows">${stats}</div>
       </div>
       ${item.description ? `<p class="mg-item-inspect-desc">${escapeHtml(item.description)}</p>` : ''}
       <div class="mg-item-inspect-help">点击一次查看属性 · 双击更换装备</div>
