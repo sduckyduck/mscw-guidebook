@@ -107,7 +107,7 @@ export default function SkillPanel({
             {secondJobSkills.length > 0 && (
               <SkillGroupCard
                 title="二转技能"
-                kicker={Number(level) > 30 ? '已开放' : 'Lv.30 后开放'}
+                kicker={Number(level) >= 30 ? '已开放' : 'Lv.30 后开放'}
                 remaining={plan.remainingByTier?.second ?? 0}
                 total={plan.totalSpByTier?.second ?? 0}
                 skills={secondJobSkills}
@@ -202,10 +202,23 @@ function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus, onInspect })
   const rowClass = ['mg-skill-row clickable', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
   return (
     <article className={rowClass} role="button" tabIndex={0} onClick={onInspect} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onInspect(); }}>
-      <SkillBadge name={skill.name} iconKey={skill.iconKey} />
+      <button
+        type="button"
+        className="mg-skill-icon-button"
+        onClick={(event) => {
+          event.stopPropagation();
+          if (canPlus) onPlus();
+          else if (canMinus) onMinus();
+        }}
+        disabled={!canPlus && !canMinus}
+        aria-label={`${skill.name} ${canPlus ? '加 1 点' : canMinus ? '减 1 点' : '无法调整'}`}
+        title={canPlus ? '+1 SP' : canMinus ? '-1 SP' : '无法调整'}
+      >
+        <SkillBadge name={skill.name} iconKey={skill.iconKey} />
+      </button>
       <div className="mg-skill-main">
         <strong>{skill.name}</strong>
-        <span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · [+/-]'}</span>
+        <span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · 点击图标加点'}</span>
       </div>
       <div className="mg-mini-controls" onClick={(event) => event.stopPropagation()}>
         <button onClick={onMinus} disabled={!canMinus}>-</button>
