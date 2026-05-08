@@ -16,6 +16,7 @@ import './styles/layout-unify.css';
 import './styles/community-build-detail.css';
 import './styles/saved-build-cleanup.css';
 import './styles/character-spap-layout-lock.css';
+import './styles/skill-icon-click.css';
 
 const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['materials', '材料']];
 
