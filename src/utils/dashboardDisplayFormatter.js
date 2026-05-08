@@ -6,12 +6,21 @@ const MULTI_HIT_SKILLS = new Map([
   ['Savage Blow', 6],
 ]);
 
-const KNOWN_WEAPON_ATTACK = new Map([
-  ['ryden', 50],
-]);
-
 function normalizeText(value = '') {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function readNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function readStat(item, keys) {
+  for (const key of keys) {
+    const value = item?.[key] ?? item?.stats?.[key];
+    if (value !== undefined && value !== null && value !== '') return readNumber(value);
+  }
+  return 0;
 }
 
 function parseRange(text = '') {
@@ -36,12 +45,34 @@ function getEquippedWeaponName(root = document) {
   return weaponTile?.querySelector('strong')?.textContent?.trim() ?? '';
 }
 
-function getKnownWeaponAttack(root = document) {
-  const weaponName = normalizeText(getEquippedWeaponName(root));
-  for (const [name, attack] of KNOWN_WEAPON_ATTACK.entries()) {
-    if (weaponName.includes(name)) return attack;
+function findItemByName(name = '') {
+  const key = normalizeText(name);
+  if (!key) return null;
+  const byName = window.__mscwGuideItemsByName;
+  if (byName?.get?.(key)) return byName.get(key);
+
+  const items = window.__mscwGuideItems ?? [];
+  let best = null;
+  let bestScore = 0;
+  for (const item of items) {
+    const itemName = normalizeText(item?.title ?? item?.name ?? '');
+    if (!itemName) continue;
+    const score = itemName === key ? 100
+      : itemName.includes(key) ? key.length / itemName.length * 80
+        : key.includes(itemName) ? itemName.length / key.length * 70
+          : 0;
+    if (score > bestScore) {
+      best = item;
+      bestScore = score;
+    }
   }
-  return null;
+  return bestScore >= 35 ? best : null;
+}
+
+function getEquippedWeaponAttack(root = document) {
+  const weaponName = getEquippedWeaponName(root);
+  const item = findItemByName(weaponName);
+  return readStat(item, ['incPAD', 'pad', 'watk', 'attack', 'weaponAttack']);
 }
 
 function formatPerHit(totalRange, hits) {
@@ -85,7 +116,7 @@ function formatDamageRows(root = document) {
 }
 
 function formatWeaponAttack(root = document) {
-  const knownAttack = getKnownWeaponAttack(document);
+  const itemAttack = getEquippedWeaponAttack(document);
 
   root.querySelectorAll?.('.mg-stat-box')?.forEach((box) => {
     const label = box.querySelector('span')?.textContent?.trim();
@@ -96,7 +127,7 @@ function formatWeaponAttack(root = document) {
     if (!value || !breakdown) return;
 
     const parsed = parseBreakdown(breakdown.textContent);
-    const weaponAttack = knownAttack ?? parsed?.bonus;
+    const weaponAttack = itemAttack || parsed?.bonus;
     if (!weaponAttack || weaponAttack <= 0) return;
 
     value.textContent = String(weaponAttack);
