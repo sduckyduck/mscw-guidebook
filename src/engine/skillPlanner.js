@@ -3,6 +3,8 @@ import {
   getSkillPlan as getSkillPlanBase,
   getApNote,
 } from './skillPlannerRealPlayer.js';
+import { CLASS_LINES } from '../data/classes.js';
+import { buildStatPlan } from './levelEngine.js';
 
 const DAMAGE_NAMES = new Set([
   'Power Strike', 'Slash Blast',
@@ -11,35 +13,35 @@ const DAMAGE_NAMES = new Set([
   'Double Stab', 'Lucky Seven', 'Drain', 'Savage Blow',
 ]);
 
-function numericLevel(level) {
-  const value = Number(level);
-  return Number.isFinite(value) ? value : 0;
-}
+const MULTI_HIT_SKILLS = new Map([
+  ['magic claw', 2],
+  ['double shot', 2],
+  ['double stab', 2],
+  ['lucky seven', 2],
+  ['savage blow', 6],
+]);
 
-function secondJobBonusSp(level) {
-  return numericLevel(level) >= 30 ? 1 : 0;
+const MAGIC_DAMAGE_SKILLS = new Set([
+  'energy bolt', 'magic claw', 'fire arrow', 'poison breath', 'cold beam', 'thunder bolt', 'heal', 'holy arrow',
+]);
+
+const GUIDE_WEAPON_ATTACK_BY_ROUTE = [
+  { classId: 'bowman', branchIds: ['bowman', 'hunter'], minLevel: 30, maxLevel: 34, weaponName: 'Ryden', weaponType: 'bow', attack: 50, stats: { STR: 1 } },
+  { classId: 'bowman', branchIds: ['crossbowman'], minLevel: 25, maxLevel: 34, weaponName: 'Mountain Crossbow', weaponType: 'crossbow', attack: 47, stats: {} },
+  { classId: 'bowman', branchIds: ['bowman', 'hunter'], minLevel: 25, maxLevel: 29, weaponName: 'Battle Bow', weaponType: 'bow', attack: 44, stats: {} },
+];
+
+function number(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
 }
 
 function roundSkillValue(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return 0;
-  return Math.max(0, Math.round(number));
+  return Math.max(0, Math.round(number(value, 0)));
 }
 
-function normalizeAllocation(allocation = {}) {
-  return Object.fromEntries(
-    Object.entries(allocation ?? {}).map(([name, value]) => [name, roundSkillValue(value)]),
-  );
-}
-
-function sameAllocation(left = {}, right = {}) {
-  const a = normalizeAllocation(left);
-  const b = normalizeAllocation(right);
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  for (const key of keys) {
-    if (roundSkillValue(a[key]) !== roundSkillValue(b[key])) return false;
-  }
-  return true;
+function normalizeName(value = '') {
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
 function clonePlan(plan) {
@@ -50,216 +52,276 @@ function clonePlan(plan) {
     next: (plan.next ?? []).map((step) => ({ ...step })),
     totalSpByTier: { ...(plan.totalSpByTier ?? {}) },
     remainingByTier: { ...(plan.remainingByTier ?? {}) },
-    statBonuses: plan.statBonuses,
-    damageCards: plan.damageCards,
-    mainAttack: plan.mainAttack ?? 0,
   };
 }
 
-function unlockSecondJobAtLevel30(plan, level) {
-  if (numericLevel(level) < 30) return plan;
+function sameAllocation(left = {}, right = {}) {
+  const keys = new Set([...Object.keys(left ?? {}), ...Object.keys(right ?? {})]);
+  for (const key of keys) {
+    if (roundSkillValue(left?.[key]) !== roundSkillValue(right?.[key])) return false;
+  }
+  return true;
+}
+
+function getSkillEffect(skill) {
+  const level = Math.max(0, roundSkillValue(skill?.level));
+  const table = skill?.allLevelStats ?? skill?.all_level_stats ?? [];
+  return String(table[Math.max(0, level - 1)] ?? skill?.role ?? skill?.description ?? '');
+}
+
+function parseDamageProfile(skill) {
+  const effect = getSkillEffect(skill);
+  const name = normalizeName(skill?.name);
+  const multi = effect.match(/attack\s+(\d+)x\s+with\s+(\d+(?:\.\d+)?)%\s+damage/i);
+  const percent = effect.match(/\bdamage\s+(\d+(?:\.\d+)?)%/i);
+  const basicAttack = effect.match(/\bbasic attack\s+(\d+(?:\.\d+)?)/i)?.[1];
+  const hits = multi ? number(multi[1], 1) : (MULTI_HIT_SKILLS.get(name) ?? 1);
+
+  if (basicAttack !== undefined && MAGIC_DAMAGE_SKILLS.has(name)) {
+    return { kind: 'magic', effect, hits, basicAttack: number(basicAttack, 0), ratio: 1 };
+  }
+
+  if (multi || percent) {
+    return { kind: MAGIC_DAMAGE_SKILLS.has(name) ? 'magic-percent' : 'physical', effect, hits, ratio: number(multi?.[2] ?? percent?.[1], 100) / 100 };
+  }
+
+  if (MULTI_HIT_SKILLS.has(name) || DAMAGE_NAMES.has(skill?.name)) {
+    return { kind: MAGIC_DAMAGE_SKILLS.has(name) ? 'magic-percent' : 'physical', effect, hits, ratio: Math.max(0.5, roundSkillValue(skill?.level) / Math.max(1, roundSkillValue(skill?.max))) };
+  }
+
+  return null;
+}
+
+function isDamageSkill(skill) {
+  return roundSkillValue(skill?.level) > 0 && !skill?.locked && DAMAGE_NAMES.has(skill?.name) && Boolean(parseDamageProfile(skill));
+}
+
+function getClassLine(classId) {
+  return CLASS_LINES.find((line) => line.id === classId) ?? CLASS_LINES.find((line) => line.id === 'warrior') ?? CLASS_LINES[0];
+}
+
+function getRouteWeapon(args = {}) {
+  const classId = args.classId;
+  const branchId = args.branchId ?? classId;
+  const level = number(args.level, 1);
+  const known = GUIDE_WEAPON_ATTACK_BY_ROUTE.find((item) => item.classId === classId
+    && item.branchIds.includes(branchId)
+    && level >= item.minLevel
+    && level <= item.maxLevel);
+
+  if (known) return known;
+
+  const fallbackAttack = number(args.weaponAttack ?? args.watk, 0);
+  if (fallbackAttack > 0) return { weaponName: 'Equipped Weapon', weaponType: '', attack: fallbackAttack, stats: {} };
+
+  // Do not trust the previous mainAttack path as weapon attack when it is clearly
+  // a route damage estimate. Use it only as a last-resort tiny fallback.
+  const maybeWeaponAttack = number(args.mainAttack, 0);
+  if (maybeWeaponAttack > 0 && maybeWeaponAttack <= 120) {
+    return { weaponName: 'Estimated Weapon', weaponType: '', attack: maybeWeaponAttack, stats: {} };
+  }
+
+  return { weaponName: 'Estimated Weapon', weaponType: '', attack: Math.max(1, Math.round(maybeWeaponAttack / 5) || 1), stats: {} };
+}
+
+function addStats(stats = {}, bonus = {}) {
+  return {
+    STR: number(stats.STR) + number(bonus.STR),
+    DEX: number(stats.DEX) + number(bonus.DEX),
+    INT: number(stats.INT) + number(bonus.INT),
+    LUK: number(stats.LUK) + number(bonus.LUK),
+  };
+}
+
+function getGuideStats(args = {}, statBonuses = null) {
+  const classLine = getClassLine(args.classId);
+  const weapon = getRouteWeapon(args);
+  const statPlan = buildStatPlan(classLine, args.level, {
+    budget: args.budget,
+    apAllocation: args.apAllocation,
+    skillBonuses: statBonuses ?? undefined,
+  });
+
+  return {
+    classLine,
+    weapon,
+    statPlan,
+    stats: addStats(statPlan.stats, weapon.stats),
+  };
+}
+
+function getSkillLevel(skills = [], pattern) {
+  return roundSkillValue((skills ?? []).find((skill) => pattern.test(String(skill.name ?? '')))?.level);
+}
+
+function getPhysicalMastery({ classId, weaponType, skills = [] }) {
+  if (classId === 'bowman') {
+    const mastery = /crossbow/i.test(weaponType)
+      ? getSkillLevel(skills, /crossbow mastery/i)
+      : getSkillLevel(skills, /bow mastery/i);
+    return mastery > 0 ? Math.min(0.6, 0.15 + mastery * 0.02) : 0.3;
+  }
+
+  const anyMastery = getSkillLevel(skills, /mastery/i);
+  return anyMastery > 0 ? Math.min(0.6, 0.15 + anyMastery * 0.02) : 0.3;
+}
+
+function getBasePhysicalRange(args = {}, skills = []) {
+  const { classLine, weapon, stats } = getGuideStats(args);
+  const attack = Math.max(1, number(weapon.attack, 1));
+  const primary = number(stats[classLine.primaryStat]);
+  const secondary = number(stats[classLine.secondaryStat]);
+  const mastery = getPhysicalMastery({ classId: classLine.id, weaponType: weapon.weaponType, skills });
+
+  if (classLine.id === 'bowman') {
+    const multiplier = /crossbow/i.test(weapon.weaponType) ? 3.6 : 3.4;
+    const max = Math.max(1, Math.round(((primary * multiplier) + secondary) * attack / 100));
+    const min = Math.max(1, Math.round(((primary * multiplier * mastery) + secondary) * attack / 100));
+    return { min: Math.min(min, max), max, weapon };
+  }
+
+  const genericMax = Math.max(1, Math.round(number(args.mainAttack, attack)));
+  return { min: Math.max(1, Math.round(genericMax * mastery)), max: genericMax, weapon };
+}
+
+function getMagicRange(args = {}, skill, profile, statBonuses = null) {
+  const { stats } = getGuideStats(args, statBonuses);
+  const intValue = number(stats.INT);
+  const magicAttack = Math.max(1, Math.floor(intValue / 2));
+  const mastery = 0.6;
+  const base = number(profile.basicAttack, 1) + magicAttack / 7;
+  const max = Math.round(base * (((magicAttack * 2 + intValue) / 100) + 1));
+  const min = Math.round(base * (((magicAttack * 2 * mastery + intValue) / 100) + 1));
+  return { min: Math.max(1, min), max: Math.max(min + 1, max) };
+}
+
+function getPhysicalSkillRange(base, profile) {
+  const ratio = Math.max(0.01, number(profile.ratio, 1));
+  return {
+    min: Math.max(1, Math.round(base.min * ratio)),
+    max: Math.max(1, Math.round(base.max * ratio)),
+  };
+}
+
+function makeDamageCard({ skill, profile, range, isBase = false, weapon = null }) {
+  const hits = Math.max(1, Math.round(number(profile?.hits, 1)));
+  const perHitMin = Math.max(1, Math.round(range.min));
+  const perHitMax = Math.max(perHitMin, Math.round(range.max));
+  const totalMin = perHitMin * hits;
+  const totalMax = perHitMax * hits;
+
+  return {
+    name: skill?.name ?? 'Base Attack',
+    role: profile?.effect || skill?.description || skill?.tierLabel || (isBase ? '普通攻击' : ''),
+    level: isBase ? null : roundSkillValue(skill?.level),
+    maxLevel: isBase ? null : roundSkillValue(skill?.max ?? skill?.maxLevel),
+    iconKey: skill?.iconKey ?? skill?.thumbnail,
+    min: totalMin,
+    max: totalMax,
+    perHitMin,
+    perHitMax,
+    totalMin,
+    totalMax,
+    hits,
+    damageText: hits > 1 ? `${perHitMin} - ${perHitMax}/hit` : `${totalMin} - ${totalMax}`,
+    weaponAttack: weapon?.attack,
+    weaponName: weapon?.weaponName,
+    isBase,
+  };
+}
+
+function buildDamageCards(skills = [], args = {}, statBonuses = null) {
+  const base = getBasePhysicalRange(args, skills);
+  const cards = skills
+    .filter(isDamageSkill)
+    .map((skill) => {
+      const profile = parseDamageProfile(skill);
+      if (!profile) return null;
+      const range = profile.kind === 'magic'
+        ? getMagicRange(args, skill, profile, statBonuses)
+        : getPhysicalSkillRange(base, profile);
+      return makeDamageCard({ skill, profile, range, weapon: base.weapon });
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.totalMax - a.totalMax)
+    .slice(0, 6);
+
+  const baseCard = args.classId === 'magician'
+    ? null
+    : makeDamageCard({
+      skill: { name: 'Base Attack' },
+      profile: { hits: 1, effect: '普通攻击' },
+      range: base,
+      isBase: true,
+      weapon: base.weapon,
+    });
+
+  return [baseCard, ...cards].filter(Boolean);
+}
+
+function recalcPlan(plan, args = {}) {
+  const skills = (plan.skills ?? []).map((skill) => ({ ...skill, level: roundSkillValue(skill.level) }));
+  const usedByTier = skills.reduce((sum, skill) => {
+    const tier = skill.tier === 'second' ? 'second' : 'first';
+    sum[tier] = (sum[tier] ?? 0) + roundSkillValue(skill.level);
+    return sum;
+  }, { first: 0, second: 0 });
+  const totals = {
+    first: roundSkillValue(plan.totalSpByTier?.first),
+    second: roundSkillValue(plan.totalSpByTier?.second),
+  };
+  const statBonuses = plan.statBonuses ?? getEmptyStatBonuses();
+
+  return {
+    ...plan,
+    skills,
+    current: skills.filter((skill) => roundSkillValue(skill.level) > 0),
+    totalSpByTier: totals,
+    totalSp: totals.first + totals.second,
+    usedSp: usedByTier.first + usedByTier.second,
+    remainingSp: Math.max(0, totals.first + totals.second - usedByTier.first - usedByTier.second),
+    remainingByTier: {
+      first: Math.max(0, totals.first - usedByTier.first),
+      second: Math.max(0, totals.second - usedByTier.second),
+    },
+    statBonuses,
+    damageCards: buildDamageCards(skills, args, statBonuses),
+  };
+}
+
+function getEmptyStatBonuses() {
+  return {
+    stats: { STR: 0, DEX: 0, INT: 0, LUK: 0 },
+    maxHpPercent: 0,
+    maxMpPercent: 0,
+    accuracy: 0,
+    magicAccuracy: 0,
+    avoidability: 0,
+    weaponAttack: 0,
+    magicAttack: 0,
+    speed: 0,
+    jump: 0,
+    criticalRate: 0,
+    criticalDamage: 0,
+  };
+}
+
+function unlockLevel30SecondJob(plan, args = {}) {
+  if (number(args.level, 1) < 30) return plan;
   for (const skill of plan.skills ?? []) {
     if (skill.tier === 'second') skill.locked = false;
   }
+
+  if (roundSkillValue(plan.totalSpByTier?.second) === 0) {
+    plan.totalSpByTier = { ...(plan.totalSpByTier ?? {}), second: 1 };
+    const firstSecondSkill = (plan.skills ?? []).find((skill) => skill.tier === 'second' && !skill.locked);
+    if (firstSecondSkill && roundSkillValue(firstSecondSkill.level) === 0) firstSecondSkill.level = 1;
+  }
+
   return plan;
 }
 
-function addSecondJobBonusToPlan(plan, level) {
-  const bonus = secondJobBonusSp(level);
-  if (!bonus) return plan;
-
-  const secondTotal = roundSkillValue(plan.totalSpByTier?.second) + bonus;
-  plan.totalSpByTier = { ...(plan.totalSpByTier ?? {}), second: secondTotal };
-  plan.totalSp = roundSkillValue(plan.totalSpByTier.first) + secondTotal;
-
-  let left = bonus;
-  for (const skill of plan.skills ?? []) {
-    if (!left) break;
-    if (skill.tier !== 'second' || skill.locked) continue;
-    const current = roundSkillValue(skill.level);
-    const max = roundSkillValue(skill.max);
-    const add = Math.min(left, Math.max(0, max - current));
-    skill.level = current + add;
-    left -= add;
-  }
-  return recalcPlan(plan);
-}
-
-function getSkill(plan, name) {
-  return (plan.skills ?? []).find((skill) => skill.name === name);
-}
-
-function addToSkill(plan, name, amount, maxOverride = null) {
-  const skill = getSkill(plan, name);
-  if (!skill || skill.locked || amount <= 0) return 0;
-  const cap = maxOverride === null ? roundSkillValue(skill.max) : Math.min(roundSkillValue(skill.max), roundSkillValue(maxOverride));
-  const add = Math.min(amount, Math.max(0, cap - roundSkillValue(skill.level)));
-  skill.level = roundSkillValue(skill.level) + add;
-  return add;
-}
-
-function resetFirstJob(plan) {
-  for (const skill of plan.skills ?? []) {
-    if (skill.tier !== 'second') skill.level = 0;
-  }
-}
-
-function fillFirstJob(plan, total, order, caps = {}) {
-  let left = Math.max(0, roundSkillValue(total));
-  for (const name of order) {
-    if (!left) break;
-    const cap = Object.prototype.hasOwnProperty.call(caps, name) ? caps[name] : null;
-    left -= addToSkill(plan, name, left, cap);
-  }
-  for (const name of order) {
-    if (!left) break;
-    if (Object.prototype.hasOwnProperty.call(caps, name)) continue;
-    left -= addToSkill(plan, name, left);
-  }
-}
-
-function applyWarriorFirstJobRoute(plan, args = {}) {
-  if (args.classId !== 'warrior') return false;
-  if (!getSkill(plan, 'Power Strike') || !getSkill(plan, 'Slash Blast')) return false;
-
-  const total = roundSkillValue(plan.totalSpByTier?.first);
-  resetFirstJob(plan);
-
-  if (args.budget === 'low') {
-    fillFirstJob(plan, total, [
-      'Precise Strikes',
-      'Improved HP Recovery',
-      'Max HP Increase',
-      'Power Strike',
-      'Slash Blast',
-      'Iron Body',
-    ], {});
-    return true;
-  }
-
-  if (args.budget === 'high') {
-    fillFirstJob(plan, total, [
-      'Power Strike',
-      'Slash Blast',
-      'Precise Strikes',
-      'Max HP Increase',
-      'Iron Body',
-      'Improved HP Recovery',
-    ], { 'Improved HP Recovery': 0, 'Max HP Increase': 0 });
-    return true;
-  }
-
-  fillFirstJob(plan, total, [
-    'Precise Strikes',
-    'Power Strike',
-    'Slash Blast',
-    'Max HP Increase',
-    'Improved HP Recovery',
-    'Iron Body',
-  ], { 'Improved HP Recovery': 3 });
-  return true;
-}
-
-function applyMagicianFirstJobRoute(plan, args = {}) {
-  if (args.classId !== 'magician') return false;
-  if (!getSkill(plan, 'Energy Bolt') || !getSkill(plan, 'Magic Claw')) return false;
-
-  const total = roundSkillValue(plan.totalSpByTier?.first);
-  resetFirstJob(plan);
-
-  if (args.budget === 'low') {
-    fillFirstJob(plan, total, [
-      'Energy Bolt',
-      'Improved MP Recovery',
-      'Max MP Increase',
-      'Magic Guard',
-      'Magic Armor',
-      'Magic Claw',
-    ], { 'Magic Claw': 0 });
-    return true;
-  }
-
-  fillFirstJob(plan, total, [
-    'Energy Bolt',
-    'Improved MP Recovery',
-    'Max MP Increase',
-    'Magic Claw',
-    'Magic Guard',
-    'Magic Armor',
-  ], { 'Energy Bolt': 1, 'Improved MP Recovery': args.budget === 'high' ? 5 : 10 });
-  return true;
-}
-
-function applyBowmanFirstJobRoute(plan, args = {}) {
-  if (args.classId !== 'bowman') return false;
-  if (!getSkill(plan, 'Arrow Blow') || !getSkill(plan, 'Double Shot')) return false;
-
-  const total = roundSkillValue(plan.totalSpByTier?.first);
-  resetFirstJob(plan);
-
-  if (args.budget === 'low') {
-    fillFirstJob(plan, total, [
-      'Critical Shot',
-      'The Eye of Amazon',
-      'Arrow Blow',
-      'Focus',
-      "Amazon's Judgement",
-      'Double Shot',
-    ], { 'Double Shot': 0 });
-    return true;
-  }
-
-  fillFirstJob(plan, total, [
-    'Critical Shot',
-    'The Eye of Amazon',
-    'Arrow Blow',
-    'Double Shot',
-    'Focus',
-    "Amazon's Judgement",
-  ], { 'Arrow Blow': 1 });
-  return true;
-}
-
-function applyThiefFirstJobRoute(plan, args = {}) {
-  if (args.classId !== 'thief') return false;
-  if (!getSkill(plan, 'Lucky Seven') || !getSkill(plan, 'Keen Eyes')) return false;
-
-  const total = roundSkillValue(plan.totalSpByTier?.first);
-  resetFirstJob(plan);
-
-  if (args.budget === 'low') {
-    fillFirstJob(plan, total, [
-      'Lucky Seven',
-      'Keen Eyes',
-      'Nimble Body',
-      'Dark Sight',
-      'Disorder',
-      'Double Stab',
-    ], { 'Double Stab': 0 });
-    return true;
-  }
-
-  fillFirstJob(plan, total, [
-    'Lucky Seven',
-    'Keen Eyes',
-    'Nimble Body',
-    'Dark Sight',
-    'Disorder',
-    'Double Stab',
-  ], { 'Double Stab': 0 });
-  return true;
-}
-
-function applyFirstJobRoute(plan, args = {}) {
-  const changed = applyWarriorFirstJobRoute(plan, args)
-    || applyMagicianFirstJobRoute(plan, args)
-    || applyBowmanFirstJobRoute(plan, args)
-    || applyThiefFirstJobRoute(plan, args);
-  return changed ? recalcPlan(plan) : recalcPlan(plan);
-}
-
 function applyManualAllocation(plan, customSkills = {}) {
-  const allocation = normalizeAllocation(customSkills);
   const totals = {
     first: roundSkillValue(plan.totalSpByTier?.first),
     second: roundSkillValue(plan.totalSpByTier?.second),
@@ -273,167 +335,26 @@ function applyManualAllocation(plan, customSkills = {}) {
     }
     const tier = skill.tier === 'second' ? 'second' : 'first';
     const available = Math.max(0, totals[tier] - used[tier]);
-    const nextLevel = Math.min(roundSkillValue(allocation[skill.name]), roundSkillValue(skill.max), available);
-    skill.level = nextLevel;
-    used[tier] += nextLevel;
+    const level = Math.min(roundSkillValue(customSkills?.[skill.name]), roundSkillValue(skill.max), available);
+    skill.level = level;
+    used[tier] += level;
   }
 
-  return recalcPlan(plan);
-}
-
-function getLevel(plan, name) {
-  return roundSkillValue(getSkill(plan, name)?.level);
-}
-
-function getCalculatedStatBonuses(plan) {
-  const precise = getLevel(plan, 'Precise Strikes');
-  const nimble = getLevel(plan, 'Nimble Body');
-  const focus = getLevel(plan, 'Focus');
-  const bowMastery = getLevel(plan, 'Bow Mastery');
-  const crossbowMastery = getLevel(plan, 'Crossbow Mastery');
-
-  return {
-    stats: { STR: 0, DEX: 0, INT: 0, LUK: 0 },
-    maxHpPercent: 0,
-    maxMpPercent: 0,
-    accuracy: precise + nimble + focus + Math.floor((bowMastery + crossbowMastery) / 2),
-    magicAccuracy: 0,
-    avoidability: nimble + focus,
-    weaponAttack: 0,
-    magicAttack: 0,
-    speed: 0,
-    jump: 0,
-    criticalRate: 0,
-    criticalDamage: 0,
-  };
-}
-
-function effect(row) {
-  return String((row.allLevelStats ?? row.all_level_stats ?? [])[Math.max(0, roundSkillValue(row.level) - 1)] ?? '');
-}
-
-function parseDamage(text) {
-  const multi = String(text).match(/Attack\s+(\d+)x\s+with\s+(\d+(?:\.\d+)?)%\s+damage/i);
-  if (multi) return { hits: Number(multi[1]), ratio: Number(multi[2]) / 100 };
-  const percent = String(text).match(/damage\s+(\d+(?:\.\d+)?)%/i);
-  return percent ? { hits: 1, ratio: Number(percent[1]) / 100 } : null;
-}
-
-function getPhysicalMasteryRatio(skills = []) {
-  const masterySkill = (skills ?? []).find((skill) => /mastery/i.test(skill.name) && roundSkillValue(skill.level) > 0 && !skill.locked);
-  if (!masterySkill) return 0.3;
-
-  const level = roundSkillValue(masterySkill.level);
-  const currentEffect = effect(masterySkill);
-  const percent = currentEffect.match(/mastery\s*(?:\+|:)?\s*(\d+(?:\.\d+)?)%/i)
-    ?? currentEffect.match(/weapon mastery\s*(?:\+|:)?\s*(\d+(?:\.\d+)?)%/i);
-  if (percent) return Math.max(0.3, Number(percent[1]) / 100);
-
-  return Math.max(0.3, Math.min(0.6, 0.3 + level * 0.015));
-}
-
-function getBaseAttackRange(mainAttack, skills = []) {
-  if (mainAttack && typeof mainAttack === 'object') {
-    const max = Math.max(1, Math.round(Number(mainAttack.max ?? mainAttack.value ?? 0) || 0));
-    const min = Math.max(1, Math.round(Number(mainAttack.min ?? max * Number(mainAttack.minRatio ?? 0.3)) || 0));
-    return { min, max };
-  }
-  const max = Math.max(1, Math.round(Number(mainAttack) || 0));
-  return { min: Math.max(1, Math.round(max * getPhysicalMasteryRatio(skills))), max };
-}
-
-function buildDamageCards(skills = [], mainAttack = 0) {
-  const base = getBaseAttackRange(mainAttack, skills);
-  const cards = skills
-    .filter((row) => roundSkillValue(row.level) > 0 && !row.locked && DAMAGE_NAMES.has(row.name))
-    .map((row) => {
-      const currentEffect = effect(row);
-      const damage = parseDamage(currentEffect) ?? {
-        hits: ['Magic Claw', 'Double Shot', 'Lucky Seven'].includes(row.name) ? 2 : 1,
-        ratio: Math.max(0.5, roundSkillValue(row.level) / Math.max(1, roundSkillValue(row.max))),
-      };
-      const hits = Math.max(1, Number(damage.hits) || 1);
-      const perHitMin = Math.max(1, Math.round(base.min * damage.ratio));
-      const perHitMax = Math.max(perHitMin + 1, Math.round(base.max * damage.ratio));
-      const totalMin = perHitMin * hits;
-      const totalMax = perHitMax * hits;
-      return {
-        name: row.name,
-        role: currentEffect || row.description || row.tierLabel,
-        level: roundSkillValue(row.level),
-        maxLevel: roundSkillValue(row.max),
-        iconKey: row.iconKey,
-        min: totalMin,
-        max: totalMax,
-        perHitMin,
-        perHitMax,
-        damageText: hits > 1 ? `${perHitMin} - ${perHitMax}/hit` : `${totalMin} - ${totalMax}`,
-        hits,
-      };
-    })
-    .sort((a, b) => b.max - a.max)
-    .slice(0, 6);
-  return [{ name: 'Base Attack', role: '普通攻击', level: null, maxLevel: null, min: base.min, max: base.max, perHitMin: base.min, perHitMax: base.max, hits: 1, damageText: `${base.min} - ${base.max}`, isBase: true }, ...cards];
-}
-
-function recalcPlan(plan) {
-  const usedByTier = (plan.skills ?? []).reduce((sum, skill) => {
-    const tier = skill.tier === 'second' ? 'second' : 'first';
-    sum[tier] = (sum[tier] ?? 0) + roundSkillValue(skill.level);
-    return sum;
-  }, { first: 0, second: 0 });
-
-  const totals = {
-    first: roundSkillValue(plan.totalSpByTier?.first),
-    second: roundSkillValue(plan.totalSpByTier?.second),
-  };
-
-  const usedSp = usedByTier.first + usedByTier.second;
-  const totalSp = totals.first + totals.second;
-  const normalizedSkills = (plan.skills ?? []).map((skill) => ({
-    ...skill,
-    level: roundSkillValue(skill.level),
-  }));
-  const normalizedPlan = { ...plan, skills: normalizedSkills };
-
-  return {
-    ...normalizedPlan,
-    current: normalizedSkills.filter((skill) => roundSkillValue(skill.level) > 0),
-    totalSpByTier: totals,
-    totalSp,
-    usedSp,
-    remainingSp: Math.max(0, totalSp - usedSp),
-    remainingByTier: {
-      first: Math.max(0, totals.first - usedByTier.first),
-      second: Math.max(0, totals.second - usedByTier.second),
-    },
-    statBonuses: getCalculatedStatBonuses(normalizedPlan),
-    damageCards: buildDamageCards(normalizedSkills, plan.mainAttack ?? 0),
-  };
+  return plan;
 }
 
 export function getRecommendedSkillAllocation(args = {}) {
-  const base = getRecommendedSkillAllocationBase(args);
-  const plan = applyFirstJobRoute(addSecondJobBonusToPlan(
-    unlockSecondJobAtLevel30(clonePlan(getSkillPlanBase({ ...args, customSkills: undefined })), args.level),
-    args.level,
-  ), args);
-
-  return Object.fromEntries((plan.skills ?? []).map((skill) => [skill.name, roundSkillValue(skill.level ?? base[skill.name]) ]));
+  const plan = recalcPlan(unlockLevel30SecondJob(clonePlan(getSkillPlanBase({ ...args, customSkills: undefined })), args), args);
+  return Object.fromEntries((plan.skills ?? []).map((skill) => [skill.name, roundSkillValue(skill.level)]));
 }
 
 export function getSkillPlan(args = {}) {
   const recommendedAllocation = getRecommendedSkillAllocation(args);
   const hasManualAllocation = args.customSkills && !sameAllocation(args.customSkills, recommendedAllocation);
+  const plan = unlockLevel30SecondJob(clonePlan(getSkillPlanBase({ ...args, customSkills: undefined })), args);
 
-  const basePlan = clonePlan(getSkillPlanBase({ ...args, customSkills: undefined }));
-  basePlan.mainAttack = args.mainAttack ?? 0;
-  unlockSecondJobAtLevel30(basePlan, args.level);
-  addSecondJobBonusToPlan(basePlan, args.level);
-  applyFirstJobRoute(basePlan, args);
-
-  if (!hasManualAllocation) return recalcPlan(basePlan);
-  return applyManualAllocation(basePlan, args.customSkills);
+  if (hasManualAllocation) applyManualAllocation(plan, args.customSkills);
+  return recalcPlan(plan, args);
 }
 
 export { getApNote };
