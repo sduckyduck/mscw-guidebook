@@ -2,8 +2,6 @@ import {
   getSkillPlan as getSkillPlanBase,
   getApNote,
 } from './skillPlannerRealPlayer.js';
-import { CLASS_LINES } from '../data/classes.js';
-import { buildStatPlan } from './levelEngine.js';
 
 const DAMAGE_NAMES = new Set([
   'Power Strike', 'Slash Blast',
@@ -23,12 +21,6 @@ const MULTI_HIT_SKILLS = new Map([
 const MAGIC_DAMAGE_SKILLS = new Set([
   'energy bolt', 'magic claw', 'fire arrow', 'poison breath', 'cold beam', 'thunder bolt', 'heal', 'holy arrow',
 ]);
-
-const GUIDE_WEAPON_ATTACK_BY_ROUTE = [
-  { classId: 'bowman', branchIds: ['bowman', 'hunter'], minLevel: 30, maxLevel: 34, weaponName: 'Ryden', weaponType: 'bow', attack: 50, stats: { STR: 1 } },
-  { classId: 'bowman', branchIds: ['crossbowman'], minLevel: 25, maxLevel: 34, weaponName: 'Mountain Crossbow', weaponType: 'crossbow', attack: 47, stats: {} },
-  { classId: 'bowman', branchIds: ['bowman', 'hunter'], minLevel: 25, maxLevel: 29, weaponName: 'Battle Bow', weaponType: 'bow', attack: 44, stats: {} },
-];
 
 function number(value, fallback = 0) {
   const numeric = Number(value);
@@ -81,11 +73,21 @@ function parseDamageProfile(skill) {
   }
 
   if (multi || percent) {
-    return { kind: MAGIC_DAMAGE_SKILLS.has(name) ? 'magic-percent' : 'physical', effect, hits, ratio: number(multi?.[2] ?? percent?.[1], 100) / 100 };
+    return {
+      kind: MAGIC_DAMAGE_SKILLS.has(name) ? 'magic-percent' : 'physical',
+      effect,
+      hits,
+      ratio: number(multi?.[2] ?? percent?.[1], 100) / 100,
+    };
   }
 
   if (MULTI_HIT_SKILLS.has(name) || DAMAGE_NAMES.has(skill?.name)) {
-    return { kind: MAGIC_DAMAGE_SKILLS.has(name) ? 'magic-percent' : 'physical', effect, hits, ratio: Math.max(0.5, roundSkillValue(skill?.level) / Math.max(1, roundSkillValue(skill?.max))) };
+    return {
+      kind: MAGIC_DAMAGE_SKILLS.has(name) ? 'magic-percent' : 'physical',
+      effect,
+      hits,
+      ratio: Math.max(0.5, roundSkillValue(skill?.level) / Math.max(1, roundSkillValue(skill?.max))),
+    };
   }
 
   return null;
@@ -95,101 +97,29 @@ function isDamageSkill(skill) {
   return roundSkillValue(skill?.level) > 0 && !skill?.locked && DAMAGE_NAMES.has(skill?.name) && Boolean(parseDamageProfile(skill));
 }
 
-function getClassLine(classId) {
-  return CLASS_LINES.find((line) => line.id === classId) ?? CLASS_LINES.find((line) => line.id === 'warrior') ?? CLASS_LINES[0];
-}
-
-function getRouteWeapon(args = {}) {
-  const classId = args.classId;
-  const branchId = args.branchId ?? classId;
-  const level = number(args.level, 1);
-  const known = GUIDE_WEAPON_ATTACK_BY_ROUTE.find((item) => item.classId === classId
-    && item.branchIds.includes(branchId)
-    && level >= item.minLevel
-    && level <= item.maxLevel);
-
-  if (known) return known;
-
-  const fallbackAttack = number(args.weaponAttack ?? args.watk, 0);
-  if (fallbackAttack > 0) return { weaponName: 'Equipped Weapon', weaponType: '', attack: fallbackAttack, stats: {} };
-
-  const maybeWeaponAttack = number(args.mainAttack, 0);
-  if (maybeWeaponAttack > 0 && maybeWeaponAttack <= 120) {
-    return { weaponName: 'Estimated Weapon', weaponType: '', attack: maybeWeaponAttack, stats: {} };
-  }
-
-  return { weaponName: 'Estimated Weapon', weaponType: '', attack: Math.max(1, Math.round(maybeWeaponAttack / 5) || 1), stats: {} };
-}
-
-function addStats(stats = {}, bonus = {}) {
-  return {
-    STR: number(stats.STR) + number(bonus.STR),
-    DEX: number(stats.DEX) + number(bonus.DEX),
-    INT: number(stats.INT) + number(bonus.INT),
-    LUK: number(stats.LUK) + number(bonus.LUK),
-  };
-}
-
-function getGuideStats(args = {}, statBonuses = null) {
-  const classLine = getClassLine(args.classId);
-  const weapon = getRouteWeapon(args);
-  const statPlan = buildStatPlan(classLine, args.level, {
-    budget: args.budget,
-    apAllocation: args.apAllocation,
-    skillBonuses: statBonuses ?? undefined,
-  });
-
-  return {
-    classLine,
-    weapon,
-    statPlan,
-    stats: addStats(statPlan.stats, weapon.stats),
-  };
-}
-
 function getSkillLevel(skills = [], pattern) {
   return roundSkillValue((skills ?? []).find((skill) => pattern.test(String(skill.name ?? '')))?.level);
 }
 
-function getPhysicalMastery({ classId, weaponType, skills = [] }) {
-  if (classId === 'bowman') {
-    const mastery = /crossbow/i.test(weaponType)
-      ? getSkillLevel(skills, /crossbow mastery/i)
-      : getSkillLevel(skills, /bow mastery/i);
-    return mastery > 0 ? Math.min(0.6, 0.15 + mastery * 0.02) : 0.3;
-  }
-
-  const anyMastery = getSkillLevel(skills, /mastery/i);
-  return anyMastery > 0 ? Math.min(0.6, 0.15 + anyMastery * 0.02) : 0.3;
+function getPhysicalMasteryRatio(skills = []) {
+  const mastery = getSkillLevel(skills, /mastery/i);
+  if (!mastery) return 0.3;
+  return Math.min(0.6, Math.max(0.3, 0.15 + mastery * 0.02));
 }
 
 function getBasePhysicalRange(args = {}, skills = []) {
-  const { classLine, weapon, stats } = getGuideStats(args);
-  const attack = Math.max(1, number(weapon.attack, 1));
-  const primary = number(stats[classLine.primaryStat]);
-  const secondary = number(stats[classLine.secondaryStat]);
-  const mastery = getPhysicalMastery({ classId: classLine.id, weaponType: weapon.weaponType, skills });
-
-  if (classLine.id === 'bowman') {
-    const multiplier = /crossbow/i.test(weapon.weaponType) ? 3.6 : 3.4;
-    const max = Math.max(1, Math.round(((primary * multiplier) + secondary) * attack / 100));
-    const min = Math.max(1, Math.round(((primary * multiplier * mastery) + secondary) * attack / 100));
-    return { min: Math.min(min, max), max, weapon };
-  }
-
-  const genericMax = Math.max(1, Math.round(number(args.mainAttack, attack)));
-  return { min: Math.max(1, Math.round(genericMax * mastery)), max: genericMax, weapon };
+  // mainAttack is computed upstream from the actual selected gear in AppMediaEnhanced.
+  // Do not treat it as weapon attack; it is the base attack estimate after the real
+  // equipment stats from AppData/items.json have already been aggregated.
+  const max = Math.max(1, Math.round(number(args.mainAttack, 1)));
+  const masteryRatio = number(args.minAttackRatio, 0) || getPhysicalMasteryRatio(skills);
+  const min = Math.max(1, Math.round(max * masteryRatio));
+  return { min: Math.min(min, max), max };
 }
 
-function getMagicRange(args = {}, skill, profile, statBonuses = null) {
-  const { stats } = getGuideStats(args, statBonuses);
-  const intValue = number(stats.INT);
-  const magicAttack = Math.max(1, Math.floor(intValue / 2));
-  const mastery = 0.6;
-  const base = number(profile.basicAttack, 1) + magicAttack / 7;
-  const max = Math.round(base * (((magicAttack * 2 + intValue) / 100) + 1));
-  const min = Math.round(base * (((magicAttack * 2 * mastery + intValue) / 100) + 1));
-  return { min: Math.max(1, min), max: Math.max(min + 1, max) };
+function getMagicRange(args = {}, profile) {
+  const max = Math.max(1, Math.round(number(args.mainAttack, 1) * number(profile.ratio, 1)));
+  return { min: Math.max(1, Math.round(max * 0.65)), max };
 }
 
 function getPhysicalSkillRange(base, profile) {
@@ -200,7 +130,7 @@ function getPhysicalSkillRange(base, profile) {
   };
 }
 
-function makeDamageCard({ skill, profile, range, isBase = false, weapon = null }) {
+function makeDamageCard({ skill, profile, range, isBase = false }) {
   const hits = Math.max(1, Math.round(number(profile?.hits, 1)));
   const perHitMin = Math.max(1, Math.round(range.min));
   const perHitMax = Math.max(perHitMin, Math.round(range.max));
@@ -221,13 +151,11 @@ function makeDamageCard({ skill, profile, range, isBase = false, weapon = null }
     totalMax,
     hits,
     damageText: hits > 1 ? `${perHitMin} - ${perHitMax}/hit` : `${totalMin} - ${totalMax}`,
-    weaponAttack: weapon?.attack,
-    weaponName: weapon?.weaponName,
     isBase,
   };
 }
 
-function buildDamageCards(skills = [], args = {}, statBonuses = null) {
+function buildDamageCards(skills = [], args = {}) {
   const base = getBasePhysicalRange(args, skills);
   const cards = skills
     .filter(isDamageSkill)
@@ -235,9 +163,9 @@ function buildDamageCards(skills = [], args = {}, statBonuses = null) {
       const profile = parseDamageProfile(skill);
       if (!profile) return null;
       const range = profile.kind === 'magic'
-        ? getMagicRange(args, skill, profile, statBonuses)
+        ? getMagicRange(args, profile)
         : getPhysicalSkillRange(base, profile);
-      return makeDamageCard({ skill, profile, range, weapon: base.weapon });
+      return makeDamageCard({ skill, profile, range });
     })
     .filter(Boolean)
     .sort((a, b) => b.totalMax - a.totalMax)
@@ -250,10 +178,26 @@ function buildDamageCards(skills = [], args = {}, statBonuses = null) {
       profile: { hits: 1, effect: '普通攻击' },
       range: base,
       isBase: true,
-      weapon: base.weapon,
     });
 
   return [baseCard, ...cards].filter(Boolean);
+}
+
+function getEmptyStatBonuses() {
+  return {
+    stats: { STR: 0, DEX: 0, INT: 0, LUK: 0 },
+    maxHpPercent: 0,
+    maxMpPercent: 0,
+    accuracy: 0,
+    magicAccuracy: 0,
+    avoidability: 0,
+    weaponAttack: 0,
+    magicAttack: 0,
+    speed: 0,
+    jump: 0,
+    criticalRate: 0,
+    criticalDamage: 0,
+  };
 }
 
 function recalcPlan(plan, args = {}) {
@@ -282,24 +226,7 @@ function recalcPlan(plan, args = {}) {
       second: Math.max(0, totals.second - usedByTier.second),
     },
     statBonuses,
-    damageCards: buildDamageCards(skills, args, statBonuses),
-  };
-}
-
-function getEmptyStatBonuses() {
-  return {
-    stats: { STR: 0, DEX: 0, INT: 0, LUK: 0 },
-    maxHpPercent: 0,
-    maxMpPercent: 0,
-    accuracy: 0,
-    magicAccuracy: 0,
-    avoidability: 0,
-    weaponAttack: 0,
-    magicAttack: 0,
-    speed: 0,
-    jump: 0,
-    criticalRate: 0,
-    criticalDamage: 0,
+    damageCards: buildDamageCards(skills, args),
   };
 }
 
