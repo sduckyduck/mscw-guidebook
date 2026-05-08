@@ -4,6 +4,7 @@ import AppMediaEnhanced from './AppMediaEnhanced.jsx';
 import CoverIntro from './components/CoverIntro.jsx';
 import CraftingMaterialsPageSafe from './components/CraftingMaterialsPageSafe.jsx';
 import CommunityBuildsPage from './components/CommunityBuildsPage.jsx';
+import AdminBuildsPage from './components/AdminBuildsPage.jsx';
 import './utils/dashboardActionButtons.js';
 import './styles.css';
 import './styles/cover-intro.css';
@@ -29,14 +30,20 @@ function isBuildRoute() {
   return window.location.pathname === '/builds' || window.location.pathname.startsWith('/builds/');
 }
 
+function isAdminRoute() {
+  return window.location.pathname === '/admin/builds' || window.location.pathname.startsWith('/admin/builds/');
+}
+
 function GuidebookRouter() {
   const [materialsOpen, setMaterialsOpen] = useState(() => window.location.hash === '#materials');
   const [buildRouteOpen, setBuildRouteOpen] = useState(() => isBuildRoute());
+  const [adminRouteOpen, setAdminRouteOpen] = useState(() => isAdminRoute());
 
   useEffect(() => {
     const sync = () => {
       setMaterialsOpen(window.location.hash === '#materials');
       setBuildRouteOpen(isBuildRoute());
+      setAdminRouteOpen(isAdminRoute());
     };
     window.addEventListener('popstate', sync);
     window.addEventListener('hashchange', sync);
@@ -50,8 +57,10 @@ function GuidebookRouter() {
     replaceHash(tab);
     setMaterialsOpen(tab === 'materials');
     setBuildRouteOpen(false);
+    setAdminRouteOpen(false);
   };
 
+  if (adminRouteOpen) return <AdminBuildsPage />;
   if (buildRouteOpen) return <CommunityBuildsPage />;
 
   if (materialsOpen) {
@@ -77,7 +86,7 @@ function GuidebookRouter() {
 }
 
 function AppWithIntro() {
-  const [entered, setEntered] = useState(() => isBuildRoute());
+  const [entered, setEntered] = useState(() => isBuildRoute() || isAdminRoute());
   return entered ? <GuidebookRouter /> : <CoverIntro onEnter={() => setEntered(true)} />;
 }
 
