@@ -4,35 +4,163 @@ import {
   getApNote,
 } from './skillPlannerRealPlayer.js';
 
-function withSecondJobAdvancementBonus(args = {}) {
-  const level = Number(args.level);
-  if (!Number.isFinite(level) || level < 30) return args;
-
-  // In MapleStory, the level-30 job advancement grants 1 second-job SP immediately.
-  // The base planner gives second-job SP only after Lv.30, so add 1/3 level:
-  // Lv.30 => 1 SP, Lv.31 => 4 SP, Lv.50 => 61 SP.
-  return { ...args, level: level + 1 / 3 };
+function numericLevel(level) {
+  const value = Number(level);
+  return Number.isFinite(value) ? value : 0;
 }
 
-function normalizeDisplayedLevels(plan, realLevel) {
-  const level = Number(realLevel);
-  if (!Number.isFinite(level)) return plan;
+function secondJobBonusSp(level) {
+  // Job advancement at Lv.30 gives 1 second-job SP immediately.
+  // After that, every new level gives 3 more SP:
+  // Lv.30 = 1, Lv.31 = 4, Lv.32 = 7, ...
+  return numericLevel(level) >= 30 ? 1 : 0;
+}
+
+function roundSkillValue(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.round(number));
+}
+
+function normalizeAllocation(allocation = {}) {
+  return Object.fromEntries(
+    Object.entries(allocation ?? {}).map(([name, value]) => [name, roundSkillValue(value)]),
+  );
+}
+
+function sameAllocation(left = {}, right = {}) {
+  const a = normalizeAllocation(left);
+  const b = normalizeAllocation(right);
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    if (roundSkillValue(a[key]) !== roundSkillValue(b[key])) return false;
+  }
+  return true;
+}
+
+function clonePlan(plan) {
   return {
     ...plan,
-    next: (plan.next ?? []).map((step) => ({
-      ...step,
-      level: Math.max(level, Math.round(Number(step.level) || level)),
+    skills: (plan.skills ?? []).map((skill) => ({ ...skill })),
+    current: (plan.current ?? []).map((skill) => ({ ...skill })),
+    next: (plan.next ?? []).map((step) => ({ ...step })),
+    totalSpByTier: { ...(plan.totalSpByTier ?? {}) },
+    remainingByTier: { ...(plan.remainingByTier ?? {}) },
+    statBonuses: plan.statBonuses,
+    damageCards: plan.damageCards,
+  };
+}
+
+function unlockSecondJobAtLevel30(plan, level) {
+  if (numericLevel(level) < 30) return plan;
+  for (const skill of plan.skills ?? []) {
+    if (skill.tier === 'second') skill.locked = false;
+  }
+  return plan;
+}
+
+function addSecondJobBonusToPlan(plan, level) {
+  const bonus = secondJobBonusSp(level);
+  if (!bonus) return plan;
+
+  const secondTotal = roundSkillValue(plan.totalSpByTier?.second) + bonus;
+  plan.totalSpByTier = { ...(plan.totalSpByTier ?? {}), second: secondTotal };
+  plan.totalSp = roundSkillValue(plan.totalSpByTier.first) + secondTotal;
+
+  let left = bonus;
+  for (const skill of plan.skills ?? []) {
+    if (!left) break;
+    if (skill.tier !== 'second' || skill.locked) continue;
+    const current = roundSkillValue(skill.level);
+    const max = roundSkillValue(skill.max);
+    const add = Math.min(left, Math.max(0, max - current));
+    skill.level = current + add;
+    left -= add;
+  }
+  return recalcPlan(plan);
+}
+
+function applyManualAllocation(plan, customSkills = {}) {
+  const allocation = normalizeAllocation(customSkills);
+  const totals = {
+    first: roundSkillValue(plan.totalSpByTier?.first),
+    second: roundSkillValue(plan.totalSpByTier?.second),
+  };
+  const used = { first: 0, second: 0 };
+
+  for (const skill of plan.skills ?? []) {
+    if (skill.locked) {
+      skill.level = 0;
+      continue;
+    }
+    const tier = skill.tier === 'second' ? 'second' : 'first';
+    const available = Math.max(0, totals[tier] - used[tier]);
+    const nextLevel = Math.min(roundSkillValue(allocation[skill.name]), roundSkillValue(skill.max), available);
+    skill.level = nextLevel;
+    used[tier] += nextLevel;
+  }
+
+  return recalcPlan(plan);
+}
+
+function recalcPlan(plan) {
+  const usedByTier = (plan.skills ?? []).reduce((sum, skill) => {
+    const tier = skill.tier === 'second' ? 'second' : 'first';
+    sum[tier] = (sum[tier] ?? 0) + roundSkillValue(skill.level);
+    return sum;
+  }, { first: 0, second: 0 });
+
+  const totals = {
+    first: roundSkillValue(plan.totalSpByTier?.first),
+    second: roundSkillValue(plan.totalSpByTier?.second),
+  };
+
+  const usedSp = usedByTier.first + usedByTier.second;
+  const totalSp = totals.first + totals.second;
+
+  return {
+    ...plan,
+    skills: (plan.skills ?? []).map((skill) => ({
+      ...skill,
+      level: roundSkillValue(skill.level),
     })),
+    current: (plan.skills ?? []).filter((skill) => roundSkillValue(skill.level) > 0).map((skill) => ({
+      ...skill,
+      level: roundSkillValue(skill.level),
+    })),
+    totalSpByTier: totals,
+    totalSp,
+    usedSp,
+    remainingSp: Math.max(0, totalSp - usedSp),
+    remainingByTier: {
+      first: Math.max(0, totals.first - usedByTier.first),
+      second: Math.max(0, totals.second - usedByTier.second),
+    },
   };
 }
 
 export function getRecommendedSkillAllocation(args = {}) {
-  return getRecommendedSkillAllocationBase(withSecondJobAdvancementBonus(args));
+  const base = getRecommendedSkillAllocationBase(args);
+  const plan = addSecondJobBonusToPlan(
+    unlockSecondJobAtLevel30(clonePlan(getSkillPlanBase({ ...args, customSkills: undefined })), args.level),
+    args.level,
+  );
+
+  // Use the recalculated plan as the source of truth so the Lv.30 bonus SP is
+  // included as an integer and never saved as 3.999999999-style floating values.
+  return Object.fromEntries((plan.skills ?? []).map((skill) => [skill.name, roundSkillValue(skill.level ?? base[skill.name]) ]));
 }
 
 export function getSkillPlan(args = {}) {
-  const plan = getSkillPlanBase(withSecondJobAdvancementBonus(args));
-  return normalizeDisplayedLevels(plan, args.level);
+  const recommendedAllocation = getRecommendedSkillAllocation(args);
+  const hasManualAllocation = args.customSkills && !sameAllocation(args.customSkills, recommendedAllocation);
+
+  const basePlan = clonePlan(getSkillPlanBase({ ...args, customSkills: undefined }));
+  unlockSecondJobAtLevel30(basePlan, args.level);
+  addSecondJobBonusToPlan(basePlan, args.level);
+
+  if (!hasManualAllocation) return recalcPlan(basePlan);
+  return applyManualAllocation(basePlan, args.customSkills);
 }
 
 export { getApNote };
