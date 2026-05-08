@@ -22,6 +22,15 @@ const MAGIC_DAMAGE_SKILLS = new Set([
   'energy bolt', 'magic claw', 'fire arrow', 'poison breath', 'cold beam', 'thunder bolt', 'heal', 'holy arrow',
 ]);
 
+const PHYSICAL_RANGE_TUNING = {
+  warrior: { maxScale: 0.55, minRatio: 0.32 },
+  bowman: { maxScale: 0.54, minRatio: 0.38 },
+  thief: { maxScale: 0.49, minRatio: 0.44 },
+  pirate: { maxScale: 0.52, minRatio: 0.36 },
+};
+
+const DEFAULT_PHYSICAL_RANGE_TUNING = { maxScale: 0.54, minRatio: 0.35 };
+
 function number(value, fallback = 0) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : fallback;
@@ -103,16 +112,24 @@ function getSkillLevel(skills = [], pattern) {
 
 function getPhysicalMasteryRatio(skills = []) {
   const mastery = getSkillLevel(skills, /mastery/i);
-  if (!mastery) return 0.3;
+  if (!mastery) return 0;
   return Math.min(0.6, Math.max(0.3, 0.15 + mastery * 0.02));
 }
 
+function getClassPhysicalTuning(classId) {
+  return PHYSICAL_RANGE_TUNING[classId] ?? DEFAULT_PHYSICAL_RANGE_TUNING;
+}
+
 function getBasePhysicalRange(args = {}, skills = []) {
-  // mainAttack is computed upstream from the actual selected gear in AppMediaEnhanced.
-  // Do not treat it as weapon attack; it is the base attack estimate after the real
-  // equipment stats from AppData/items.json have already been aggregated.
-  const max = Math.max(1, Math.round(number(args.mainAttack, 1)));
-  const masteryRatio = number(args.minAttackRatio, 0) || getPhysicalMasteryRatio(skills);
+  // mainAttack arrives from AppMediaEnhanced's old dashboard estimator. That value
+  // was too high to use directly as Maple max damage, which caused 2-hit skills
+  // such as Lucky Seven and Double Shot to appear massively inflated. Until the
+  // UI passes raw STR/DEX/INT/LUK + weapon data into this module, keep this
+  // class-aware normalization here so every class uses the same corrected core.
+  const oldEstimatedMax = Math.max(1, number(args.mainAttack, 1));
+  const tuning = getClassPhysicalTuning(args.classId);
+  const max = Math.max(1, Math.round(oldEstimatedMax * tuning.maxScale));
+  const masteryRatio = getPhysicalMasteryRatio(skills) || tuning.minRatio;
   const min = Math.max(1, Math.round(max * masteryRatio));
   return { min: Math.min(min, max), max };
 }
@@ -150,7 +167,7 @@ function makeDamageCard({ skill, profile, range, isBase = false }) {
     totalMin,
     totalMax,
     hits,
-    damageText: hits > 1 ? `${perHitMin} - ${perHitMax}/hit` : `${totalMin} - ${totalMax}`,
+    damageText: hits > 1 ? `${totalMin} - ${totalMax}/cast (${perHitMin} - ${perHitMax}/hit)` : `${totalMin} - ${totalMax}`,
     isBase,
   };
 }
