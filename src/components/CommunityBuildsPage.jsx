@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import SharedBuildPreview from './SharedBuildPreview.jsx';
 import { fetchCommunityBuild, fetchCommunityBuilds, submitCommunityBuild } from '../services/buildApi.js';
 import '../styles/community-builds.css';
 
@@ -43,40 +44,6 @@ const PRIORITY_LABELS = {
   exp: '经验',
   material: '材料',
   meso: '金币',
-};
-
-const EDITION_LABELS = {
-  global: '国际服',
-  china: '国服',
-};
-
-const GENDER_LABELS = {
-  male: '男',
-  female: '女',
-};
-
-const STAT_LABELS = {
-  STR: 'STR',
-  DEX: 'DEX',
-  INT: 'INT',
-  LUK: 'LUK',
-  HP: 'HP',
-  MP: 'MP',
-  ACC: 'ACC',
-  AVOID: 'AVOID',
-};
-
-const SLOT_LABELS = {
-  weapon: '武器',
-  cap: '头盔',
-  overall: '套服',
-  top: '上衣',
-  bottom: '下衣',
-  shoes: '鞋子',
-  glove: '手套',
-  shield: '盾牌',
-  cape: '披风',
-  earring: '耳环',
 };
 
 function readSavedGuideState() {
@@ -129,38 +96,7 @@ function createPayloadFromSavedState(form, savedState) {
 function navigateTo(path) {
   if (typeof window === 'undefined') return;
   window.history.pushState(null, '', path);
-  window.dispatchEvent(new PopStateEvent('popstate'));
-}
-
-function entriesFromObject(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
-  return Object.entries(value).filter(([, item]) => item !== undefined && item !== null && item !== '');
-}
-
-function getApRows(stats) {
-  const allocation = stats?.apAllocation;
-  return entriesFromObject(allocation)
-    .filter(([, value]) => Number.isFinite(Number(value)))
-    .map(([key, value]) => ({ label: STAT_LABELS[key] ?? key, value: Number(value) }));
-}
-
-function getSkillRows(skills) {
-  return entriesFromObject(skills)
-    .map(([name, level]) => ({ name, level: Number(level) || 0 }))
-    .filter((skill) => skill.level > 0)
-    .sort((a, b) => b.level - a.level || a.name.localeCompare(b.name));
-}
-
-function getGearRows(gear) {
-  return entriesFromObject(gear)
-    .filter(([, item]) => item && typeof item === 'object')
-    .map(([slot, item]) => ({
-      slot,
-      slotLabel: SLOT_LABELS[slot] ?? slot,
-      title: item.title || item.name || item.label || '未命名装备',
-      reqLevel: item.reqLevel ?? item.level ?? '-',
-      detail: [item.weaponType, item.reqJobLabel, item.scoreLabel, item.attackSpeed].filter(Boolean).join(' · '),
-    }));
+  window.dispatchEvent(new Event('popstate'));
 }
 
 function copyShareUrl(url, onCopied) {
@@ -347,10 +283,6 @@ function BuildDetail({ buildId }) {
   if (!build) return null;
 
   const shareUrl = typeof window === 'undefined' ? `/builds/${build.id}` : `${window.location.origin}/builds/${build.id}`;
-  const apRows = getApRows(build.stats);
-  const skillRows = getSkillRows(build.skills);
-  const gearRows = getGearRows(build.gear);
-
   const handleCopy = () => {
     copyShareUrl(shareUrl, () => {
       setCopied(true);
@@ -358,8 +290,8 @@ function BuildDetail({ buildId }) {
     });
   };
 
-  return <section className="community-panel detail-panel">
-    <div className="detail-head">
+  return <section className="community-panel detail-panel shared-detail-panel">
+    <div className="detail-head compact-detail-head">
       <div>
         <p className="community-kicker">公开 Build</p>
         <h2>{build.title}</h2>
@@ -370,79 +302,6 @@ function BuildDetail({ buildId }) {
         <button className="community-primary" onClick={handleCopy}>{copied ? '已复制' : '复制分享链接'}</button>
       </div>
     </div>
-
-    <div className="current-build-summary detail-summary">
-      <SummaryPill label="职业" value={formatLabel(JOB_LABELS, build.job)} />
-      <SummaryPill label="二转" value={formatLabel(BRANCH_LABELS, build.branch)} />
-      <SummaryPill label="等级" value={`Lv.${build.level ?? '-'}`} />
-      <SummaryPill label="资金" value={formatLabel(BUDGET_LABELS, build.budget)} />
-      <SummaryPill label="优先" value={formatLabel(PRIORITY_LABELS, build.priority)} />
-      <SummaryPill label="浏览" value={build.views ?? 0} />
-    </div>
-
-    <div className="build-readable-layout">
-      <ReadablePanel title="AP / 基础配置" subtitle="提交时保存的手动 AP 与基础参数。">
-        <div className="ap-stat-grid">
-          {apRows.length ? apRows.map((row) => <StatTile key={row.label} label={row.label} value={row.value} />) : <EmptyReadableState text="这个 Build 使用系统推荐 AP，没有保存手动 AP。" />}
-        </div>
-        <div className="mini-meta-row">
-          <span>版本：{formatLabel(EDITION_LABELS, build.stats?.editionId)}</span>
-          <span>性别：{formatLabel(GENDER_LABELS, build.stats?.gender)}</span>
-        </div>
-      </ReadablePanel>
-
-      <ReadablePanel title="技能配置" subtitle="只展示投入点数大于 0 的技能。">
-        {skillRows.length ? <div className="skill-readable-list">
-          {skillRows.map((skill) => <SkillReadableRow key={skill.name} skill={skill} />)}
-        </div> : <EmptyReadableState text="这个 Build 没有保存手动技能配置。" />}
-      </ReadablePanel>
-
-      <ReadablePanel title="手动装备配置" subtitle="只展示玩家主动替换过的装备。">
-        {gearRows.length ? <div className="gear-readable-grid">
-          {gearRows.map((item) => <GearReadableTile key={item.slot} item={item} />)}
-        </div> : <EmptyReadableState text="暂无手动替换装备；打开时会按当前推荐逻辑生成装备。" />}
-      </ReadablePanel>
-    </div>
+    <SharedBuildPreview build={build} />
   </section>;
-}
-
-function ReadablePanel({ title, subtitle, children }) {
-  return <section className="readable-panel">
-    <div className="readable-panel-head">
-      <h3>{title}</h3>
-      {subtitle && <p>{subtitle}</p>}
-    </div>
-    {children}
-  </section>;
-}
-
-function StatTile({ label, value }) {
-  return <div className="ap-stat-tile">
-    <span>{label}</span>
-    <strong>{value}</strong>
-  </div>;
-}
-
-function SkillReadableRow({ skill }) {
-  const letters = skill.name.replace(/[^a-zA-Z]/g, '').slice(0, 2) || skill.name.slice(0, 2);
-  return <article className="skill-readable-row">
-    <div className="skill-readable-icon">{letters}</div>
-    <div>
-      <strong>{skill.name}</strong>
-      <span>已投入 {skill.level} 点</span>
-    </div>
-    <em>Lv. {skill.level}</em>
-  </article>;
-}
-
-function GearReadableTile({ item }) {
-  return <article className="gear-readable-tile">
-    <span>{item.slotLabel}</span>
-    <strong>{item.title}</strong>
-    <p>Lv.{item.reqLevel}{item.detail ? ` · ${item.detail}` : ''}</p>
-  </article>;
-}
-
-function EmptyReadableState({ text }) {
-  return <div className="empty-readable-state">{text}</div>;
 }
