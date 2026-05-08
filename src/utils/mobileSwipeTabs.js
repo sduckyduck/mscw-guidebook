@@ -5,6 +5,8 @@ const SWIPE_TABS = [
   { id: 'materials', label: '材料' },
 ];
 
+const SWIPE_ANIMATION_MS = 340;
+
 const INTERACTIVE_SELECTOR = [
   'button',
   'a',
@@ -66,6 +68,28 @@ function clickTabButton(tabId) {
   return true;
 }
 
+function resetSwipeAnimation(shell) {
+  shell.classList.remove('mg-tab-swipe-forward', 'mg-tab-swipe-backward', 'mg-tab-swipe-animating');
+}
+
+function playSwipeAnimation(direction) {
+  window.requestAnimationFrame(() => {
+    const shell = document.querySelector('.app-shell');
+    if (!shell) return;
+
+    resetSwipeAnimation(shell);
+    // Force a new animation frame even when the user swipes quickly multiple times.
+    void shell.offsetWidth;
+
+    const className = direction > 0 ? 'mg-tab-swipe-forward' : 'mg-tab-swipe-backward';
+    shell.classList.add('mg-tab-swipe-animating', className);
+
+    window.setTimeout(() => {
+      resetSwipeAnimation(shell);
+    }, SWIPE_ANIMATION_MS + 90);
+  });
+}
+
 function goToAdjacentTab(delta) {
   const currentId = getCurrentTabId();
   const currentIndex = SWIPE_TABS.findIndex((tab) => tab.id === currentId);
@@ -75,13 +99,100 @@ function goToAdjacentTab(delta) {
   if (nextIndex === currentIndex) return;
 
   const nextTab = SWIPE_TABS[nextIndex];
-  clickTabButton(nextTab.id);
+  const changed = clickTabButton(nextTab.id);
+  if (changed) playSwipeAnimation(delta);
+}
+
+function installSwipeAnimationStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('mscw-mobile-swipe-tab-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'mscw-mobile-swipe-tab-styles';
+  style.textContent = `
+    @media (pointer: coarse), (max-width: 820px) {
+      .top-tabs .top-tab {
+        transition:
+          background-color 240ms ease,
+          border-color 240ms ease,
+          color 240ms ease,
+          box-shadow 240ms ease,
+          transform 240ms ease;
+      }
+
+      .top-tabs .top-tab.active {
+        transform: translateY(-1px) scale(1.015);
+        box-shadow: inset 0 0 0 1px rgba(25, 128, 108, 0.12), 0 8px 18px rgba(14, 92, 88, 0.10);
+      }
+
+      .app-shell.mg-tab-swipe-animating {
+        overflow-x: hidden !important;
+      }
+
+      .app-shell.mg-tab-swipe-forward > :not(.top-tabs) {
+        animation: mscwSwipeTabForward ${SWIPE_ANIMATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        will-change: transform, opacity, filter;
+      }
+
+      .app-shell.mg-tab-swipe-backward > :not(.top-tabs) {
+        animation: mscwSwipeTabBackward ${SWIPE_ANIMATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        will-change: transform, opacity, filter;
+      }
+    }
+
+    @keyframes mscwSwipeTabForward {
+      0% {
+        opacity: 0.18;
+        transform: translate3d(34px, 0, 0) scale(0.985);
+        filter: blur(2px);
+      }
+      58% {
+        opacity: 1;
+        filter: blur(0);
+      }
+      100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    @keyframes mscwSwipeTabBackward {
+      0% {
+        opacity: 0.18;
+        transform: translate3d(-34px, 0, 0) scale(0.985);
+        filter: blur(2px);
+      }
+      58% {
+        opacity: 1;
+        filter: blur(0);
+      }
+      100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .top-tabs .top-tab,
+      .app-shell.mg-tab-swipe-forward > :not(.top-tabs),
+      .app-shell.mg-tab-swipe-backward > :not(.top-tabs) {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+        filter: none !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 function installMobileSwipeTabs() {
   if (typeof window === 'undefined') return;
   if (window.__mscwMobileSwipeTabsInstalled) return;
   window.__mscwMobileSwipeTabsInstalled = true;
+  installSwipeAnimationStyles();
 
   let start = null;
 
