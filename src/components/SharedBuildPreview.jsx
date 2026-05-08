@@ -195,7 +195,7 @@ export default function SharedBuildPreview({ build }) {
         <SavedBuildDamagePanel classLine={classLine} skillPlan={skillPlan} />
       </div>
     </div>
-    <SavedBuildSpApPanel classLine={classLine} branch={branch} saved={saved} statPlan={statPlan} skillPlan={skillPlan} apNote={apNote} />
+    <SavedBuildSpApPanel classLine={classLine} saved={saved} statPlan={statPlan} skillPlan={skillPlan} apNote={apNote} />
     {error && <p className="community-error">官方数据读取提示：{error}</p>}
   </section>;
 }
@@ -314,7 +314,7 @@ function SavedDamageRow({ card }) {
   </article>;
 }
 
-function SavedBuildSpApPanel({ classLine, branch, saved, statPlan, skillPlan, apNote }) {
+function SavedBuildSpApPanel({ classLine, saved, statPlan, skillPlan, apNote }) {
   const firstJobSkills = skillPlan.skills.filter((skill) => skill.tier !== 'second');
   const secondJobSkills = skillPlan.skills.filter((skill) => skill.tier === 'second');
 
@@ -376,15 +376,11 @@ function ReadonlyPanelHead({ kicker, title, action }) {
 }
 
 function ReadonlyPointRow({ label: labelText, value, points, minValue }) {
-  return <article className="mg-ap-box saved-ap-box-readonly">
+  return <article className="mg-ap-box saved-ap-box-readonly no-readonly-controls">
     <div>
       <span>{labelText}</span>
       <strong>{value}</strong>
       <em>AP {points} · 最低 {minValue}</em>
-    </div>
-    <div className="mg-mini-controls readonly-controls" aria-hidden="true">
-      <span>-</span>
-      <span>+</span>
     </div>
   </article>;
 }
@@ -406,16 +402,12 @@ function SavedSkillGroupCard({ title, kicker, action, note, remaining, total, sk
 }
 
 function ReadonlySkillPointRow({ skill }) {
-  const rowClass = ['mg-skill-row saved-skill-row-readonly', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
+  const rowClass = ['mg-skill-row saved-skill-row-readonly no-readonly-controls', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
   return <article className={rowClass}>
     <SkillBadge name={skill.name} iconKey={skill.iconKey} />
     <div className="mg-skill-main">
       <strong>{skill.name}</strong>
       <span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · 已保存'}</span>
-    </div>
-    <div className="mg-mini-controls readonly-controls" aria-hidden="true">
-      <span>-</span>
-      <span>+</span>
     </div>
   </article>;
 }
