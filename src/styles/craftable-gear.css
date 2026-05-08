@@ -1,0 +1,166 @@
+.mg-craftable-badge {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(20, 130, 113, 0.28);
+  background: linear-gradient(135deg, #eafff9, #d7fbf0);
+  color: #127160;
+  font-weight: 1000;
+  box-shadow: 0 5px 12px rgba(14, 92, 88, 0.12);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mg-craftable-badge.picker {
+  min-width: 50px;
+  height: 28px;
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 0.68rem;
+  margin-left: auto;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+
+.mg-craftable-badge.tile {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 21px;
+  height: 21px;
+  border-radius: 8px;
+  font-size: 0.62rem;
+  z-index: 4;
+}
+
+.mg-equip-tile {
+  position: relative;
+}
+
+.mg-craftable-badge:active {
+  transform: scale(0.94);
+}
+
+.mg-craft-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  align-items: end;
+  background: rgba(8, 18, 28, 0.44);
+  backdrop-filter: blur(4px);
+}
+
+.mg-craft-modal {
+  width: min(100%, 720px);
+  max-height: 72vh;
+  margin: 0 auto;
+  overflow-y: auto;
+  border-radius: 28px 28px 0 0;
+  background: #fff;
+  padding: 22px;
+  color: #111827;
+  box-shadow: 0 -18px 42px rgba(0, 0, 0, 0.22);
+}
+
+.mg-craft-modal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.mg-craft-modal-head span {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.mg-craft-modal-head h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.34rem;
+  font-weight: 1000;
+}
+
+.mg-craft-modal-close {
+  border: 1px solid #d7e0dc;
+  border-radius: 999px;
+  background: #f8faf9;
+  color: #0f172a;
+  font-weight: 1000;
+  padding: 10px 16px;
+}
+
+.mg-craft-modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mg-craft-modal-meta span {
+  border-radius: 999px;
+  background: #eefdf8;
+  color: #176d5b;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.mg-craft-modal h3 {
+  margin: 10px 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 1000;
+}
+
+.mg-craft-material-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mg-craft-material-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e5ece9;
+  border-radius: 14px;
+  background: #fbfefd;
+  padding: 11px 13px;
+}
+
+.mg-craft-material-row strong {
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.mg-craft-material-row em {
+  font-style: normal;
+  color: #127160;
+  font-weight: 1000;
+}
+
+@media (max-width: 520px) {
+  .mg-craftable-badge.picker {
+    min-width: 44px;
+    height: 25px;
+    font-size: 0.58rem;
+    padding: 0 6px;
+  }
+
+  .mg-craftable-badge.tile {
+    width: 18px;
+    height: 18px;
+    border-radius: 7px;
+    font-size: 0.54rem;
+  }
+
+  .mg-craft-modal {
+    padding: 18px;
+    border-radius: 24px 24px 0 0;
+  }
+}
