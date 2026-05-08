@@ -2,6 +2,75 @@ const CRAFTING_DATA_PATH = 'AppData/crafting.json';
 const BADGE_CLASS = 'mg-craftable-badge';
 const BADGED_ATTR = 'data-mscw-craftable-badged';
 
+const PROFESSION_ZH = {
+  Smithing: '防具锻造',
+  Weaponcrafting: '武器制作',
+  Tailoring: '裁缝制作',
+  Woodcrafting: '木工制作',
+  Leatherworking: '皮革制作',
+  Arcforge: '奥术锻造',
+  Crafting: '制作',
+};
+
+const MATERIAL_ZH = {
+  'Bronze Ingot': '青铜锭',
+  'Steel Ingot': '钢铁锭',
+  'Mithril Ingot': '秘银锭',
+  'Adamantium Ingot': '锂矿锭',
+  'Silver Ingot': '银锭',
+  'Orihalcon Ingot': '奥利哈钢锭',
+  'Gold Ingot': '黄金锭',
+  'Dark Crystal': '黑水晶',
+  Diamond: '钻石',
+  Sapphire: '蓝宝石',
+  Garnet: '石榴石',
+  Amethyst: '紫水晶',
+  Aquamarine: '海蓝宝石',
+  Emerald: '祖母绿',
+  Opal: '蛋白石',
+  Topaz: '黄晶',
+  'Black Crystal': '黑水晶',
+  'Power Crystal': '力量水晶',
+  'Dexterity Crystal': '敏捷水晶',
+  'Wisdom Crystal': '智慧水晶',
+  'LUK Crystal': '幸运水晶',
+  'Screw': '螺丝钉',
+  Screw: '螺丝钉',
+  'Processed Wood': '加工木材',
+  'Stiff Feather': '硬羽毛',
+  'Soft Feather': '柔软羽毛',
+  'Animal Skin': '动物皮',
+  Leather: '皮革',
+  'Dragon Skin': '龙皮',
+  'Piece of Ice': '冰块',
+  'Firewood': '柴火',
+  'Tree Branch': '树枝',
+  'Wooden Board': '木板',
+  'Log': '原木',
+  'Pig Ribbon': '猪的蝴蝶结',
+  'Orange Mushroom Cap': '橙蘑菇盖',
+  'Blue Mushroom Cap': '蓝蘑菇盖',
+  'Green Mushroom Cap': '绿蘑菇盖',
+  'Zombie Mushroom Cap': '僵尸蘑菇盖',
+  'Horny Mushroom Cap': '刺蘑菇盖',
+  'Wild Boar Tooth': '野猪尖牙',
+  'Fire Boar Tooth': '火野猪尖牙',
+  'Jr. Necki Skin': '小青蛇皮',
+  'Evil Eye Tail': '风独眼兽尾巴',
+  'Curse Eye Tail': '冰独眼兽尾巴',
+  'Lupin Banana': '猴子香蕉',
+  'Zombie Lupin Doll': '僵尸猴玩偶',
+  'Solid Horn': '坚硬的角',
+  'Drake Skull': '龙头骨',
+  'Dragon Scale': '龙鳞',
+  'Ligator Skin': '鳄鱼皮',
+  'Octopus Leg': '章鱼脚',
+  'Slime Bubble': '绿水灵珠',
+  'Bubble Fish Thoughts': '泡泡鱼的心事',
+  'Star Rock': '星石',
+  'Moon Rock': '月石',
+};
+
 let recipeMapPromise = null;
 let recipeMap = null;
 
@@ -24,6 +93,14 @@ function safeArray(value) {
   if (!value) return [];
   if (typeof value === 'object') return Object.values(value);
   return [];
+}
+
+function translateProfession(value = '') {
+  return PROFESSION_ZH[value] ?? PROFESSION_ZH[String(value).trim()] ?? value ?? '制作';
+}
+
+function translateMaterial(value = '') {
+  return MATERIAL_ZH[value] ?? MATERIAL_ZH[String(value).trim()] ?? value ?? '未知材料';
 }
 
 function buildRecipeMap(raw) {
@@ -105,10 +182,10 @@ function removeStaleBadge(node) {
 function createBadge(recipe, variant) {
   const badge = document.createElement('span');
   badge.className = `${BADGE_CLASS} ${variant === 'tile' ? 'tile' : 'picker'}`;
-  badge.textContent = variant === 'tile' ? '锻' : '可锻造';
+  badge.textContent = variant === 'tile' ? '可造' : '可锻造';
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
-  badge.setAttribute('aria-label', `查看 ${recipe.output} 的锻造材料`);
+  badge.setAttribute('aria-label', `查看 ${recipe.output} 的制作材料`);
   badge.dataset.recipeId = recipe.id;
 
   const open = (event) => {
@@ -152,7 +229,7 @@ function applyBadges(root = document) {
 function formatMeso(value) {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) return '';
-  return `${number.toLocaleString()} meso`;
+  return `${number.toLocaleString()} 金币`;
 }
 
 function showCraftingModal(recipe) {
@@ -170,16 +247,16 @@ function showCraftingModal(recipe) {
         <button type="button" class="mg-craft-modal-close">关闭</button>
       </div>
       <div class="mg-craft-modal-meta">
-        <span>${escapeHtml(recipe.profession)}</span>
-        <span>Lv.${recipe.level || '-'}</span>
+        <span>${escapeHtml(translateProfession(recipe.profession))}</span>
+        <span>制作等级 ${recipe.level || '-'}</span>
         ${formatMeso(recipe.mesoCost) ? `<span>${formatMeso(recipe.mesoCost)}</span>` : ''}
-        ${recipe.exp ? `<span>EXP ${recipe.exp}</span>` : ''}
+        ${recipe.exp ? `<span>制作经验 ${recipe.exp}</span>` : ''}
       </div>
       <h3>需要材料</h3>
       <div class="mg-craft-material-list">
         ${recipe.materials.length ? recipe.materials.map((material) => `
           <div class="mg-craft-material-row">
-            <strong>${escapeHtml(material.name)}</strong>
+            <strong>${escapeHtml(translateMaterial(material.name))}</strong>
             <em>x${material.qty}</em>
           </div>
         `).join('') : '<p>当前配方没有材料明细。</p>'}
