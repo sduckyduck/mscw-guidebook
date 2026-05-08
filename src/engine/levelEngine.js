@@ -101,15 +101,10 @@ export function getRecommendedApAllocation(classLine, level, custom = {}) {
   const minStats = getMinimumStatsForClass(classLine.id);
   const allocation = normalizeLevel10BaseStats(classLine.baseStats, primary, classLine.id);
 
-  // Start from the corrected Lv.10 stat line, then distribute level-up AP.
-  // The returned allocation is the editable final AP line, not only the delta.
   const secondaryNeeded = Math.max(0, secondaryTarget - (allocation[secondary] ?? minStats[secondary]));
   let secondaryAdded = Math.min(levelUpAp, secondaryNeeded);
   let primaryAdded = Math.max(0, levelUpAp - secondaryAdded);
 
-  // For physical jobs, low/normal budget means fewer accuracy bonuses from gear.
-  // Add secondary AP until the estimated hit target is reached, then put the rest
-  // back into the main damage stat. Magician intentionally skips this rule.
   if (classLine.id !== 'magician' && accuracyTarget > 0) {
     let safety = 0;
     while (secondaryAdded < levelUpAp && safety < levelUpAp) {
@@ -202,8 +197,6 @@ function resolveFinalApAllocation(customAllocation, baseStats, recommendedAlloca
     return sanitizeFinalApAllocation(customAllocation, totalAp, minStats);
   }
 
-  // Backward compatibility for older saved state, where AP allocation meant
-  // level-up deltas instead of final AP values.
   const migrated = { ...baseStats };
   for (const key of STAT_KEYS) {
     migrated[key] = (migrated[key] ?? minStats[key]) + Math.max(0, Math.floor(Number(customAllocation?.[key] ?? 0)));
@@ -222,8 +215,6 @@ function sanitizeFinalApAllocation(allocation, totalAp, minStats = getMinimumSta
     remaining -= next[key];
   }
 
-  // If an imported/custom allocation over-spent before later stats received their
-  // minimums, repair it by pulling points from earlier stats down to the floor.
   for (const key of [...STAT_KEYS].reverse()) {
     const floor = minStats[key] ?? MIN_STAT_AP;
     if (next[key] >= floor) continue;
@@ -264,11 +255,12 @@ function inferSecondaryTarget(classId, level, budget = 'mid') {
   }
 
   if (classId === 'bowman') {
-    // Bowman damage and accuracy already come mostly from DEX. Low budget can keep
-    // STR lower because weapon upgrades lag; high budget needs fresher weapon reqs.
-    if (budget === 'low') return Math.min(70, Math.max(10, Math.round(level * 0.48)));
-    if (budget === 'high') return Math.min(90, Math.max(15, Math.round(level * 0.82)));
-    return Math.min(80, Math.max(12, Math.round(level * 0.65)));
+    // Bowman secondary STR gates bow upgrades. 穷鬼流 should lag a little,
+    // but at Lv.50 it still needs enough STR to see/use mid-late bows instead of
+    // being stuck on Lv.20 Hunter's Bow.
+    if (budget === 'low') return Math.min(70, Math.max(15, Math.round(level * 0.86) + 2));
+    if (budget === 'high') return Math.min(90, Math.max(20, level + 5));
+    return Math.min(85, Math.max(18, level + 3));
   }
 
   if (classId === 'thief') {
