@@ -14,6 +14,7 @@ import './utils/brandFooterName.js';
 import './utils/budgetRouteTuning.js';
 import './utils/craftableGearBadges.js';
 import './utils/overviewDamageDisplayPatch.js';
+import './utils/weaponAttackStatDisplayPatch.js';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
