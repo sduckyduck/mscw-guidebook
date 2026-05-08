@@ -80,6 +80,52 @@ function addSecondJobBonusToPlan(plan, level) {
   return recalcPlan(plan);
 }
 
+function getSkill(plan, name) {
+  return (plan.skills ?? []).find((skill) => skill.name === name);
+}
+
+function addToSkill(plan, name, amount) {
+  const skill = getSkill(plan, name);
+  if (!skill || skill.locked || amount <= 0) return 0;
+  const add = Math.min(amount, Math.max(0, roundSkillValue(skill.max) - roundSkillValue(skill.level)));
+  skill.level = roundSkillValue(skill.level) + add;
+  return add;
+}
+
+function applyBowmanFirstJobPrereqRoute(plan, args = {}) {
+  if (args.classId !== 'bowman') return plan;
+
+  const firstSkills = (plan.skills ?? []).filter((skill) => skill.tier !== 'second');
+  if (!firstSkills.some((skill) => skill.name === 'Arrow Blow') || !firstSkills.some((skill) => skill.name === 'Double Shot')) return plan;
+
+  const total = roundSkillValue(plan.totalSpByTier?.first);
+  let left = total;
+  for (const skill of firstSkills) skill.level = 0;
+
+  const lowRoute = args.budget === 'low' && args.priority !== 'exp';
+  const order = lowRoute
+    ? ['Critical Shot', 'The Eye of Amazon', 'Arrow Blow', 'Focus', "Amazon's Judgement", 'Double Shot']
+    : ['Critical Shot', 'The Eye of Amazon', 'Arrow Blow', 'Double Shot', 'Focus', "Amazon's Judgement"];
+  const caps = lowRoute ? { 'Double Shot': 0 } : { 'Arrow Blow': 1 };
+
+  for (const name of order) {
+    if (!left) break;
+    const skill = getSkill(plan, name);
+    if (!skill) continue;
+    const cap = Object.prototype.hasOwnProperty.call(caps, name) ? caps[name] : roundSkillValue(skill.max);
+    const add = Math.min(left, Math.max(0, cap - roundSkillValue(skill.level)));
+    left -= addToSkill(plan, name, add);
+  }
+
+  for (const name of order) {
+    if (!left) break;
+    if (Object.prototype.hasOwnProperty.call(caps, name)) continue;
+    left -= addToSkill(plan, name, left);
+  }
+
+  return recalcPlan(plan);
+}
+
 function applyManualAllocation(plan, customSkills = {}) {
   const allocation = normalizeAllocation(customSkills);
   const totals = {
@@ -141,10 +187,10 @@ function recalcPlan(plan) {
 
 export function getRecommendedSkillAllocation(args = {}) {
   const base = getRecommendedSkillAllocationBase(args);
-  const plan = addSecondJobBonusToPlan(
+  const plan = applyBowmanFirstJobPrereqRoute(addSecondJobBonusToPlan(
     unlockSecondJobAtLevel30(clonePlan(getSkillPlanBase({ ...args, customSkills: undefined })), args.level),
     args.level,
-  );
+  ), args);
 
   // Use the recalculated plan as the source of truth so the Lv.30 bonus SP is
   // included as an integer and never saved as 3.999999999-style floating values.
@@ -158,6 +204,7 @@ export function getSkillPlan(args = {}) {
   const basePlan = clonePlan(getSkillPlanBase({ ...args, customSkills: undefined }));
   unlockSecondJobAtLevel30(basePlan, args.level);
   addSecondJobBonusToPlan(basePlan, args.level);
+  applyBowmanFirstJobPrereqRoute(basePlan, args);
 
   if (!hasManualAllocation) return recalcPlan(basePlan);
   return applyManualAllocation(basePlan, args.customSkills);
