@@ -4,6 +4,13 @@ import {
   getApNote,
 } from './skillPlannerRealPlayer.js';
 
+const DAMAGE_NAMES = new Set([
+  'Power Strike', 'Slash Blast',
+  'Energy Bolt', 'Magic Claw', 'Fire Arrow', 'Poison Breath', 'Cold Beam', 'Thunder Bolt', 'Heal', 'Holy Arrow',
+  'Arrow Blow', 'Double Shot', 'Power Knockback', 'Arrow Bomb: Bow', 'Iron Arrow: Crossbow',
+  'Double Stab', 'Lucky Seven', 'Drain', 'Savage Blow',
+]);
+
 function numericLevel(level) {
   const value = Number(level);
   return Number.isFinite(value) ? value : 0;
@@ -45,6 +52,7 @@ function clonePlan(plan) {
     remainingByTier: { ...(plan.remainingByTier ?? {}) },
     statBonuses: plan.statBonuses,
     damageCards: plan.damageCards,
+    mainAttack: Number(plan.mainAttack ?? 0) || 0,
   };
 }
 
@@ -300,6 +308,47 @@ function getCalculatedStatBonuses(plan) {
   };
 }
 
+function effect(row) {
+  return String((row.allLevelStats ?? row.all_level_stats ?? [])[Math.max(0, roundSkillValue(row.level) - 1)] ?? '');
+}
+
+function parseDamage(text) {
+  const multi = String(text).match(/Attack\s+(\d+)x\s+with\s+(\d+(?:\.\d+)?)%\s+damage/i);
+  if (multi) return { hits: Number(multi[1]), ratio: Number(multi[2]) / 100 };
+  const percent = String(text).match(/damage\s+(\d+(?:\.\d+)?)%/i);
+  return percent ? { hits: 1, ratio: Number(percent[1]) / 100 } : null;
+}
+
+function buildDamageCards(skills = [], mainAttack = 0) {
+  const attack = Number(mainAttack) || 0;
+  const baseMin = Math.max(1, Math.round(attack * 0.62));
+  const baseMax = Math.max(baseMin + 1, Math.round(attack * 1.18));
+  const cards = skills
+    .filter((row) => roundSkillValue(row.level) > 0 && !row.locked && DAMAGE_NAMES.has(row.name))
+    .map((row) => {
+      const currentEffect = effect(row);
+      const damage = parseDamage(currentEffect) ?? {
+        hits: ['Magic Claw', 'Double Shot', 'Lucky Seven'].includes(row.name) ? 2 : 1,
+        ratio: Math.max(0.5, roundSkillValue(row.level) / Math.max(1, roundSkillValue(row.max))),
+      };
+      const min = Math.max(1, Math.round(attack * damage.ratio * damage.hits * 0.82));
+      const max = Math.max(min + 1, Math.round(attack * damage.ratio * damage.hits * 1.18));
+      return {
+        name: row.name,
+        role: currentEffect || row.description || row.tierLabel,
+        level: roundSkillValue(row.level),
+        maxLevel: roundSkillValue(row.max),
+        iconKey: row.iconKey,
+        min,
+        max,
+        hits: damage.hits,
+      };
+    })
+    .sort((a, b) => b.max - a.max)
+    .slice(0, 6);
+  return [{ name: 'Base Attack', role: '普通攻击', level: null, maxLevel: null, min: baseMin, max: baseMax, isBase: true }, ...cards];
+}
+
 function recalcPlan(plan) {
   const usedByTier = (plan.skills ?? []).reduce((sum, skill) => {
     const tier = skill.tier === 'second' ? 'second' : 'first';
@@ -332,6 +381,7 @@ function recalcPlan(plan) {
       second: Math.max(0, totals.second - usedByTier.second),
     },
     statBonuses: getCalculatedStatBonuses(normalizedPlan),
+    damageCards: buildDamageCards(normalizedSkills, Number(plan.mainAttack) || 0),
   };
 }
 
@@ -350,6 +400,7 @@ export function getSkillPlan(args = {}) {
   const hasManualAllocation = args.customSkills && !sameAllocation(args.customSkills, recommendedAllocation);
 
   const basePlan = clonePlan(getSkillPlanBase({ ...args, customSkills: undefined }));
+  basePlan.mainAttack = Number(args.mainAttack) || 0;
   unlockSecondJobAtLevel30(basePlan, args.level);
   addSecondJobBonusToPlan(basePlan, args.level);
   applyFirstJobRoute(basePlan, args);
