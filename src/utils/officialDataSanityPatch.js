@@ -6,14 +6,35 @@ const ITEM_STAT_OVERRIDES = [
     names: ['ryden'],
     stats: {
       incPAD: 50,
-      pad: 50,
-      watk: 50,
-      attack: 50,
       incSTR: 1,
-      str: 1,
     },
   },
 ];
+
+const STAT_ALIASES = {
+  reqLevel: ['reqLevel', 'req_level', 'level'],
+  reqJob: ['reqJob', 'req_job'],
+  reqSTR: ['reqSTR', 'reqStr', 'req_str'],
+  reqDEX: ['reqDEX', 'reqDex', 'req_dex'],
+  reqINT: ['reqINT', 'reqInt', 'req_int'],
+  reqLUK: ['reqLUK', 'reqLuk', 'req_luk'],
+  incSTR: ['incSTR', 'str'],
+  incDEX: ['incDEX', 'dex'],
+  incINT: ['incINT', 'int'],
+  incLUK: ['incLUK', 'luk'],
+  incMHP: ['incMHP', 'incMaxHP', 'incHP', 'mhp', 'hp'],
+  incMMP: ['incMMP', 'incMaxMP', 'incMP', 'mmp', 'mp'],
+  incPAD: ['incPAD', 'pad', 'watk', 'attack', 'weaponAttack'],
+  incMAD: ['incMAD', 'mad', 'matk', 'magicAttack'],
+  incPDD: ['incPDD', 'pdd', 'wdef', 'defense'],
+  incMDD: ['incMDD', 'mdd', 'magicDefense'],
+  incACC: ['incACC', 'accuracy', 'acc'],
+  incEVA: ['incEVA', 'incAVOID', 'incAvoid', 'avoidability', 'eva', 'avoid'],
+  incSpeed: ['incSpeed', 'speed'],
+  incJump: ['incJump', 'jump'],
+  tuc: ['tuc', 'slots'],
+  attackSpeed: ['attackSpeed', 'attack_speed'],
+};
 
 function normalizeText(value = '') {
   return String(value).toLowerCase().replace(/\s+/g, ' ').trim();
@@ -22,6 +43,40 @@ function normalizeText(value = '') {
 function nameIncludesAny(value, names) {
   const text = normalizeText(value);
   return names.some((name) => text.includes(name));
+}
+
+function readStat(item, keys) {
+  for (const key of keys) {
+    const value = item?.[key] ?? item?.stats?.[key];
+    if (value !== undefined && value !== null && value !== '') return Number(value) || 0;
+  }
+  return 0;
+}
+
+function writeCanonicalStat(item, key, value) {
+  if (value === undefined || value === null || value === '') return item;
+  const numeric = Number(value) || 0;
+  if (!numeric && !['reqLevel', 'reqJob', 'attackSpeed', 'tuc'].includes(key)) return item;
+  item[key] = numeric;
+  item.stats = { ...(item.stats ?? {}), [key]: numeric };
+  return item;
+}
+
+function normalizeEquipmentStats(item) {
+  if (!item || item.category !== 'Equipment') return item;
+  const next = { ...item, stats: { ...(item.stats ?? {}) } };
+  for (const [canonical, aliases] of Object.entries(STAT_ALIASES)) {
+    writeCanonicalStat(next, canonical, readStat(next, aliases));
+  }
+
+  next.reqJobLabel = next.reqJobLabel ?? next.req_job_label;
+  next.req_job_label = next.req_job_label ?? next.reqJobLabel;
+  next.weaponType = next.weaponType ?? next.weapon_type;
+  next.weapon_type = next.weapon_type ?? next.weaponType;
+  next.attackSpeedLabel = next.attackSpeedLabel ?? next.attack_speed_label;
+  next.attack_speed_label = next.attack_speed_label ?? next.attackSpeedLabel;
+  next.title = next.title ?? next.name;
+  return next;
 }
 
 function isBannedItem(item) {
@@ -81,11 +136,17 @@ function buildCorrectedItemDescription(item, fallback = '') {
   const matk = Number(item.incMAD ?? item.stats?.incMAD ?? 0) || 0;
   const str = Number(item.incSTR ?? item.stats?.incSTR ?? 0) || 0;
   const dex = Number(item.incDEX ?? item.stats?.incDEX ?? 0) || 0;
+  const pdd = Number(item.incPDD ?? item.stats?.incPDD ?? 0) || 0;
+  const mdd = Number(item.incMDD ?? item.stats?.incMDD ?? 0) || 0;
+  const acc = Number(item.incACC ?? item.stats?.incACC ?? 0) || 0;
 
   if (watk) statParts.push(`+${watk} WATK`);
   if (matk) statParts.push(`+${matk} MATK`);
   if (str) statParts.push(`+${str} STR`);
   if (dex) statParts.push(`+${dex} DEX`);
+  if (pdd) statParts.push(`+${pdd} WDEF`);
+  if (mdd) statParts.push(`+${mdd} MDEF`);
+  if (acc) statParts.push(`+${acc} ACC`);
 
   const slots = Number(item.tuc ?? item.slots ?? item.stats?.tuc ?? item.stats?.slots ?? 0) || 0;
   if (slots) statParts.push(`${slots} slots`);
@@ -112,14 +173,23 @@ function normalizeEquipmentPriceForGuideScoring(item) {
   };
 }
 
+function exposeItems(items) {
+  if (typeof window === 'undefined') return;
+  window.__mscwGuideItems = items;
+  window.__mscwGuideItemsByName = new Map(
+    items
+      .filter((item) => item?.category === 'Equipment')
+      .flatMap((item) => [item.name, item.title].filter(Boolean).map((name) => [normalizeText(name), item])),
+  );
+}
+
 function patchItemsPayload(payload) {
   if (!payload || !Array.isArray(payload.items)) return payload;
-  return {
-    ...payload,
-    items: payload.items
-      .filter((item) => !isBannedItem(item))
-      .map((item) => normalizeEquipmentPriceForGuideScoring(applyItemStatOverride(item))),
-  };
+  const items = payload.items
+    .filter((item) => !isBannedItem(item))
+    .map((item) => normalizeEquipmentPriceForGuideScoring(normalizeEquipmentStats(applyItemStatOverride(item))));
+  exposeItems(items);
+  return { ...payload, items };
 }
 
 function patchMonstersPayload(payload) {
