@@ -100,6 +100,8 @@ export default function SkillPanel({
               kicker="SP 加点"
               action="系统推荐"
               onAction={onSkillReset}
+              secondaryAction="清空"
+              onSecondaryAction={() => clearSkillTier(firstJobSkills, onSkillChange)}
               note={plan.summary}
               remaining={plan.remainingByTier?.first ?? 0}
               total={plan.totalSpByTier?.first ?? 0}
