@@ -319,10 +319,22 @@ function parseDamage(text) {
   return percent ? { hits: 1, ratio: Number(percent[1]) / 100 } : null;
 }
 
+function getPhysicalMasteryRatio(skills = []) {
+  const masterySkill = (skills ?? []).find((skill) => /mastery/i.test(skill.name) && roundSkillValue(skill.level) > 0 && !skill.locked);
+  if (!masterySkill) return 0.3;
+
+  const level = roundSkillValue(masterySkill.level);
+  const currentEffect = effect(masterySkill);
+  const percent = currentEffect.match(/mastery\s*(?:\+|:)?\s*(\d+(?:\.\d+)?)%/i)
+    ?? currentEffect.match(/weapon mastery\s*(?:\+|:)?\s*(\d+(?:\.\d+)?)%/i);
+  if (percent) return Math.max(0.3, Number(percent[1]) / 100);
+
+  return Math.max(0.3, Math.min(0.6, 0.3 + level * 0.015));
+}
+
 function buildDamageCards(skills = [], mainAttack = 0) {
-  const attack = Number(mainAttack) || 0;
-  const baseMin = Math.max(1, Math.round(attack * 0.62));
-  const baseMax = Math.max(baseMin + 1, Math.round(attack * 1.18));
+  const baseMax = Math.max(1, Math.round(Number(mainAttack) || 0));
+  const baseMin = Math.max(1, Math.round(baseMax * getPhysicalMasteryRatio(skills)));
   const cards = skills
     .filter((row) => roundSkillValue(row.level) > 0 && !row.locked && DAMAGE_NAMES.has(row.name))
     .map((row) => {
@@ -331,8 +343,9 @@ function buildDamageCards(skills = [], mainAttack = 0) {
         hits: ['Magic Claw', 'Double Shot', 'Lucky Seven'].includes(row.name) ? 2 : 1,
         ratio: Math.max(0.5, roundSkillValue(row.level) / Math.max(1, roundSkillValue(row.max))),
       };
-      const min = Math.max(1, Math.round(attack * damage.ratio * damage.hits * 0.82));
-      const max = Math.max(min + 1, Math.round(attack * damage.ratio * damage.hits * 1.18));
+      const multiplier = damage.ratio * damage.hits;
+      const min = Math.max(1, Math.round(baseMin * multiplier));
+      const max = Math.max(min + 1, Math.round(baseMax * multiplier));
       return {
         name: row.name,
         role: currentEffect || row.description || row.tierLabel,
