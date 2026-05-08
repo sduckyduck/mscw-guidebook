@@ -1,48 +1,59 @@
-/* Clean layout for the Character/SP-AP tab.
-   This removes the repeated character preview card and makes AP distribute horizontally. */
+/* Figure-1 layout for the Character/SP-AP tab.
+   Goal: keep the original one-screen feeling, remove the repeated character preview,
+   keep AP horizontal, and keep first/second job skills side-by-side on mobile. */
 
-.mg-character-dashboard-clean {
+.mg-character-dashboard-figure1 {
   max-width: 720px !important;
 }
 
-.mg-character-clean-layout {
+.mg-character-figure1-layout {
   display: grid;
-  gap: 14px;
-}
-
-.mg-character-dashboard-clean .mg-ap-panel-wide {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.mg-ap-wide-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 178px;
-  gap: 12px;
-  align-items: stretch;
-  margin-bottom: 10px;
-}
-
-.mg-ap-meter-compact {
-  margin: 0 !important;
-}
-
-.mg-ap-grid-horizontal {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-}
-
-.mg-skill-clean-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr);
   gap: 14px;
   align-items: start;
 }
 
-.mg-skill-clean-grid .mg-sp-panel,
-.mg-skill-clean-grid .mg-skill-side-card {
+.mg-ap-summary-panel {
+  grid-column: 1 / -1;
+}
+
+.mg-ap-summary-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 12px;
+  align-items: center;
+}
+
+.mg-character-left-rail,
+.mg-character-right-rail {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.mg-ap-stats-panel {
+  padding-top: 10px;
+}
+
+.mg-ap-grid-figure1 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.mg-ap-grid-figure1 .mg-ap-box {
+  min-height: 92px;
+}
+
+.mg-character-right-rail .mg-skill-side-card,
+.mg-character-right-rail .mg-second-skill-card,
+.mg-character-left-rail .mg-sp-panel {
   min-height: 100%;
 }
 
+.mg-character-dashboard-figure1 .mg-character-preview-card,
+.mg-character-dashboard-figure1 .mg-character-frame-lg,
+.mg-character-dashboard-figure1 .mg-character-preview-meta,
 .mg-character-dashboard-clean .mg-character-preview-card,
 .mg-character-dashboard-clean .mg-character-frame-lg,
 .mg-character-dashboard-clean .mg-character-preview-meta {
@@ -50,64 +61,61 @@
 }
 
 @media (max-width: 760px) {
-  .mg-character-dashboard-clean {
+  .mg-character-dashboard-figure1 {
     max-width: 100% !important;
   }
 
-  .mg-character-clean-layout {
-    gap: 9px;
+  .mg-character-figure1-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 10px;
   }
 
-  .mg-ap-wide-summary {
+  .mg-ap-summary-inline {
     grid-template-columns: 1fr;
-    gap: 6px;
+    gap: 8px;
   }
 
   .mg-ap-meter-compact {
     display: none !important;
   }
 
-  .mg-ap-grid-horizontal {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  .mg-ap-grid-figure1 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 6px !important;
   }
 
-  .mg-ap-grid-horizontal .mg-ap-box {
-    min-height: 80px;
-    grid-template-columns: 1fr;
-  }
-
-  .mg-ap-grid-horizontal .mg-mini-controls {
-    grid-template-columns: 1fr 1fr;
-    width: 100%;
-  }
-
-  .mg-ap-grid-horizontal .mg-mini-controls button {
-    width: 100% !important;
-  }
-
-  .mg-skill-clean-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 8px;
+  .mg-ap-grid-figure1 .mg-ap-box {
+    min-height: 74px;
   }
 }
 
+/* Most important mobile rule: keep the two-column figure-1 structure.
+   Do not collapse first/second job skill panels into one vertical column. */
 @media (max-width: 520px) {
-  .mg-ap-grid-horizontal {
+  .mg-character-figure1-layout {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 8px;
+  }
+
+  .mg-character-left-rail,
+  .mg-character-right-rail {
+    gap: 8px;
+  }
+
+  .mg-ap-grid-figure1 {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  .mg-ap-grid-horizontal .mg-ap-box {
-    min-height: 72px;
-    grid-template-columns: minmax(0, 1fr) auto;
+  .mg-ap-grid-figure1 .mg-ap-box {
+    min-height: 70px;
   }
 
-  .mg-ap-grid-horizontal .mg-mini-controls {
-    grid-template-columns: 22px 22px;
-    width: auto;
+  .mg-ap-summary-panel {
+    grid-column: 1 / -1;
   }
 
-  .mg-skill-clean-grid {
-    grid-template-columns: 1fr;
+  .mg-character-dashboard-figure1 .mg-skill-row {
+    padding-left: 8px;
+    padding-right: 8px;
   }
 }
