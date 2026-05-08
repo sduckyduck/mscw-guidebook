@@ -57,7 +57,9 @@
 .saved-build-equipment-board,
 .saved-map-card,
 .saved-character-preview-card,
-.saved-damage-card {
+.saved-damage-card,
+.saved-spap-panel .mg-glass-panel,
+.saved-spap-panel .mg-skill-side-card {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -276,6 +278,134 @@
   max-height: 58px;
 }
 
+.saved-spap-panel {
+  margin-top: 16px;
+}
+
+.saved-spap-title {
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1.05rem;
+  line-height: 1.15;
+  font-weight: 1000;
+}
+
+.saved-spap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.saved-spap-panel .mg-ap-panel,
+.saved-spap-panel .mg-sp-panel,
+.saved-spap-panel .mg-skill-side-card {
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.saved-spap-panel .mg-character-panel-head h2 {
+  font-size: 1.18rem;
+  line-height: 1.08;
+}
+
+.saved-readonly-chip {
+  border-radius: 14px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 1000;
+}
+
+.saved-spap-panel .mg-character-note {
+  font-size: 0.72rem;
+  line-height: 1.28;
+}
+
+.saved-spap-panel .mg-character-meter {
+  min-height: 62px;
+  padding: 10px 12px;
+}
+
+.saved-spap-panel .mg-character-meter span,
+.saved-spap-panel .mg-character-meter em {
+  font-size: 0.72rem;
+}
+
+.saved-spap-panel .mg-character-meter strong {
+  font-size: 1.34rem;
+}
+
+.saved-spap-panel .mg-ap-grid {
+  gap: 8px;
+}
+
+.saved-spap-panel .mg-ap-box {
+  min-height: 72px;
+  padding: 10px;
+}
+
+.saved-spap-panel .mg-ap-box span {
+  font-size: 0.72rem;
+}
+
+.saved-spap-panel .mg-ap-box strong {
+  font-size: 1.18rem;
+}
+
+.saved-spap-panel .mg-ap-box em {
+  font-size: 0.64rem;
+}
+
+.saved-spap-panel .mg-skill-stack {
+  gap: 8px;
+}
+
+.saved-spap-panel .mg-skill-row {
+  min-height: 58px;
+  padding: 8px 10px;
+  cursor: default;
+}
+
+.saved-spap-panel .mg-skill-row:hover {
+  transform: none;
+}
+
+.saved-spap-panel .mg-skill-badge {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+}
+
+.saved-spap-panel .mg-skill-icon-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.saved-spap-panel .mg-skill-main strong {
+  font-size: 0.82rem;
+  line-height: 1.08;
+}
+
+.saved-spap-panel .mg-skill-main span {
+  font-size: 0.64rem;
+}
+
+.readonly-controls span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 37, 43, 0.12);
+  background: rgba(245, 249, 249, 0.86);
+  color: rgba(16, 37, 43, 0.42);
+  font-weight: 1000;
+}
+
 @media (max-width: 900px) {
   .shared-detail-panel {
     max-width: 100%;
@@ -284,6 +414,11 @@
 
   .shared-build-grid {
     grid-template-columns: 0.82fr 1.18fr;
+    gap: 10px;
+  }
+
+  .saved-spap-grid {
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
 
@@ -297,7 +432,8 @@
 }
 
 @media (max-width: 520px) {
-  .shared-build-grid {
+  .shared-build-grid,
+  .saved-spap-grid {
     grid-template-columns: 0.82fr 1.18fr;
   }
 
@@ -307,5 +443,37 @@
 
   .saved-readonly-field strong {
     font-size: 0.76rem;
+  }
+
+  .saved-spap-panel .mg-character-panel-head h2 {
+    font-size: 1rem;
+  }
+
+  .saved-spap-panel .mg-skill-row {
+    padding: 7px;
+  }
+
+  .saved-spap-panel .mg-skill-badge {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
+
+  .saved-spap-panel .mg-skill-icon-img {
+    width: 31px;
+    height: 31px;
+  }
+
+  .saved-spap-panel .mg-skill-main strong {
+    font-size: 0.72rem;
+  }
+
+  .saved-spap-panel .mg-skill-main span {
+    font-size: 0.58rem;
+  }
+
+  .readonly-controls span {
+    width: 28px;
+    height: 28px;
   }
 }
