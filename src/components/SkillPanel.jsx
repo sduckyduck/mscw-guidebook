@@ -46,14 +46,14 @@ export default function SkillPanel({
   const secondJobSkills = plan.skills.filter((skill) => skill.tier === 'second');
 
   return (
-    <section className="mg-dashboard mg-character-dashboard mg-character-dashboard-clean">
+    <section className="mg-dashboard mg-character-dashboard mg-character-dashboard-figure1">
       <h1 className="mg-dashboard-title">MapleGuide: 角色能力与技能分配</h1>
       <p className="mg-dashboard-subtitle">SP/AP Distribution · 当前 {classLine?.name ?? '角色'} Lv.{level}</p>
 
-      <div className="mg-character-clean-layout">
-        <section className="mg-glass-panel mg-ap-panel mg-ap-panel-wide">
+      <div className="mg-character-figure1-layout">
+        <section className="mg-glass-panel mg-ap-summary-panel">
           <PanelHead kicker="AP 加点" title="能力值分配" action="系统推荐" onAction={onApReset} />
-          <div className="mg-ap-wide-summary">
+          <div className="mg-ap-summary-inline">
             <p className="mg-character-note">{apNote}</p>
             <div className="mg-character-meter mg-ap-meter-compact">
               <span>可分配 AP</span>
@@ -61,28 +61,31 @@ export default function SkillPanel({
               <em>最低值按职业转职要求保护</em>
             </div>
           </div>
-          <div className="mg-ap-grid mg-ap-grid-horizontal">
-            {STAT_KEYS.map((stat) => {
-              const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
-              const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
-              return (
-                <PointRow
-                  key={stat}
-                  label={stat}
-                  value={statPlan.stats[stat]}
-                  points={apValue}
-                  minValue={minValue}
-                  canMinus={apValue > minValue}
-                  canPlus={statPlan.remainingAp > 0}
-                  onMinus={() => onApChange(stat, -1)}
-                  onPlus={() => onApChange(stat, 1)}
-                />
-              );
-            })}
-          </div>
         </section>
 
-        <div className="mg-skill-clean-grid">
+        <div className="mg-character-left-rail">
+          <section className="mg-glass-panel mg-ap-stats-panel">
+            <div className="mg-ap-grid mg-ap-grid-figure1">
+              {STAT_KEYS.map((stat) => {
+                const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP;
+                const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP;
+                return (
+                  <PointRow
+                    key={stat}
+                    label={stat}
+                    value={statPlan.stats[stat]}
+                    points={apValue}
+                    minValue={minValue}
+                    canMinus={apValue > minValue}
+                    canPlus={statPlan.remainingAp > 0}
+                    onMinus={() => onApChange(stat, -1)}
+                    onPlus={() => onApChange(stat, 1)}
+                  />
+                );
+              })}
+            </div>
+          </section>
+
           <SkillGroupCard
             title="一转技能"
             kicker="SP 加点"
@@ -97,7 +100,9 @@ export default function SkillPanel({
             onSkillInspect={setSelectedSkill}
             glass
           />
+        </div>
 
+        <div className="mg-character-right-rail">
           {secondJobSkills.length > 0 && (
             <SkillGroupCard
               title="二转技能"
