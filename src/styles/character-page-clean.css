@@ -1,54 +1,58 @@
-/* Figure-1 layout for the Character/SP-AP tab.
-   Goal: top AP info, then AP cards horizontally across the full width,
-   then first/second job skill panels side-by-side below. */
+/* Character/SP-AP tab layout v2.
+   Exact structure: AP summary → AP cards full-width horizontal → skill panels below. */
 
 .mg-character-dashboard-figure1 {
   max-width: 720px !important;
 }
 
-.mg-character-figure1-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  gap: 14px;
-  align-items: start;
+.mg-character-figure1-layout-v2 {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  width: 100%;
 }
 
-.mg-ap-summary-panel,
-.mg-ap-stats-panel {
-  grid-column: 1 / -1;
+.mg-ap-summary-panel-v2,
+.mg-ap-stats-panel-v2 {
+  width: 100% !important;
+  box-sizing: border-box;
 }
 
-.mg-ap-summary-inline {
+.mg-ap-summary-inline-v2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 190px;
   gap: 12px;
   align-items: center;
 }
 
-.mg-character-left-rail,
-.mg-character-right-rail {
-  display: grid;
-  gap: 14px;
-  align-content: start;
-}
-
-.mg-ap-stats-panel {
-  padding-top: 12px;
-}
-
-.mg-ap-grid-figure1 {
-  display: grid;
+.mg-ap-grid-horizontal-v2 {
+  display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 10px !important;
+  width: 100%;
 }
 
-.mg-ap-grid-figure1 .mg-ap-box {
+.mg-ap-grid-horizontal-v2 .mg-ap-box {
   min-height: 92px;
 }
 
-.mg-character-right-rail .mg-skill-side-card,
-.mg-character-right-rail .mg-second-skill-card,
-.mg-character-left-rail .mg-sp-panel {
+.mg-character-skill-row-v2 {
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr) !important;
+  gap: 14px !important;
+  align-items: start;
+  width: 100%;
+}
+
+.mg-character-left-rail-v2,
+.mg-character-right-rail-v2 {
+  display: block !important;
+  min-width: 0;
+}
+
+.mg-character-right-rail-v2 .mg-skill-side-card,
+.mg-character-right-rail-v2 .mg-second-skill-card,
+.mg-character-left-rail-v2 .mg-sp-panel {
   min-height: 100%;
 }
 
@@ -66,12 +70,11 @@
     max-width: 100% !important;
   }
 
-  .mg-character-figure1-layout {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    gap: 10px;
+  .mg-character-figure1-layout-v2 {
+    gap: 10px !important;
   }
 
-  .mg-ap-summary-inline {
+  .mg-ap-summary-inline-v2 {
     grid-template-columns: 1fr;
     gap: 8px;
   }
@@ -80,74 +83,73 @@
     display: none !important;
   }
 
-  .mg-ap-grid-figure1 {
+  .mg-ap-grid-horizontal-v2 {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     gap: 6px !important;
   }
 
-  .mg-ap-grid-figure1 .mg-ap-box {
+  .mg-ap-grid-horizontal-v2 .mg-ap-box {
     min-height: 78px;
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .mg-ap-grid-figure1 .mg-mini-controls {
+  .mg-ap-grid-horizontal-v2 .mg-mini-controls {
     grid-template-columns: 1fr 1fr;
     width: 100%;
   }
 
-  .mg-ap-grid-figure1 .mg-mini-controls button {
+  .mg-ap-grid-horizontal-v2 .mg-mini-controls button {
     width: 100% !important;
+  }
+
+  .mg-character-skill-row-v2 {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr) !important;
+    gap: 10px !important;
   }
 }
 
 @media (max-width: 520px) {
-  .mg-character-figure1-layout {
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-    gap: 8px;
+  .mg-character-figure1-layout-v2 {
+    gap: 8px !important;
   }
 
-  .mg-character-left-rail,
-  .mg-character-right-rail {
-    gap: 8px;
-  }
-
-  .mg-ap-grid-figure1 {
+  .mg-ap-grid-horizontal-v2 {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     gap: 6px !important;
   }
 
-  .mg-ap-grid-figure1 .mg-ap-box {
+  .mg-ap-grid-horizontal-v2 .mg-ap-box {
     min-height: 74px;
     padding: 8px 7px;
   }
 
-  .mg-ap-grid-figure1 .mg-ap-box span {
+  .mg-ap-grid-horizontal-v2 .mg-ap-box span {
     font-size: 0.62rem;
   }
 
-  .mg-ap-grid-figure1 .mg-ap-box strong {
+  .mg-ap-grid-horizontal-v2 .mg-ap-box strong {
     font-size: 1.05rem;
   }
 
-  .mg-ap-grid-figure1 .mg-ap-box em {
+  .mg-ap-grid-horizontal-v2 .mg-ap-box em {
     font-size: 0.52rem;
     line-height: 1.12;
   }
 
-  .mg-ap-grid-figure1 .mg-mini-controls {
+  .mg-ap-grid-horizontal-v2 .mg-mini-controls {
     grid-template-columns: 1fr 1fr;
     gap: 4px;
   }
 
-  .mg-ap-grid-figure1 .mg-mini-controls button {
+  .mg-ap-grid-horizontal-v2 .mg-mini-controls button {
     min-width: 0 !important;
     width: 100% !important;
     height: 28px !important;
   }
 
-  .mg-ap-summary-panel,
-  .mg-ap-stats-panel {
-    grid-column: 1 / -1;
+  .mg-character-skill-row-v2 {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr) !important;
+    gap: 8px !important;
   }
 
   .mg-character-dashboard-figure1 .mg-skill-row {
