@@ -281,26 +281,26 @@ function inferSecondaryTarget(classId, level, budget = 'mid') {
 function inferAccuracyTarget(classId, level, budget = 'mid') {
   if (classId === 'magician') return 0;
   if (classId === 'warrior') {
-    if (budget === 'low') return Math.round(level * 1.35 + 10);
-    if (budget === 'high') return Math.round(level * 1.28 + 10);
-    return Math.round(level * 1.3 + 10);
+    if (budget === 'low') return Math.round(level * 0.62 + 12);
+    if (budget === 'high') return Math.round(level * 0.52 + 10);
+    return Math.round(level * 0.56 + 11);
   }
   if (classId === 'bowman') {
-    if (budget === 'low') return Math.round(level * 1.18 + 8);
-    if (budget === 'high') return Math.round(level * 1.08 + 8);
-    return Math.round(level * 1.12 + 8);
+    if (budget === 'low') return Math.round(level * 0.42 + 11);
+    if (budget === 'high') return Math.round(level * 0.34 + 9);
+    return Math.round(level * 0.38 + 10);
   }
   if (classId === 'thief') {
-    if (budget === 'low') return Math.round(level * 1.28 + 10);
-    if (budget === 'high') return Math.round(level * 1.18 + 10);
-    return Math.round(level * 1.23 + 10);
+    if (budget === 'low') return Math.round(level * 0.48 + 13);
+    if (budget === 'high') return Math.round(level * 0.38 + 10);
+    return Math.round(level * 0.43 + 12);
   }
   if (classId === 'pirate') {
-    if (budget === 'low') return Math.round(level * 1.22 + 8);
-    if (budget === 'high') return Math.round(level * 1.1 + 8);
-    return Math.round(level * 1.14 + 8);
+    if (budget === 'low') return Math.round(level * 0.46 + 11);
+    if (budget === 'high') return Math.round(level * 0.36 + 9);
+    return Math.round(level * 0.4 + 10);
   }
-  return Math.round(level + 6);
+  return Math.round(level * 0.4 + 10);
 }
 
 function inferHpGrowth(classId) {
@@ -317,13 +317,13 @@ function inferMpGrowth(classId, intValue) {
   return 6 + intValue * 0.02;
 }
 
-function estimateAccuracy(classId, stats, level) {
-  if (classId === 'magician') return Math.round(level * 0.35 + stats.LUK * 0.4 + stats.INT * 0.1);
-  if (classId === 'warrior') return Math.round(stats.DEX * 0.8 + stats.LUK * 0.5 + level * 0.3);
-  if (classId === 'bowman') return Math.round(stats.DEX * 0.9 + stats.LUK * 0.4 + level * 0.4);
-  if (classId === 'thief') return Math.round(stats.DEX * 0.7 + stats.LUK * 0.6 + level * 0.4);
-  if (classId === 'pirate') return Math.round(stats.DEX * 0.8 + stats.STR * 0.25 + level * 0.35);
-  return Math.round(level + (stats.DEX ?? 0));
+function estimateAccuracy(_classId, stats) {
+  // Physical ACC is universal across classes and weapons:
+  // floor(DEX / 3) + floor(LUK / 6) + 5.
+  // Gear ACC and skill ACC are added separately on top.
+  return Math.floor((Number(stats?.DEX) || 0) / 3)
+    + Math.floor((Number(stats?.LUK) || 0) / 6)
+    + 5;
 }
 
 function estimateMagicAccuracy(stats, level) {
