@@ -4,6 +4,93 @@ const IMAGE_EXTENSIONS = ['png', 'webp', 'gif', 'jpg', 'jpeg'];
 const REPO_ICON_API = 'https://api.github.com/repos/sduckyduck/mscw-guidebook/contents/public/icons?ref=main';
 const IMAGE_RE = /\.(png|webp|gif|jpe?g)$/i;
 
+const SKILL_ICON_IDS = {
+  'base attack': '',
+  '普通攻击': '',
+
+  'improved hp recovery': '1000000',
+  'improved max hp increase': '1000001',
+  'max hp increase': '1000001',
+  'iron body': '1001003',
+  'power strike': '1001004',
+  'slash blast': '1001005',
+  'precise strikes': '1000002',
+
+  'improved mp recovery': '2000000',
+  'improved mp': '2000000',
+  'max mp increase': '2000001',
+  'max mp inc': '2000001',
+  'magic guard': '2001002',
+  'magic armor': '2001003',
+  'energy bolt': '2001004',
+  'magic claw': '2001005',
+
+  'mp eater': '2100000',
+  'meditation': '2101001',
+  'teleport': '2001009',
+  'slow': '2101003',
+  'fire arrow': '2101004',
+  'poison breath': '2101005',
+  'cold beam': '2201004',
+  'thunder bolt': '2201005',
+  'heal': '2301002',
+  'invincible': '2301003',
+  'bless': '2301004',
+  'holy arrow': '2301005',
+
+  'the eye of amazon': '3000000',
+  'critical shot': '3000001',
+  "amazon's judgement": '3000002',
+  'focus': '3001003',
+  'arrow blow': '3001004',
+  'double shot': '3001005',
+  'bow mastery': '3100000',
+  'final attack bow': '3100001',
+  'bow booster': '3101002',
+  'power knockback': '3101003',
+  'soul arrow bow': '3101004',
+  'arrow bomb bow': '3101005',
+  'crossbow mastery': '3200000',
+  'final attack crossbow': '3200001',
+  'crossbow booster': '3201002',
+  'soul arrow crossbow': '3201004',
+  'iron arrow crossbow': '3201005',
+
+  'nimble body': '4000000',
+  'keen eyes': '4000001',
+  'disorder': '4001002',
+  'dark sight': '4001003',
+  'double stab': '4001334',
+  'lucky seven': '4001344',
+  'claw mastery': '4100000',
+  'critical throw': '4100001',
+  'claw booster': '4101003',
+  'haste': '4101004',
+  'drain': '4101005',
+  'dagger mastery': '4200000',
+  'dagger booster': '4201002',
+  'steal': '4201004',
+  'savage blow': '4201005',
+
+  'sword mastery': '1100000',
+  'axe mastery': '1100001',
+  'final attack sword': '1100002',
+  'final attack axe': '1100003',
+  'sword booster': '1101004',
+  'axe booster': '1101005',
+  'rage': '1101006',
+  'power guard': '1101007',
+  'threaten': '1201006',
+  'spear mastery': '1300000',
+  'pole arm mastery': '1300001',
+  'final attack spear': '1300002',
+  'final attack pole arm': '1300003',
+  'spear booster': '1301004',
+  'pole arm booster': '1301005',
+  'iron will': '1301006',
+  'hyper body': '1301007',
+};
+
 let iconFilesPromise = null;
 let iconFilesCache = null;
 let debugInstalled = false;
@@ -23,6 +110,45 @@ export function slugifyIconName(value) {
     .replace(/^-|-$/g, '');
 }
 
+function normalizeSkillName(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[:()]/g, ' ')
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function padSkillId(value) {
+  return String(value ?? '').replace(/^0+/, '').padStart(7, '0');
+}
+
+function getSkillIconId(name) {
+  const clean = normalizeSkillName(name);
+  if (Object.prototype.hasOwnProperty.call(SKILL_ICON_IDS, clean)) return SKILL_ICON_IDS[clean];
+  const withoutSuffix = clean
+    .replace(/ bow$/i, '')
+    .replace(/ crossbow$/i, '')
+    .replace(/ sword$/i, '')
+    .replace(/ axe$/i, '')
+    .replace(/ spear$/i, '')
+    .replace(/ pole arm$/i, '');
+  return SKILL_ICON_IDS[withoutSuffix] ?? '';
+}
+
+function skillIconSources(name) {
+  const id = getSkillIconId(name);
+  if (!id) return [];
+  const clean = String(id).replace(/^0+/, '');
+  return [
+    `${baseUrl()}AppData/images/skills/${padSkillId(clean)}.png`,
+    `${baseUrl()}AppData/images/skills/${clean}.png`,
+    `https://maplestory.io/api/MCW/1/skill/${clean}/icon`,
+    `https://maplestory.io/api/GMS/83/skill/${clean}/icon`,
+  ];
+}
+
 function normalizeKey(value) {
   return slugifyIconName(value).replace(/-/g, '');
 }
@@ -39,6 +165,7 @@ export function iconSourcesFromNames(names, folders = ['icons'], extensions = IM
   const root = `${baseUrl()}icons`;
   const output = [];
   for (const rawName of names.filter(Boolean)) {
+    output.push(...skillIconSources(rawName));
     const clean = stripExt(String(rawName).replace(/^\/+/, ''));
     const slug = slugifyIconName(clean);
     const variants = unique([clean, slug, slug.replace(/-/g, '_'), slug.replace(/-/g, '')]);
@@ -236,7 +363,8 @@ export default function IconFallback({
     return () => { stopped = true; };
   }, [nameList.join('|'), folderList.join('|')]);
 
-  const list = useMemo(() => unique([...staticList, ...discovered]), [staticList.join('|'), discovered.join('|')]);
+  const nameGeneratedList = useMemo(() => iconSourcesFromNames(nameList, folderList), [nameList.join('|'), folderList.join('|')]);
+  const list = useMemo(() => unique([...staticList, ...nameGeneratedList, ...discovered]), [staticList.join('|'), nameGeneratedList.join('|'), discovered.join('|')]);
 
   useEffect(() => setIndex(0), [list.join('|')]);
 
