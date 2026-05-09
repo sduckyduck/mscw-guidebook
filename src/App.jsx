@@ -961,7 +961,7 @@ function toGearRecommendation(item, slot, classLine) {
     : `攻击 ${item.incPAD || 0}${item.incMAD ? ` / 魔攻 ${item.incMAD}` : ''}`;
   const labelBySlot = { weapon: '武器', armor: '防具', accessory: '饰品' };
 
-  return {
+    return {
     ...item,
     id: item.id,
     slot,
@@ -983,6 +983,7 @@ function toGearRecommendation(item, slot, classLine) {
     reqJobLabel: item.req_job_label,
     scoreLabel: item.price ? `${item.price.toLocaleString()} meso` : '无价格数据',
   };
+}
 
 function formatRequirements(item) {
   const reqs = [
