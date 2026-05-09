@@ -4,6 +4,7 @@ const BASE_URL = import.meta.env?.BASE_URL || '/';
 
 function asset(path) {
   if (!path) return '';
+  if (/^https?:\/\//i.test(String(path))) return String(path);
   return `${BASE_URL}${String(path).replace(/^\/+/, '')}`;
 }
 
@@ -16,19 +17,42 @@ function mk(type, note, current, next, values = []) {
   return { type, note, current, next, values };
 }
 
+function normalizeLevelStats(value) {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return [];
+  return Object.entries(value)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([, row]) => {
+      if (typeof row === 'string') return row;
+      if (!row || typeof row !== 'object') return String(row ?? '');
+      return row.effect ?? row.desc ?? row.description ?? row.text ?? Object.entries(row)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `${k} ${v}`)
+        .join('; ');
+    });
+}
+
 function officialStats(skill) {
-  return skill?.allLevelStats ?? skill?.all_level_stats ?? [];
+  return normalizeLevelStats(
+    skill?.allLevelStats
+      ?? skill?.all_level_stats
+      ?? skill?.levelStats
+      ?? skill?.levels
+      ?? skill?.levelData
+      ?? skill?.effectByLevel
+      ?? skill?.effects,
+  );
 }
 
 function cleanDescription(description = '') {
-  return translateSkillText(description) || '当前技能数据来自官方 AppData。';
+  return translateSkillText(description) || '当前技能数据来自当前版本数据源。';
 }
 
 function officialEffectType(skill, currentText = '') {
   const text = `${skill?.description ?? ''} ${currentText}`;
   if (/Damage|Basic Attack|Attack \d+x/i.test(text)) return '主动攻击技能';
   if (/\bfor\s+\d+\s+sec|while active|party/i.test(text)) return '主动增益技能';
-  if (/Max HP|Max MP|Accuracy|Avoidability|Mastery|Critical Rate|Critical Damage/i.test(text)) return '被动属性技能';
+  if (/Max HP|Max MP|Accuracy|Avoidability|Mastery|Critical Rate|Critical Damage|Recovery|Recover/i.test(text)) return '被动属性技能';
   return translateSkillEffectType(text);
 }
 
@@ -58,7 +82,7 @@ function officialSkillEffect(skill) {
     return mk(
       '技能效果',
       cleanDescription(skill?.description),
-      `当前 Lv.${lv}：当前没有官方逐级效果表。`,
+      `当前 Lv.${lv}：当前没有逐级效果表。请检查 skills.json 是否包含 levels / levelStats / allLevelStats。`,
       lv >= max ? '下一级：已经满级。' : `下一级 Lv.${nx}：请参考技能说明。`,
       [],
     );
@@ -71,6 +95,13 @@ function officialSkillEffect(skill) {
     lv >= max ? `下一级：已经满级。当前效果保持：${currentText || translateLevelText(stats[max - 1]) || '无'}` : `下一级 Lv.${nx}：${nextText}`,
     effectPills(currentRaw, nextRaw),
   );
+}
+
+function getDataSourceLabel(skill) {
+  if (skill?.source === 'fallback') return '内置兜底路线';
+  if (String(skill?.iconKey ?? skill?.thumbnail ?? '').includes('/cms/')) return '国服 CMS';
+  if (String(skill?.iconKey ?? skill?.thumbnail ?? '').includes('AppData')) return '国际服 AppData';
+  return skill?.source === 'official' ? '当前版本技能数据' : '未知来源';
 }
 
 function SkillIcon({ skill }) {
@@ -90,6 +121,8 @@ export default function SkillDetailSheet({ skill, plan, onClose }) {
   const currentLevel = Number(skill.level || 0);
   const maxLevel = Number(skill.max || skill.maxLevel || 0);
   const progress = maxLevel > 0 ? Math.round((currentLevel / maxLevel) * 100) : 0;
+  const statsRows = officialStats(skill);
+  const sourceLabel = getDataSourceLabel(skill);
 
   return (
     <div className="mg-detail-backdrop" onClick={onClose}>
@@ -102,6 +135,12 @@ export default function SkillDetailSheet({ skill, plan, onClose }) {
             <p>当前 Lv. {skill.level}/{skill.max}</p>
           </div>
           <button onClick={onClose}>关闭</button>
+        </div>
+
+        <div className="mg-detail-kpis">
+          <div><span>技能 ID</span><strong>{skill.id || '-'}</strong></div>
+          <div><span>数据源</span><strong>{sourceLabel}</strong></div>
+          <div><span>效果表</span><strong>{statsRows.length ? `${statsRows.length} 行` : '缺失'}</strong></div>
         </div>
 
         <div className="mg-detail-kpis">
