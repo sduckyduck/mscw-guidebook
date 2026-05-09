@@ -71,6 +71,14 @@ function jobNameFromSkill(skill, group) {
     ?? 'unknown';
 }
 
+function cmsAssetPath(path, fallback) {
+  const raw = String(path || fallback || '').replace(/^\/+/, '');
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('cms/')) return raw;
+  return `cms/${raw}`;
+}
+
 function normalizeSkillForExistingAdapter(skill, group) {
   if (!isPlayableClassSkill(skill, group)) return null;
 
@@ -96,7 +104,7 @@ function normalizeSkillForExistingAdapter(skill, group) {
     allLevelStats: levelStats,
     all_level_stats: levelStats,
     levelStats,
-    thumbnail: skill.thumbnail ?? `images/skills/${id}.png`,
+    thumbnail: cmsAssetPath(skill.thumbnail, `images/skills/${id}.png`),
   };
 }
 
