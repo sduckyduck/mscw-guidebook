@@ -1,0 +1,288 @@
+{
+  "items": 7772,
+  "equipment": 4815,
+  "equipment_with_stats": 2319,
+  "monsters": 1916,
+  "maps": 4223,
+  "npcs": 1564,
+  "quests": 2164,
+  "skill_groups": 47,
+  "skills": 504,
+  "lookup_counts": {
+    "item_names": 7772,
+    "monster_names": 1916,
+    "map_names": 4223,
+    "npc_names": 1564,
+    "skill_names": 504
+  },
+  "wz_equipment_patch": {
+    "items_json": "D:\\冒险岛\\wz-python\\repo-cms\\items.json",
+    "existing_items_before": 7772,
+    "items_after": 7772,
+    "updated_existing_equipment": 4065,
+    "added_missing_equipment": 0,
+    "equipment_total": 4815,
+    "equipment_with_stats_total": 2319,
+    "character_wz": "D:\\冒险岛\\wz-python\\raw\\Character.wz",
+    "wz_version": 79,
+    "image_entries_seen": 4786,
+    "equipment_parsed": 4065,
+    "equipment_with_stats": 2264,
+    "parse_errors": 721,
+    "parse_error_samples": [
+      {
+        "id": "1002674",
+        "path": "Cap/01002674.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002462",
+        "path": "Cap/01002462.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1000023",
+        "path": "Cap/01000023.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002129",
+        "path": "Cap/01002129.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002807",
+        "path": "Cap/01002807.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002084",
+        "path": "Cap/01002084.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002064",
+        "path": "Cap/01002064.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002905",
+        "path": "Cap/01002905.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002463",
+        "path": "Cap/01002463.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002098",
+        "path": "Cap/01002098.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002202",
+        "path": "Cap/01002202.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002235",
+        "path": "Cap/01002235.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002829",
+        "path": "Cap/01002829.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002896",
+        "path": "Cap/01002896.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002695",
+        "path": "Cap/01002695.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002820",
+        "path": "Cap/01002820.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002926",
+        "path": "Cap/01002926.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1003015",
+        "path": "Cap/01003015.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002480",
+        "path": "Cap/01002480.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002086",
+        "path": "Cap/01002086.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002678",
+        "path": "Cap/01002678.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002053",
+        "path": "Cap/01002053.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002254",
+        "path": "Cap/01002254.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1002078",
+        "path": "Cap/01002078.img",
+        "error": "index out of range"
+      },
+      {
+        "id": "1000036",
+        "path": "Cap/01000036.img",
+        "error": "index out of range"
+      }
+    ]
+  },
+  "item_name_string_wz_patch": {
+    "string_wz_names_found": 9660,
+    "items_patched": 7459,
+    "items_still_bad_name": 313,
+    "bad_name_examples": [
+      {
+        "id": "1000022",
+        "name": "1000022"
+      },
+      {
+        "id": "1000035",
+        "name": "01000035.img"
+      },
+      {
+        "id": "1001028",
+        "name": "1001028"
+      },
+      {
+        "id": "1002472",
+        "name": "1002472"
+      },
+      {
+        "id": "1002473",
+        "name": "1002473"
+      },
+      {
+        "id": "1002474",
+        "name": "1002474"
+      },
+      {
+        "id": "1002475",
+        "name": "1002475"
+      },
+      {
+        "id": "1002494",
+        "name": "1002494"
+      },
+      {
+        "id": "1002517",
+        "name": "01002517.img"
+      },
+      {
+        "id": "1002755",
+        "name": "01002755.img"
+      },
+      {
+        "id": "1002756",
+        "name": "01002756.img"
+      },
+      {
+        "id": "1002762",
+        "name": "01002762.img"
+      },
+      {
+        "id": "1002763",
+        "name": "01002763.img"
+      },
+      {
+        "id": "1002764",
+        "name": "01002764.img"
+      },
+      {
+        "id": "1002765",
+        "name": "01002765.img"
+      },
+      {
+        "id": "1002766",
+        "name": "01002766.img"
+      },
+      {
+        "id": "1002839",
+        "name": "01002839.img"
+      },
+      {
+        "id": "1002841",
+        "name": "01002841.img"
+      },
+      {
+        "id": "1002870",
+        "name": "01002870.img"
+      },
+      {
+        "id": "1002905",
+        "name": "01002905.img"
+      },
+      {
+        "id": "1002906",
+        "name": "01002906.img"
+      },
+      {
+        "id": "1002919",
+        "name": "01002919.img"
+      },
+      {
+        "id": "1002920",
+        "name": "01002920.img"
+      },
+      {
+        "id": "1002923",
+        "name": "01002923.img"
+      },
+      {
+        "id": "1002924",
+        "name": "01002924.img"
+      },
+      {
+        "id": "1002925",
+        "name": "01002925.img"
+      },
+      {
+        "id": "1002954",
+        "name": "01002954.img"
+      },
+      {
+        "id": "1002955",
+        "name": "01002955.img"
+      },
+      {
+        "id": "1002971",
+        "name": "01002971.img"
+      },
+      {
+        "id": "1002995",
+        "name": "01002995.img"
+      }
+    ],
+    "sample_1492000": "短枪"
+  }
+}
