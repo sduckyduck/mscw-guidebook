@@ -5,6 +5,7 @@ import CoverIntro from './components/CoverIntro.jsx';
 import CraftingMaterialsPageSafe from './components/CraftingMaterialsPageSafe.jsx';
 import CommunityBuildsPage from './components/CommunityBuildsPage.jsx';
 import AdminBuildsPage from './components/AdminBuildsPage.jsx';
+import './utils/cmsSkillFetchPatch.js';
 import './utils/officialDataSanityPatch.js';
 import './utils/warriorStarterGearPatch.js';
 import './utils/dashboardActionButtons.js';
