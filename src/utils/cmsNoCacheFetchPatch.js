@@ -1,5 +1,5 @@
 const PATCH_FLAG = '__mscwCmsNoCacheFetchPatchInstalled';
-const CMS_DATA_VERSION = 'cms-equipment-stats-20260509-v4';
+const CMS_DATA_VERSION = 'cms-equipment-stats-20260509-v5';
 const STORAGE_KEY = 'mscw-guidebook-state-v2';
 
 const BANNED_CMS_ITEM_NAME = /(gm|admin|administrator|test|tester|event|cash|nx|vip|donor|wizet|developer|manager|维泽特|管理员|测试|活动|现金|点装|圣诞|周年|纪念|情人节|生日|蛋糕|气球|玫瑰|巧克力|棒棒糖|泳装|游泳|透明|玩具)/i;
@@ -55,19 +55,12 @@ function getReqLevel(item) {
 
 function isSuspiciousCmsEquipment(item) {
   if (!item || String(item.category ?? '').toLowerCase() !== 'equipment') return false;
-
-  // User-facing build planner should not recommend any level-0 equipment.
-  // In CMS WZ this catches beginner placeholders, cash cosmetics, GM/test/event
-  // equipment, and zero-requirement visual items.
   if (getReqLevel(item) <= 0) return true;
 
   const nameText = `${item.name ?? ''} ${item.title ?? ''} ${item.description ?? ''}`;
   if (BANNED_CMS_ITEM_NAME.test(nameText)) return true;
   if (n(item.cash ?? item.stats?.cash) === 1) return true;
 
-  // These CMS WZ files include GM/test/event equipment. They are valid WZ rows,
-  // but not valid leveling recommendations. Keep normal high-level equipment; only
-  // remove clearly impossible outliers for a 1st/2nd job guidebook.
   if (hasAbsStatAtLeast(item, HIGH_STAT_KEYS, 100)) return true;
   if (hasAbsStatAtLeast(item, HIGH_COMBAT_KEYS, 140)) return true;
   if (hasAbsStatAtLeast(item, HIGH_DEFENSE_KEYS, 180)) return true;
@@ -99,12 +92,13 @@ function sanitizeCmsItemsPayload(payload) {
   };
 }
 
-function resetSavedGearOverridesForNewCmsVersion() {
+function resetSavedPlannerStateForNewCmsVersion() {
   if (typeof window === 'undefined') return;
   try {
     const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}');
     if (saved.cmsDataVersion === CMS_DATA_VERSION) return;
     delete saved.gearOverrides;
+    delete saved.skillAllocation;
     saved.cmsDataVersion = CMS_DATA_VERSION;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
   } catch {
@@ -125,7 +119,7 @@ function installCmsNoCacheFetchPatch() {
   if (window[PATCH_FLAG]) return;
   window[PATCH_FLAG] = true;
   window.__mscwCmsDataVersion = CMS_DATA_VERSION;
-  resetSavedGearOverridesForNewCmsVersion();
+  resetSavedPlannerStateForNewCmsVersion();
 
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
