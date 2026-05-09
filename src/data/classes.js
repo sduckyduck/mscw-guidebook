@@ -85,14 +85,16 @@ export const EDITIONS = [
     minLevel: 10,
     maxLevel: 50,
     dataMode: 'official-appdata',
+    dataSource: 'official-appdata',
     classIds: ['warrior', 'magician', 'bowman', 'thief'],
   },
   {
     id: 'china',
-    name: '国服',
+    name: '国服内测',
     minLevel: 10,
     maxLevel: 120,
-    dataMode: 'china-placeholder',
+    dataMode: 'official-appdata',
+    dataSource: 'cms-china',
     classIds: ['warrior', 'magician', 'bowman', 'thief', 'pirate'],
   },
 ];
