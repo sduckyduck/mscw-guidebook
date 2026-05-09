@@ -83,9 +83,10 @@ export const EDITIONS = [
     id: 'global',
     name: '国际服',
     minLevel: 10,
-    maxLevel: 120,
+    maxLevel: 50,
     dataMode: 'official-appdata',
-    classIds: ['warrior', 'magician', 'bowman', 'thief', 'pirate'],
+    dataSource: 'official-appdata',
+    classIds: ['warrior', 'magician', 'bowman', 'thief'],
   },
   {
     id: 'china',
@@ -93,6 +94,7 @@ export const EDITIONS = [
     minLevel: 10,
     maxLevel: 120,
     dataMode: 'official-appdata',
+    dataSource: 'cms-china',
     classIds: ['warrior', 'magician', 'bowman', 'thief', 'pirate'],
   },
 ];
