@@ -28,6 +28,7 @@ const JOB_NAME_MAP = {
 const TYPE_LABEL_MAP = {
   Equipment: '装备',
   Weapon: '武器',
+  Armor: '防具',
   Claw: '拳套',
   Dagger: '短刀',
   Bow: '弓',
@@ -66,10 +67,10 @@ const SPEED_LABEL_MAP = {
 
 let clickTimer = null;
 let bypassNextClick = false;
-let itemIndexPromise = null;
+let itemIndexPromiseByEdition = new Map();
 
 function normalize(value = '') {
-  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return String(value).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, ' ').trim();
 }
 
 function readNumber(value) {
@@ -77,8 +78,41 @@ function readNumber(value) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+function readPath(obj, path, fallback = undefined) {
+  const parts = String(path).split('.');
+  let node = obj;
+  for (const part of parts) node = node?.[part];
+  return node === undefined || node === null || node === '' ? fallback : node;
+}
+
+function readAny(obj, keys, fallback = undefined) {
+  for (const key of keys) {
+    const value = readPath(obj, key);
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return fallback;
+}
+
 function readField(item, key) {
-  return item?.[key] ?? item?.stats?.[key];
+  return item?.[key] ?? item?.stats?.[key] ?? item?.info?.[key];
+}
+
+function getActiveEditionId() {
+  const editionSelect = [...document.querySelectorAll('.mg-field')]
+    .find((field) => field.textContent?.includes('版本'))
+    ?.querySelector('select');
+  if (editionSelect?.value) return editionSelect.value;
+
+  try {
+    const saved = JSON.parse(window.localStorage.getItem('mscw-guidebook-state-v2') || '{}');
+    return saved.editionId === 'china' ? 'china' : 'global';
+  } catch {
+    return 'global';
+  }
+}
+
+function getDataSourceLabel(editionId = getActiveEditionId()) {
+  return editionId === 'china' ? '国服 CMS' : '国际服 AppData';
 }
 
 function translateJobName(value = '') {
@@ -88,7 +122,9 @@ function translateJobName(value = '') {
 
 function translateType(value = '') {
   const raw = String(value || 'Equipment');
-  return TYPE_LABEL_MAP[raw] ?? TYPE_LABEL_MAP[Object.keys(TYPE_LABEL_MAP).find((key) => normalize(key) === normalize(raw))] ?? raw;
+  return TYPE_LABEL_MAP[raw]
+    ?? TYPE_LABEL_MAP[Object.keys(TYPE_LABEL_MAP).find((key) => normalize(key) === normalize(raw))]
+    ?? raw;
 }
 
 function translateSpeed(value = '') {
@@ -96,8 +132,16 @@ function translateSpeed(value = '') {
   return SPEED_LABEL_MAP[raw] ?? raw;
 }
 
+function padItemId(id) {
+  return String(id ?? '').replace(/\.0$/, '').padStart(8, '0');
+}
+
+function unpadItemId(id) {
+  return String(id ?? '').replace(/\.0$/, '').replace(/^0+/, '') || String(id ?? '');
+}
+
 function getDisplayName(item) {
-  return item?.title ?? item?.name ?? item?.itemName ?? item?.id ?? '未知装备';
+  return item?.title ?? item?.name ?? item?.itemName ?? item?.displayName ?? item?.id ?? '未知装备';
 }
 
 function getSlot(tile) {
@@ -116,11 +160,21 @@ function getItemIcon(tile) {
   return img?.src ?? '';
 }
 
+function getItemIdFromTile(tile) {
+  const explicit = tile?.dataset?.itemId ?? tile?.getAttribute?.('data-item-id');
+  if (explicit) return unpadItemId(explicit);
+  const icon = getItemIcon(tile);
+  const match = icon.match(/(\d{7,8})(?:\.png|\.gif|\.webp|$)/i);
+  return match ? unpadItemId(match[1]) : '';
+}
+
 function detectType(item, fallbackSlot = '') {
   return item?.weaponType
     ?? item?.weapon_type
     ?? item?.sub_category
     ?? item?.subCategory
+    ?? item?.type
+    ?? item?.categoryName
     ?? item?.slot
     ?? fallbackSlot
     ?? 'Equipment';
@@ -130,7 +184,7 @@ function getJobClasses(item) {
   const label = item?.reqJobLabel ?? item?.req_job_label;
   if (label && String(label).toLowerCase() !== 'all') return [translateJobName(label)];
 
-  const reqJob = readNumber(item?.reqJob ?? item?.req_job ?? item?.stats?.reqJob);
+  const reqJob = readNumber(item?.reqJob ?? item?.req_job ?? item?.stats?.reqJob ?? item?.info?.reqJob ?? item?.job);
   if (!reqJob) return ['新手'];
 
   const jobs = JOB_LABELS.filter(([bit]) => (reqJob & bit) === bit).map(([, name]) => name);
@@ -169,11 +223,12 @@ function buildDescription(item) {
   return item?.description ?? item?.desc ?? item?.flavorText ?? '';
 }
 
-function normalizeItemForDisplay(item, fallbackSlot = '') {
+function normalizeItemForDisplay(item, fallbackSlot = '', sourceLabel = getDataSourceLabel()) {
   if (!item) return null;
   return {
-    id: item.id,
+    id: unpadItemId(item.id ?? item.itemId ?? item.item_id ?? item.code ?? ''),
     name: getDisplayName(item),
+    sourceLabel,
     type: translateType(detectType(item, fallbackSlot)),
     reqRows: getRequirementRows(item),
     statRows: getStatRows(item),
@@ -184,51 +239,161 @@ function normalizeItemForDisplay(item, fallbackSlot = '') {
 function getFallbackItem(tile) {
   const slot = getSlot(tile);
   const name = getItemName(tile) || '空装备栏';
+  const id = getItemIdFromTile(tile);
   return {
+    id,
     name,
+    sourceLabel: getDataSourceLabel(),
     type: translateType(slot || 'Equipment'),
     reqRows: [['职业', '未知']],
     statRows: [],
-    description: '暂无该装备的详细资料。',
+    description: id ? `没有在当前版本数据源中找到 ID ${id} 的详细资料。` : '暂无该装备的详细资料。',
   };
 }
 
-async function fetchItemsPayload() {
-  const candidates = ['./AppData/items.json', '/AppData/items.json', 'AppData/items.json'];
-
-  for (const url of candidates) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) continue;
-      const payload = await response.json();
-      if (Array.isArray(payload?.items)) return payload.items;
-      if (Array.isArray(payload)) return payload;
-    } catch {
-      // Try the next path.
-    }
+function objectRecords(raw, keys = []) {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== 'object') return [];
+  for (const key of keys) {
+    const value = raw[key];
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === 'object') return Object.values(value);
   }
+  const values = Object.values(raw);
+  if (values.every((value) => value && typeof value === 'object' && !Array.isArray(value))) return values;
   return [];
 }
 
-function buildItemIndex(items = []) {
+function lookupName(lookups, id, fallback) {
+  const tables = [lookups?.items, lookups?.item, lookups?.itemsById, lookups?.itemById].filter(Boolean);
+  for (const table of tables) {
+    const row = table[id] ?? table[padItemId(id)] ?? table[unpadItemId(id)];
+    if (!row) continue;
+    if (typeof row === 'string') return row;
+    return readAny(row, ['zh', 'cn', 'name', 'displayName', 'label'], fallback) ?? fallback;
+  }
+  return fallback;
+}
+
+function detectSlotFromId(id) {
+  const value = padItemId(id);
+  if (value.startsWith('0100')) return 'Hat';
+  if (value.startsWith('0103')) return 'Accessory';
+  if (value.startsWith('0104')) return 'Top';
+  if (value.startsWith('0105')) return 'Overall';
+  if (value.startsWith('0106')) return 'Bottom';
+  if (value.startsWith('0107')) return 'Shoes';
+  if (value.startsWith('0108')) return 'Glove';
+  if (value.startsWith('0109')) return 'Shield';
+  if (value.startsWith('0110')) return 'Cape';
+  if (/^01(3|4|5|6|7)/.test(value)) return 'Weapon';
+  return 'Equipment';
+}
+
+function normalizeCmsItem(item, lookups = {}) {
+  const id = unpadItemId(readAny(item, ['id', 'itemId', 'item_id', 'code'], ''));
+  const stats = item.stats ?? item.info ?? item;
+  const name = readAny(item, ['name', 'displayName', 'label', 'title'], lookupName(lookups, id, `Item ${id}`));
+  const reqJob = readNumber(readAny(stats, ['reqJob', 'req_job', 'job'], readAny(item, ['reqJob', 'req_job', 'job'], 0)));
+  const type = readAny(item, ['weaponType', 'weapon_type', 'type', 'subCategory', 'sub_category', 'categoryName'], detectSlotFromId(id));
+
+  return {
+    ...item,
+    id,
+    title: name,
+    name,
+    category: 'Equipment',
+    sub_category: detectSlotFromId(id) === 'Weapon' ? 'Weapon' : 'Armor',
+    weaponType: type,
+    weapon_type: type,
+    reqJob,
+    reqJobLabel: readAny(item, ['reqJobLabel', 'req_job_label'], reqJob ? '' : 'All'),
+    reqLevel: readNumber(readAny(stats, ['reqLevel', 'req_level', 'level'], readAny(item, ['reqLevel', 'req_level', 'level'], 0))),
+    reqSTR: readNumber(readAny(stats, ['reqSTR', 'req_str', 'str'], 0)),
+    reqDEX: readNumber(readAny(stats, ['reqDEX', 'req_dex', 'dex'], 0)),
+    reqINT: readNumber(readAny(stats, ['reqINT', 'req_int', 'int'], 0)),
+    reqLUK: readNumber(readAny(stats, ['reqLUK', 'req_luk', 'luk'], 0)),
+    incSTR: readNumber(readAny(stats, ['incSTR', 'str'], 0)),
+    incDEX: readNumber(readAny(stats, ['incDEX', 'dex'], 0)),
+    incINT: readNumber(readAny(stats, ['incINT', 'int'], 0)),
+    incLUK: readNumber(readAny(stats, ['incLUK', 'luk'], 0)),
+    incMHP: readNumber(readAny(stats, ['incMHP', 'mhp', 'hp', 'incHP'], 0)),
+    incMMP: readNumber(readAny(stats, ['incMMP', 'mmp', 'mp', 'incMP'], 0)),
+    incPAD: readNumber(readAny(stats, ['incPAD', 'pad', 'watk', 'attack', 'weaponAttack'], 0)),
+    incMAD: readNumber(readAny(stats, ['incMAD', 'mad', 'matk', 'magicAttack'], 0)),
+    incPDD: readNumber(readAny(stats, ['incPDD', 'pdd', 'wdef', 'defense'], 0)),
+    incMDD: readNumber(readAny(stats, ['incMDD', 'mdd', 'magicDefense'], 0)),
+    incACC: readNumber(readAny(stats, ['incACC', 'acc', 'accuracy'], 0)),
+    incEVA: readNumber(readAny(stats, ['incEVA', 'eva', 'avoid', 'avoidability'], 0)),
+    incSpeed: readNumber(readAny(stats, ['incSpeed', 'speed'], 0)),
+    incJump: readNumber(readAny(stats, ['incJump', 'jump'], 0)),
+    tuc: readNumber(readAny(stats, ['tuc', 'slots', 'upgradeSlots'], 0)),
+    stats,
+  };
+}
+
+async function fetchJsonSafe(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchItemsPayload(editionId = getActiveEditionId()) {
+  if (editionId === 'china') {
+    const [itemsPayload, lookupsPayload] = await Promise.all([
+      fetchJsonSafe('/cms/items.json'),
+      fetchJsonSafe('/cms/lookups.json'),
+    ]);
+    const items = objectRecords(itemsPayload, ['items', 'equipment', 'equips', 'data']).map((item) => normalizeCmsItem(item, lookupsPayload ?? {}));
+    return { items, sourceLabel: '国服 CMS' };
+  }
+
+  const candidates = ['./AppData/items.json', '/AppData/items.json', 'AppData/items.json'];
+  for (const url of candidates) {
+    const payload = await fetchJsonSafe(url);
+    if (!payload) continue;
+    const items = Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : [];
+    if (items.length) return { items, sourceLabel: '国际服 AppData' };
+  }
+  return { items: [], sourceLabel: getDataSourceLabel(editionId) };
+}
+
+function buildItemIndex({ items = [], sourceLabel = getDataSourceLabel() }) {
   const byName = new Map();
+  const byId = new Map();
   for (const item of items) {
     if (String(item?.category ?? '').toLowerCase() !== 'equipment') continue;
-    const names = [item.name, item.title, item.itemName].filter(Boolean);
+    const id = unpadItemId(item.id ?? item.itemId ?? item.item_id ?? item.code ?? '');
+    if (id) {
+      byId.set(id, item);
+      byId.set(padItemId(id), item);
+    }
+    const names = [item.name, item.title, item.itemName, item.displayName].filter(Boolean);
     for (const name of names) {
       const key = normalize(name);
       if (key && !byName.has(key)) byName.set(key, item);
     }
   }
-  return { items, byName };
+  return { items, byName, byId, sourceLabel };
 }
 
 function getItemIndex() {
-  if (!itemIndexPromise) itemIndexPromise = fetchItemsPayload().then(buildItemIndex);
-  return itemIndexPromise;
+  const editionId = getActiveEditionId();
+  if (!itemIndexPromiseByEdition.has(editionId)) {
+    itemIndexPromiseByEdition.set(editionId, fetchItemsPayload(editionId).then(buildItemIndex));
+  }
+  return itemIndexPromiseByEdition.get(editionId);
 }
 
-function findBestItem(index, name) {
+function findBestItem(index, name, id = '') {
+  const cleanId = unpadItemId(id);
+  if (cleanId && index.byId.has(cleanId)) return index.byId.get(cleanId);
+  if (cleanId && index.byId.has(padItemId(cleanId))) return index.byId.get(padItemId(cleanId));
+
   const key = normalize(name);
   if (!key) return null;
   if (index.byName.has(key)) return index.byName.get(key);
@@ -252,9 +417,10 @@ function findBestItem(index, name) {
 
 async function getItemFromTile(tile) {
   const name = getItemName(tile);
+  const id = getItemIdFromTile(tile);
   const index = await getItemIndex();
-  const matched = findBestItem(index, name);
-  return normalizeItemForDisplay(matched, getSlot(tile)) ?? getFallbackItem(tile);
+  const matched = findBestItem(index, name, id);
+  return normalizeItemForDisplay(matched, getSlot(tile), index.sourceLabel) ?? getFallbackItem(tile);
 }
 
 function removeSheet() {
@@ -277,6 +443,7 @@ function escapeHtml(value = '') {
 function renderLoadingSheet(iconSrc = '') {
   renderItemSheet({
     name: '读取中...',
+    sourceLabel: getDataSourceLabel(),
     type: '装备',
     reqRows: [],
     statRows: [],
@@ -292,6 +459,7 @@ function renderItemSheet(item, iconSrc = '') {
   const stats = item.statRows?.length
     ? item.statRows.map(infoRow).join('')
     : '<p class="mg-item-inspect-muted">无额外属性。</p>';
+  const idText = item.id ? `ID ${item.id}` : 'ID 未识别';
   const backdrop = document.createElement('div');
   backdrop.className = 'mg-item-inspect-backdrop';
   backdrop.innerHTML = `
@@ -302,7 +470,7 @@ function renderItemSheet(item, iconSrc = '') {
         <div class="mg-item-inspect-icon">${iconSrc ? `<img src="${escapeHtml(iconSrc)}" alt="" />` : '<span>?</span>'}</div>
         <div>
           <h2>${escapeHtml(item.name)}</h2>
-          <p>${escapeHtml(item.type ?? '装备')}</p>
+          <p>${escapeHtml(item.type ?? '装备')} · ${escapeHtml(idText)} · ${escapeHtml(item.sourceLabel ?? getDataSourceLabel())}</p>
         </div>
       </div>
       <div class="mg-item-inspect-section compact">
