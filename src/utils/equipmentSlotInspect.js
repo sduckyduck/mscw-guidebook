@@ -1,17 +1,68 @@
 const STAT_LABELS = [
-  ['incSTR', 'STR'], ['incDEX', 'DEX'], ['incINT', 'INT'], ['incLUK', 'LUK'],
-  ['incMHP', 'Max HP'], ['incMMP', 'Max MP'], ['incPAD', 'Weapon Attack'], ['incMAD', 'Magic Attack'],
-  ['incPDD', 'Weapon Defense'], ['incMDD', 'Magic Defense'], ['incACC', 'Accuracy'], ['incEVA', 'Avoidability'],
-  ['incSpeed', 'Speed'], ['incJump', 'Jump'], ['attackSpeedLabel', 'Attack Speed'], ['tuc', 'Slots'],
+  ['incSTR', '力量'], ['incDEX', '敏捷'], ['incINT', '智力'], ['incLUK', '运气'],
+  ['incMHP', '最大 HP'], ['incMMP', '最大 MP'], ['incPAD', '武器攻击力'], ['incMAD', '魔法攻击力'],
+  ['incPDD', '物理防御力'], ['incMDD', '魔法防御力'], ['incACC', '命中率'], ['incEVA', '回避率'],
+  ['incSpeed', '移动速度'], ['incJump', '跳跃力'], ['attackSpeedLabel', '攻击速度'], ['tuc', '可升级次数'],
 ];
 
 const REQUIREMENT_LABELS = [
-  ['reqLevel', 'Level'], ['reqSTR', 'STR'], ['reqDEX', 'DEX'], ['reqINT', 'INT'], ['reqLUK', 'LUK'],
+  ['reqLevel', '等级'], ['reqSTR', '力量'], ['reqDEX', '敏捷'], ['reqINT', '智力'], ['reqLUK', '运气'],
 ];
 
 const JOB_LABELS = [
-  [1, 'Warrior'], [2, 'Magician'], [4, 'Bowman'], [8, 'Thief'], [16, 'Pirate'],
+  [1, '战士'], [2, '魔法师'], [4, '弓箭手'], [8, '飞侠'], [16, '海盗'],
 ];
+
+const JOB_NAME_MAP = {
+  all: '全职业',
+  common: '新手',
+  beginner: '新手',
+  warrior: '战士',
+  magician: '魔法师',
+  mage: '魔法师',
+  bowman: '弓箭手',
+  thief: '飞侠',
+  pirate: '海盗',
+};
+
+const TYPE_LABEL_MAP = {
+  Equipment: '装备',
+  Weapon: '武器',
+  Claw: '拳套',
+  Dagger: '短刀',
+  Bow: '弓',
+  Crossbow: '弩',
+  Wand: '短杖',
+  Staff: '长杖',
+  '1H Sword': '单手剑',
+  '2H Sword': '双手剑',
+  Sword: '剑',
+  Axe: '斧',
+  Blunt: '钝器',
+  Spear: '枪',
+  Polearm: '长枪',
+  Gun: '枪械',
+  Knuckle: '指节',
+  Hat: '帽子',
+  Top: '上衣',
+  Bottom: '裤裙',
+  Overall: '套服',
+  Shoes: '鞋子',
+  Glove: '手套',
+  Shield: '盾牌',
+  Cape: '披风',
+  Accessory: '饰品',
+};
+
+const SPEED_LABEL_MAP = {
+  Fast: '快',
+  Faster: '更快',
+  Normal: '普通',
+  Slow: '慢',
+  Slower: '较慢',
+  'Very Fast': '非常快',
+  'Very Slow': '非常慢',
+};
 
 let clickTimer = null;
 let bypassNextClick = false;
@@ -30,8 +81,23 @@ function readField(item, key) {
   return item?.[key] ?? item?.stats?.[key];
 }
 
+function translateJobName(value = '') {
+  const normalized = normalize(value);
+  return JOB_NAME_MAP[normalized] ?? String(value || '全职业');
+}
+
+function translateType(value = '') {
+  const raw = String(value || 'Equipment');
+  return TYPE_LABEL_MAP[raw] ?? TYPE_LABEL_MAP[Object.keys(TYPE_LABEL_MAP).find((key) => normalize(key) === normalize(raw))] ?? raw;
+}
+
+function translateSpeed(value = '') {
+  const raw = String(value || '');
+  return SPEED_LABEL_MAP[raw] ?? raw;
+}
+
 function getDisplayName(item) {
-  return item?.title ?? item?.name ?? item?.itemName ?? item?.id ?? 'Unknown Item';
+  return item?.title ?? item?.name ?? item?.itemName ?? item?.id ?? '未知装备';
 }
 
 function getSlot(tile) {
@@ -62,13 +128,13 @@ function detectType(item, fallbackSlot = '') {
 
 function getJobClasses(item) {
   const label = item?.reqJobLabel ?? item?.req_job_label;
-  if (label && String(label).toLowerCase() !== 'all') return [String(label)];
+  if (label && String(label).toLowerCase() !== 'all') return [translateJobName(label)];
 
   const reqJob = readNumber(item?.reqJob ?? item?.req_job ?? item?.stats?.reqJob);
-  if (!reqJob) return ['Common'];
+  if (!reqJob) return ['新手'];
 
   const jobs = JOB_LABELS.filter(([bit]) => (reqJob & bit) === bit).map(([, name]) => name);
-  return jobs.length ? jobs : ['Common'];
+  return jobs.length ? jobs : ['新手'];
 }
 
 function getRequirementRows(item) {
@@ -76,7 +142,7 @@ function getRequirementRows(item) {
     .map(([key, label]) => [label, readField(item, key)])
     .filter(([, value]) => value !== undefined && value !== null && value !== '' && readNumber(value) !== 0);
 
-  rows.unshift(['Job', getJobClasses(item).join(', ')]);
+  rows.unshift(['职业', getJobClasses(item).join(', ')]);
   return rows;
 }
 
@@ -87,7 +153,7 @@ function getStatRows(item) {
     if (value === undefined || value === null || value === '') continue;
 
     if (key === 'attackSpeedLabel') {
-      rows.push([label, String(value)]);
+      rows.push([label, translateSpeed(value)]);
       continue;
     }
 
@@ -108,7 +174,7 @@ function normalizeItemForDisplay(item, fallbackSlot = '') {
   return {
     id: item.id,
     name: getDisplayName(item),
-    type: detectType(item, fallbackSlot),
+    type: translateType(detectType(item, fallbackSlot)),
     reqRows: getRequirementRows(item),
     statRows: getStatRows(item),
     description: buildDescription(item),
@@ -117,13 +183,13 @@ function normalizeItemForDisplay(item, fallbackSlot = '') {
 
 function getFallbackItem(tile) {
   const slot = getSlot(tile);
-  const name = getItemName(tile) || 'Empty Slot';
+  const name = getItemName(tile) || '空装备栏';
   return {
     name,
-    type: slot || 'Equipment',
-    reqRows: [['Job', 'Unknown']],
+    type: translateType(slot || 'Equipment'),
+    reqRows: [['职业', '未知']],
     statRows: [],
-    description: 'No item details available.',
+    description: '暂无该装备的详细资料。',
   };
 }
 
@@ -210,8 +276,8 @@ function escapeHtml(value = '') {
 
 function renderLoadingSheet(iconSrc = '') {
   renderItemSheet({
-    name: 'Loading...',
-    type: 'Equipment',
+    name: '读取中...',
+    type: '装备',
     reqRows: [],
     statRows: [],
     description: '',
@@ -222,29 +288,29 @@ function renderItemSheet(item, iconSrc = '') {
   removeSheet();
   const requirements = item.reqRows?.length
     ? item.reqRows.map(infoRow).join('')
-    : '<p class="mg-item-inspect-muted">No requirements.</p>';
+    : '<p class="mg-item-inspect-muted">无装备需求。</p>';
   const stats = item.statRows?.length
     ? item.statRows.map(infoRow).join('')
-    : '<p class="mg-item-inspect-muted">No bonus stats.</p>';
+    : '<p class="mg-item-inspect-muted">无额外属性。</p>';
   const backdrop = document.createElement('div');
   backdrop.className = 'mg-item-inspect-backdrop';
   backdrop.innerHTML = `
     <section class="mg-item-inspect-card" role="dialog" aria-modal="true">
-      <button class="mg-item-inspect-close" type="button" aria-label="Close">关闭</button>
-      <div class="mg-item-inspect-titlebar">Equipment</div>
+      <button class="mg-item-inspect-close" type="button" aria-label="关闭">关闭</button>
+      <div class="mg-item-inspect-titlebar">装备</div>
       <div class="mg-item-inspect-top">
         <div class="mg-item-inspect-icon">${iconSrc ? `<img src="${escapeHtml(iconSrc)}" alt="" />` : '<span>?</span>'}</div>
         <div>
           <h2>${escapeHtml(item.name)}</h2>
-          <p>${escapeHtml(item.type ?? 'Equipment')}</p>
+          <p>${escapeHtml(item.type ?? '装备')}</p>
         </div>
       </div>
       <div class="mg-item-inspect-section compact">
-        <h3>Requirements</h3>
+        <h3>装备需求</h3>
         <div class="mg-item-inspect-rows">${requirements}</div>
       </div>
       <div class="mg-item-inspect-section compact">
-        <h3>Stats</h3>
+        <h3>装备属性</h3>
         <div class="mg-item-inspect-rows">${stats}</div>
       </div>
       ${item.description ? `<p class="mg-item-inspect-desc">${escapeHtml(item.description)}</p>` : ''}
