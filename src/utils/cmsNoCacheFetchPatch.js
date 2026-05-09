@@ -1,5 +1,5 @@
 const PATCH_FLAG = '__mscwCmsNoCacheFetchPatchInstalled';
-const CMS_DATA_VERSION = 'cms-equipment-stats-20260509-v3';
+const CMS_DATA_VERSION = 'cms-equipment-stats-20260509-v4';
 const STORAGE_KEY = 'mscw-guidebook-state-v2';
 
 const BANNED_CMS_ITEM_NAME = /(gm|admin|administrator|test|tester|event|cash|nx|vip|donor|wizet|developer|manager|维泽特|管理员|测试|活动|现金|点装|圣诞|周年|纪念|情人节|生日|蛋糕|气球|玫瑰|巧克力|棒棒糖|泳装|游泳|透明|玩具)/i;
@@ -49,8 +49,18 @@ function hasAbsStatAtLeast(item, keys, threshold) {
   return keys.some((key) => Math.abs(stat(item, key)) >= threshold);
 }
 
+function getReqLevel(item) {
+  return n(item?.reqLevel ?? item?.req_level ?? item?.level ?? item?.stats?.reqLevel ?? item?.stats?.req_level ?? item?.info?.reqLevel);
+}
+
 function isSuspiciousCmsEquipment(item) {
   if (!item || String(item.category ?? '').toLowerCase() !== 'equipment') return false;
+
+  // User-facing build planner should not recommend any level-0 equipment.
+  // In CMS WZ this catches beginner placeholders, cash cosmetics, GM/test/event
+  // equipment, and zero-requirement visual items.
+  if (getReqLevel(item) <= 0) return true;
+
   const nameText = `${item.name ?? ''} ${item.title ?? ''} ${item.description ?? ''}`;
   if (BANNED_CMS_ITEM_NAME.test(nameText)) return true;
   if (n(item.cash ?? item.stats?.cash) === 1) return true;
@@ -64,7 +74,7 @@ function isSuspiciousCmsEquipment(item) {
   if (Math.abs(stat(item, 'incSpeed')) > 25) return true;
   if (Math.abs(stat(item, 'incJump')) > 35) return true;
 
-  const reqLevel = n(item.reqLevel ?? item.stats?.reqLevel);
+  const reqLevel = getReqLevel(item);
   const totalMainStats = HIGH_STAT_KEYS.reduce((sum, key) => sum + Math.max(0, stat(item, key)), 0);
   if (reqLevel <= 10 && totalMainStats >= 30) return true;
   return false;
@@ -84,6 +94,7 @@ function sanitizeCmsItemsPayload(payload) {
       ...(payload.beta_filter || {}),
       version: CMS_DATA_VERSION,
       removed_suspicious_equipment: removed,
+      excludes_level_zero_equipment: true,
     },
   };
 }
