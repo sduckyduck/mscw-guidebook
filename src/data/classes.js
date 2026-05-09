@@ -81,7 +81,7 @@ export const CLASS_LINES = [
 export const EDITIONS = [
   {
     id: 'global',
-    name: '国服内测',
+    name: '国际服',
     minLevel: 10,
     maxLevel: 120,
     dataMode: 'official-appdata',
@@ -89,7 +89,7 @@ export const EDITIONS = [
   },
   {
     id: 'china',
-    name: '国服',
+    name: '国服内测',
     minLevel: 10,
     maxLevel: 120,
     dataMode: 'official-appdata',
