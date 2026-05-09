@@ -14,6 +14,7 @@ import './utils/brandFooterName.js';
 import './utils/budgetRouteTuning.js';
 import './utils/craftableGearBadges.js';
 import './utils/dashboardDisplayFormatter.js';
+import './utils/baseAttackFormulaPatch.js';
 import './utils/equipmentSlotInspect.js';
 import './styles.css';
 import './styles/cover-intro.css';
