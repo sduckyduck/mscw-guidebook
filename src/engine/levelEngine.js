@@ -21,6 +21,12 @@ const FLOW_SECONDARY_RATIOS = {
   pirate: { high: 0.18, mid: 0.3 },
 };
 
+// Low-budget accuracy compensation should only add AP to a secondary stat
+// when that secondary stat actually improves physical hit rate.
+// Bowman and pirate accuracy comes mainly from DEX, so their STR should stay
+// at equipment-requirement levels instead of swallowing the DEX pool.
+const LOW_BUDGET_ACCURACY_SECONDARY_CLASSES = new Set(['warrior', 'thief']);
+
 const clamp = (value, min, max) => Math.min(Math.max(Number(value) || min, min), max);
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
 
@@ -221,6 +227,7 @@ function allocatePrimaryAfterSecondary({ baseStats, primary, secondary, secondar
 
 function chooseSecondaryForAccuracy({ classLine, baseStats, primary, secondary, conventionalSecondaryTarget, totalAp, minStats, accuracyTarget, bonusAccuracy, budget }) {
   if (budget !== 'low') return conventionalSecondaryTarget;
+  if (!LOW_BUDGET_ACCURACY_SECONDARY_CLASSES.has(classLine.id)) return conventionalSecondaryTarget;
 
   const extraAp = Math.max(0, Number(totalAp) - getStatTotal(baseStats));
   const baseSecondary = baseStats[secondary] ?? minStats[secondary];
@@ -283,6 +290,7 @@ function shouldUseCurrentRecommendationInsteadOfSaved(saved, recommended, classL
   // as stale system output and let the route-specific recommendation win.
   if (budget === 'high' && savedSecondary > recommendedSecondary + 8 && savedPrimary < recommendedPrimary) return true;
   if (budget === 'low' && savedSecondary + 8 < recommendedSecondary && savedPrimary > recommendedPrimary) return true;
+  if (budget === 'low' && !LOW_BUDGET_ACCURACY_SECONDARY_CLASSES.has(classLine.id) && savedSecondary > recommendedSecondary + 8 && savedPrimary < recommendedPrimary) return true;
 
   return false;
 }
@@ -333,9 +341,7 @@ function inferSecondaryTarget(classId, level, budget = 'mid', custom = {}) {
   }
 
   if (classId === 'bowman') {
-    if (budget === 'low') return Math.min(70, Math.max(15, Math.round(safeLevel * 0.86) + 2));
-    if (budget === 'high') return Math.min(90, Math.max(20, safeLevel + 5));
-    return Math.min(85, Math.max(18, safeLevel + 3));
+    return Math.min(90, Math.max(base, safeLevel + 5));
   }
 
   const ratio = FLOW_SECONDARY_RATIOS[classId]?.[budget];
@@ -364,6 +370,7 @@ function inferAccuracyTarget(classId, level, budget = 'mid', custom = {}) {
 
 function getNormalizedBaseSecondary(classId) {
   if (classId === 'warrior') return 15;
+  if (classId === 'bowman') return 12;
   if (classId === 'thief') return 25;
   if (classId === 'pirate') return 20;
   return 4;
