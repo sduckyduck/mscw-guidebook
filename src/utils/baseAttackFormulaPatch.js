@@ -117,6 +117,13 @@ function calcPhysicalRange({ skill, level, id, watk, profile }) {
   return { min: Math.max(1, Math.round(Math.min(min, max))), max: Math.max(1, Math.round(Math.max(min, max))), hits: skill.hits ?? 1 };
 }
 
+function getMagicAttackFromTwoIntRule() {
+  const totalInt = statValue('INT');
+  const weapon = findWeapon(weaponTileName());
+  const gearMagic = number(weapon?.incMAD ?? weapon?.stats?.incMAD);
+  return Math.max(1, Math.floor(totalInt / 2) + gearMagic);
+}
+
 function magicMastery(level) {
   const masteryLevel = Math.min(10, Math.max(0, number(level)));
   return (0.1 + masteryLevel / 10) * 0.8;
@@ -136,14 +143,37 @@ function formatRange(range) {
   return range.hits > 1 ? `${range.min} - ${range.max}/hit` : `${range.min} - ${range.max}`;
 }
 
+function patchDisplayedMatk() {
+  if (classId() !== 'magician') return;
+  const totalInt = statValue('INT');
+  const weapon = findWeapon(weaponTileName());
+  const gearMagic = number(weapon?.incMAD ?? weapon?.stats?.incMAD);
+  const magic = getMagicAttackFromTwoIntRule();
+  const baseMagic = Math.floor(totalInt / 2);
+
+  document.querySelectorAll('.mg-stat-box').forEach((box) => {
+    const label = box.querySelector('span')?.textContent?.trim();
+    if (label !== 'MATK') return;
+    const value = box.querySelector('strong');
+    const breakdown = box.querySelector('.mg-stat-breakdown');
+    if (value) value.textContent = String(magic);
+    if (breakdown) breakdown.textContent = `(${baseMagic}+${gearMagic})`;
+    box.dataset.twoIntMagicAttack = String(magic);
+  });
+}
+
 function patchDamageRows() {
   const id = classId();
   if (!id) return;
 
+  patchDisplayedMatk();
+
   const weaponName = weaponTileName();
   const weapon = findWeapon(weaponName);
   const watk = statValue('WATK') || number(weapon?.incPAD ?? weapon?.stats?.incPAD);
-  const magic = statValue('MATK') || statValue('Magic') || number(weapon?.incMAD ?? weapon?.stats?.incMAD);
+  const magic = id === 'magician'
+    ? getMagicAttackFromTwoIntRule()
+    : (statValue('MATK') || statValue('Magic') || number(weapon?.incMAD ?? weapon?.stats?.incMAD));
   const profile = getWeaponProfile(weapon, weaponName);
 
   document.querySelectorAll('.mg-overview-damage-row').forEach((row) => {
