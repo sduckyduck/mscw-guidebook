@@ -1,7 +1,9 @@
 const PATCH_FLAG = '__mscwCmsSkillFetchPatchInstalled';
 
+const PLAYABLE_CLASS_NAMES = new Set(['warrior', 'magician', 'bowman', 'thief', 'pirate']);
+const EXCLUDED_SOURCE_JOBS = new Set(['beginner', 'misc', 'event']);
+
 const JOB_NAME_BY_PREFIX = {
-  '000': 'beginner',
   '100': 'warrior',
   '110': 'fighter',
   '120': 'page',
@@ -39,19 +41,39 @@ function normalizeId(value) {
   return String(value ?? '').replace(/\.0$/, '');
 }
 
+function normalizeText(value = '') {
+  return String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function sourceClassName(skill, group) {
+  return skill?.class_name ?? skill?.className ?? group?.class_name ?? group?.className ?? '';
+}
+
+function sourceJobName(skill, group) {
+  return skill?.job ?? skill?.jobName ?? skill?.job_name ?? group?.job ?? group?.jobName ?? group?.job_name ?? '';
+}
+
+function isPlayableClassSkill(skill, group) {
+  const className = normalizeText(sourceClassName(skill, group));
+  const jobName = normalizeText(sourceJobName(skill, group));
+  if (!PLAYABLE_CLASS_NAMES.has(className)) return false;
+  if (EXCLUDED_SOURCE_JOBS.has(jobName)) return false;
+  if (/^job \d+/.test(jobName)) return false;
+  return true;
+}
+
 function jobNameFromSkill(skill, group) {
   const id = normalizeId(skill?.id ?? skill?.skillId ?? skill?.skill_id ?? skill?.code);
   const prefix = id.slice(0, 3);
   return JOB_NAME_BY_PREFIX[prefix]
-    ?? skill?.job
-    ?? group?.job
-    ?? group?.job_name
-    ?? skill?.class_name
-    ?? group?.class_name
+    ?? sourceJobName(skill, group)
+    ?? sourceClassName(skill, group)
     ?? 'unknown';
 }
 
 function normalizeSkillForExistingAdapter(skill, group) {
+  if (!isPlayableClassSkill(skill, group)) return null;
+
   const id = normalizeId(skill?.id ?? skill?.skillId ?? skill?.skill_id ?? skill?.code);
   const job = jobNameFromSkill(skill, group);
   const levelStats = skill.all_level_stats
@@ -67,8 +89,8 @@ function normalizeSkillForExistingAdapter(skill, group) {
     jobName: job,
     className: job,
     class_name: job,
-    source_class_name: skill.class_name ?? group.class_name ?? group.className ?? '',
-    source_job: skill.job ?? group.job ?? group.job_name ?? '',
+    source_class_name: sourceClassName(skill, group),
+    source_job: sourceJobName(skill, group),
     maxLevel: Number(skill.maxLevel ?? skill.max_level ?? skill.max ?? 0),
     max_level: Number(skill.max_level ?? skill.maxLevel ?? skill.max ?? 0),
     allLevelStats: levelStats,
@@ -80,7 +102,9 @@ function normalizeSkillForExistingAdapter(skill, group) {
 
 function flattenCmsSkills(raw) {
   const groups = collectSkillGroups(raw);
-  const skills = groups.flatMap((group) => (group.skills ?? []).map((skill) => normalizeSkillForExistingAdapter(skill, group)));
+  const skills = groups.flatMap((group) => (group.skills ?? [])
+    .map((skill) => normalizeSkillForExistingAdapter(skill, group))
+    .filter(Boolean));
   return { skills };
 }
 
