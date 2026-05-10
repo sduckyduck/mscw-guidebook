@@ -21,7 +21,7 @@ export const CLASS_LINES = [
     role: '远程魔法 / 技能成型早',
     primaryStat: 'INT',
     secondaryStat: 'LUK',
-    weaponTypes: ['短杖', '长杖'],
+    weaponTypes: ['短杖'],
     branches: [
       { id: 'fp', name: '火毒法师', level: 30, theme: '单点伤害与持续输出' },
       { id: 'il', name: '冰雷法师', level: 30, theme: '控场刷怪，路线顺滑' },
@@ -29,7 +29,7 @@ export const CLASS_LINES = [
     ],
     baseStats: { STR: 4, DEX: 4, INT: 35, LUK: 8, HP: 80, MP: 120 },
     apPriority: ['INT', 'LUK'],
-    hitFormulaNote: '法师主要看魔法命中与等级差，实际可后续接官方公式。',
+    hitFormulaNote: '法师主手只推荐短杖，副手搭配盾牌。',
   },
   {
     id: 'bowman',
