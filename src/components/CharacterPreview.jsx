@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getMappedMsioItemId } from './MsioItemIcon.jsx';
 
 const API_REGION = 'CMS';
-const API_VERSION = 'latest';
+const API_VERSION = '224';
 const SKIN = 2000;
 
 const HAIR = {
