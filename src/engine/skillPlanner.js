@@ -363,15 +363,25 @@ function recalcPlan(plan, args = {}) {
 }
 
 function unlockLevel30SecondJob(plan, args = {}) {
-  if (number(args.level, 1) < 30) return plan;
+  const level = number(args.level, 1);
+  if (level < 30) return plan;
   for (const skill of plan.skills ?? []) {
     if (skill.tier === 'second') skill.locked = false;
   }
 
-  if (roundSkillValue(plan.totalSpByTier?.second) === 0) {
-    plan.totalSpByTier = { ...(plan.totalSpByTier ?? {}), second: 1 };
+  const currentSecondSp = roundSkillValue(plan.totalSpByTier?.second);
+  const expectedSecondSp = 1 + Math.max(0, level - 30) * 3;
+
+  if (currentSecondSp < expectedSecondSp) {
+    const missingSecondSp = expectedSecondSp - currentSecondSp;
+    plan.totalSpByTier = { ...(plan.totalSpByTier ?? {}), second: expectedSecondSp };
     const firstSecondSkill = (plan.skills ?? []).find((skill) => skill.tier === 'second' && !skill.locked);
-    if (firstSecondSkill && roundSkillValue(firstSecondSkill.level) === 0) firstSecondSkill.level = 1;
+    if (firstSecondSkill) {
+      firstSecondSkill.level = Math.min(
+        roundSkillValue(firstSecondSkill.max),
+        roundSkillValue(firstSecondSkill.level) + missingSecondSp,
+      );
+    }
   }
 
   return plan;
