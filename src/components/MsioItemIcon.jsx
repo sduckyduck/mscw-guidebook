@@ -1,3 +1,5 @@
+const BASE_URL = import.meta.env?.BASE_URL || '/';
+
 const EQUIPMENT_FOLDER_BY_PREFIX = {
   '0100': 'Cap',
   '0101': 'Accessory',
@@ -83,6 +85,10 @@ const EQUIPMENT_FOLDER_BY_SLOT = {
   accessory: 'Accessory',
 };
 
+function assetUrl(path) {
+  return `${BASE_URL}${String(path || '').replace(/^\/+/, '')}`;
+}
+
 function padItemId(value) {
   const raw = String(value ?? '').replace(/\.0$/, '').replace(/\D+/g, '');
   return raw ? raw.padStart(8, '0') : '';
@@ -108,7 +114,7 @@ export function getCmsItemIconUrl(item) {
   const id = padItemId(item?.id ?? item?.itemId ?? item?.item_id ?? item?.code);
   if (!id) return '';
   const folder = inferCmsEquipmentFolder(item, id);
-  return `cms_icons/equipment/${folder}/${id}.png`;
+  return assetUrl(`cms_icons/equipment/${folder}/${id}.png`);
 }
 
 export default function MsioItemIcon({ item, size = 32 }) {
