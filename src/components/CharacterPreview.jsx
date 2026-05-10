@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getMappedMsioItemId } from './MsioItemIcon.jsx';
 
-const API_REGION = 'CMS';
-const API_VERSION = '224';
+const API_REGION = 'MCW';
+const API_VERSION = '1';
 const SKIN = 2000;
 
 const HAIR = {
@@ -102,9 +102,9 @@ function urlsFor({ classLine, gender, gear }) {
   const face = FACE[g][Math.abs(seed) % FACE[g].length];
   const emote = EMOTE[classId] ?? 'default';
   const action = actionFor(gear);
-  const selectedCmsGear = mappedGear(gear);
+  const selectedGear = mappedGear(gear);
   const backup = BACKUP[classId] ?? BACKUP.warrior;
-  return [selectedCmsGear.length ? selectedCmsGear : null, backup, []]
+  return [selectedGear.length ? selectedGear : null, backup, []]
     .filter((ids) => ids !== null)
     .map((ids) => url({ hair, face, emote, ids, action }));
 }
