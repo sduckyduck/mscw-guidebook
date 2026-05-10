@@ -3,9 +3,120 @@ import { useEffect, useMemo, useState } from 'react';
 const API_REGION = 'MCW';
 const API_VERSION = '1';
 
+const EQUIPMENT_FOLDER_BY_PREFIX = {
+  '0100': 'Cap',
+  '0101': 'Accessory',
+  '0102': 'Accessory',
+  '0103': 'Accessory',
+  '0104': 'Coat',
+  '0105': 'Longcoat',
+  '0106': 'Pants',
+  '0107': 'Shoes',
+  '0108': 'Glove',
+  '0109': 'Shield',
+  '0110': 'Cape',
+  '0111': 'Accessory',
+  '0112': 'Accessory',
+  '0113': 'Accessory',
+  '0114': 'Accessory',
+  '0115': 'Accessory',
+  '0116': 'Accessory',
+  '0117': 'Accessory',
+  '0118': 'Accessory',
+  '0119': 'Accessory',
+  '0120': 'Accessory',
+  '0121': 'Accessory',
+  '0122': 'Accessory',
+  '0123': 'Accessory',
+  '0124': 'Accessory',
+  '0130': 'Weapon',
+  '0131': 'Weapon',
+  '0132': 'Weapon',
+  '0133': 'Weapon',
+  '0134': 'Weapon',
+  '0135': 'Weapon',
+  '0136': 'Weapon',
+  '0137': 'Weapon',
+  '0138': 'Weapon',
+  '0140': 'Weapon',
+  '0141': 'Weapon',
+  '0142': 'Weapon',
+  '0143': 'Weapon',
+  '0144': 'Weapon',
+  '0145': 'Weapon',
+  '0146': 'Weapon',
+  '0147': 'Weapon',
+  '0148': 'Weapon',
+  '0149': 'Weapon',
+  '0152': 'Weapon',
+  '0153': 'Weapon',
+  '0154': 'Weapon',
+  '0155': 'Weapon',
+  '0156': 'Weapon',
+  '0157': 'Weapon',
+  '0158': 'Weapon',
+  '0159': 'Weapon',
+  '0160': 'Weapon',
+  '0161': 'Weapon',
+  '0162': 'Weapon',
+  '0163': 'Weapon',
+  '0164': 'Weapon',
+  '0165': 'Weapon',
+  '0166': 'Weapon',
+  '0167': 'Weapon',
+  '0168': 'Weapon',
+  '0169': 'Weapon',
+  '0170': 'Weapon',
+};
+
+const EQUIPMENT_FOLDER_BY_WORD = [
+  [/weapon|sword|axe|blunt|spear|pole|wand|staff|bow|crossbow|claw|dagger|gun|knuckle/i, 'Weapon'],
+  [/cap|hat|helmet|帽|盔/i, 'Cap'],
+  [/coat|top|shirt|上衣/i, 'Coat'],
+  [/longcoat|overall|robe|套服|长袍/i, 'Longcoat'],
+  [/pants|bottom|裤/i, 'Pants'],
+  [/shoes|shoe|boot|鞋/i, 'Shoes'],
+  [/glove|手套/i, 'Glove'],
+  [/shield|盾/i, 'Shield'],
+  [/cape|披风/i, 'Cape'],
+  [/accessory|earring|face|eye|ring|pendant|belt|medal|饰|耳环|戒指|项链|腰带|勋章/i, 'Accessory'],
+];
+
 function idNum(value) {
   const n = Number(String(value ?? '').replace(/^0+/, ''));
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function padItemId(value) {
+  const raw = String(value ?? '').replace(/\.0$/, '').replace(/\D+/g, '');
+  return raw ? raw.padStart(8, '0') : '';
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function inferCmsEquipmentFolder(item, itemId) {
+  const text = [
+    item?.type,
+    item?.itemType,
+    item?.subCategory,
+    item?.sub_category,
+    item?.categoryName,
+    item?.category,
+    item?.slot,
+    item?.equipSlot,
+    item?.label,
+    item?.weaponType,
+    item?.weapon_type,
+    item?.name,
+    item?.title,
+  ].filter(Boolean).join(' ');
+
+  for (const [pattern, folder] of EQUIPMENT_FOLDER_BY_WORD) {
+    if (pattern.test(text)) return folder;
+  }
+  return EQUIPMENT_FOLDER_BY_PREFIX[itemId.slice(0, 4)] || 'Accessory';
 }
 
 export function getMappedMsioItemId(item) {
@@ -17,12 +128,26 @@ export function getMsioIconUrl(item) {
   return id ? `https://maplestory.io/api/${API_REGION}/${API_VERSION}/item/${id}/icon` : '';
 }
 
+export function getCmsItemIconUrl(item) {
+  const id = padItemId(item?.id ?? item?.itemId ?? item?.item_id ?? item?.code);
+  if (!id) return '';
+  const folder = inferCmsEquipmentFolder(item, id);
+  return `cms_icons/equipment/${folder}/${id}.png`;
+}
+
 export default function MsioItemIcon({ item, size = 32 }) {
   const [sourceIndex, setSourceIndex] = useState(0);
 
-  useEffect(() => setSourceIndex(0), [item?.id, item?.thumbnail]);
+  useEffect(() => setSourceIndex(0), [item?.id, item?.thumbnail, item?.cms_icon_path, item?.icon, item?.image]);
 
-  const sources = useMemo(() => [getMsioIconUrl(item), item?.thumbnail].filter(Boolean), [item]);
+  const sources = useMemo(() => unique([
+    item?.cms_icon_path,
+    getCmsItemIconUrl(item),
+    item?.thumbnail,
+    item?.icon,
+    item?.image,
+    getMsioIconUrl(item),
+  ]), [item]);
 
   return (
     <div style={{ width: size + 8, height: size + 8, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', marginBottom: 5 }}>
