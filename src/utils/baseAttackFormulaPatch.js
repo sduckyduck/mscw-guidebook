@@ -1,16 +1,18 @@
 const WEAPON_PROFILES = [
-  { match: /\b1h\s*sword\b|\bone handed sword\b|\bone-handed sword\b|long sword|gladius|cutlass|saber|sabre/i, swing: 1.8, stab: 1.8 },
-  { match: /\b2h\s*sword\b|\btwo handed sword\b|\btwo-handed sword\b|scimitar|katana/i, swing: 2.5, stab: 2.5 },
-  { match: /\b1h\s*axe\b|\bone handed axe\b|\bone-handed axe\b|fireman's axe|axe/i, swing: 2.4, stab: 1.2 },
-  { match: /\b2h\s*axe\b|\btwo handed axe\b|\btwo-handed axe\b/i, swing: 3.0, stab: 2.0 },
-  { match: /\b1h\s*blunt\b|\bone handed blunt\b|\bone-handed blunt\b|mace|hammer/i, swing: 2.4, stab: 1.2 },
-  { match: /\b2h\s*blunt\b|\btwo handed blunt\b|\btwo-handed blunt\b/i, swing: 3.0, stab: 2.0 },
-  { match: /\bspear\b/i, swing: 1.5, stab: 3.5 },
-  { match: /\bpole\s*arm\b|\bpolearm\b/i, swing: 3.5, stab: 1.5 },
-  { match: /\bcrossbow\b/i, swing: 2.5, stab: 2.5 },
-  { match: /\bbow\b|ryden/i, swing: 2.5, stab: 2.5 },
-  { match: /\bclaw\b|reef claw|garnier/i, swing: 2.5, stab: 2.5 },
-  { match: /\bdagger\b/i, swing: 1.0, stab: 2.0 },
+  { match: /\b1h\s*sword\b|\bone handed sword\b|\bone-handed sword\b|long sword|gladius|cutlass|saber|sabre/i, swing: 1.8, stab: 1.8, family: 'sword' },
+  { match: /\b2h\s*sword\b|\btwo handed sword\b|\btwo-handed sword\b|scimitar|katana/i, swing: 2.5, stab: 2.5, family: 'sword' },
+  { match: /\b1h\s*axe\b|\bone handed axe\b|\bone-handed axe\b|fireman's axe|axe/i, swing: 2.4, stab: 1.2, family: 'axe' },
+  { match: /\b2h\s*axe\b|\btwo handed axe\b|\btwo-handed axe\b/i, swing: 3.0, stab: 2.0, family: 'axe' },
+  { match: /\b1h\s*blunt\b|\bone handed blunt\b|\bone-handed blunt\b|mace|hammer/i, swing: 2.4, stab: 1.2, family: 'blunt' },
+  { match: /\b2h\s*blunt\b|\btwo handed blunt\b|\btwo-handed blunt\b/i, swing: 3.0, stab: 2.0, family: 'blunt' },
+  { match: /\bspear\b/i, swing: 1.5, stab: 3.5, family: 'spear' },
+  { match: /\bpole\s*arm\b|\bpolearm\b/i, swing: 3.5, stab: 1.5, family: 'polearm' },
+  { match: /\bcrossbow\b/i, swing: 2.5, stab: 2.5, family: 'crossbow' },
+  { match: /\bbow\b|ryden/i, swing: 2.5, stab: 2.5, family: 'bow' },
+  { match: /\bclaw\b|reef claw|garnier/i, swing: 2.5, stab: 2.5, family: 'claw' },
+  { match: /\bdagger\b/i, swing: 1.0, stab: 2.0, family: 'dagger' },
+  { match: /\bgun\b|pistol/i, swing: 2.5, stab: 2.5, family: 'gun' },
+  { match: /\bknuckle\b/i, swing: 2.0, stab: 2.0, family: 'knuckle' },
 ];
 
 const PHYSICAL_SKILLS = {
@@ -47,6 +49,20 @@ const MAGIC_SKILLS = {
   'Holy Arrow': { basic: (level) => 10 + level, hits: 1 },
 };
 
+const MASTERY_SKILLS_BY_FAMILY = {
+  sword: [/sword mastery/i, /精准剑|剑精准/],
+  axe: [/axe mastery/i, /精准斧|斧精准/],
+  blunt: [/mace mastery|blunt weapon mastery|blunt mastery/i, /精准钝器|钝器精准/],
+  spear: [/spear mastery/i, /精准枪|枪精准/],
+  polearm: [/pole\s*arm mastery|polearm mastery/i, /精准矛|精准长枪|矛精准/],
+  bow: [/bow mastery/i, /精准弓|弓精准/],
+  crossbow: [/crossbow mastery/i, /精准弩|弩精准/],
+  claw: [/claw mastery|throwing star mastery/i, /精准暗器|暗器精准/],
+  dagger: [/dagger mastery/i, /精准短刀|短刀精准/],
+  gun: [/gun mastery/i, /精准枪|枪精准/],
+  knuckle: [/knuckle mastery/i, /精准指节|指节精准/],
+};
+
 function number(value) {
   const parsed = Number(String(value ?? '').replace(/[^0-9.-]/g, ''));
   return Number.isFinite(parsed) ? parsed : 0;
@@ -68,6 +84,7 @@ function classId() {
   if (/法师|魔法师|magician/i.test(text)) return 'magician';
   if (/弓箭手|bowman/i.test(text)) return 'bowman';
   if (/飞侠|thief/i.test(text)) return 'thief';
+  if (/海盗|pirate/i.test(text)) return 'pirate';
   return '';
 }
 
@@ -86,7 +103,7 @@ function findWeapon(name) {
 
 function getWeaponProfile(weapon, fallbackName = '') {
   const text = `${weapon?.weaponType ?? weapon?.weapon_type ?? ''} ${weapon?.title ?? weapon?.name ?? ''} ${fallbackName}`;
-  return WEAPON_PROFILES.find((item) => item.match.test(text)) ?? { swing: 2.0, stab: 2.0 };
+  return WEAPON_PROFILES.find((item) => item.match.test(text)) ?? { swing: 2.0, stab: 2.0, family: 'unknown' };
 }
 
 function physicalMultiplier(profile, mode) {
@@ -98,6 +115,11 @@ function physicalMultiplier(profile, mode) {
 function primarySecondary(id) {
   if (id === 'bowman') return { primary: statValue('DEX'), secondary: statValue('STR') };
   if (id === 'thief') return { primary: statValue('LUK'), secondary: statValue('DEX') };
+  if (id === 'pirate') {
+    const str = statValue('STR');
+    const dex = statValue('DEX');
+    return { primary: Math.max(str, dex), secondary: Math.min(str, dex) };
+  }
   return { primary: statValue('STR'), secondary: statValue('DEX') };
 }
 
@@ -106,15 +128,50 @@ function parseSkillLevel(row) {
   return number(text.match(/Lv\.\s*(\d+)/i)?.[1]) || 1;
 }
 
+function parseAllocatedSkillLevel(row) {
+  const raw = row?.dataset?.skillLevel ?? '';
+  const fromData = number(raw);
+  if (fromData > 0) return fromData;
+  const text = row?.textContent ?? '';
+  return number(text.match(/Lv\.\s*(\d+)\s*\/\s*\d+/i)?.[1])
+    || number(text.match(/等级\s*(\d+)\s*\/\s*\d+/i)?.[1])
+    || number(text.match(/\b(\d+)\s*\/\s*(?:10|20|30)\b/)?.[1]);
+}
+
+function findDisplayedMasteryLevel(family) {
+  const matchers = MASTERY_SKILLS_BY_FAMILY[family] ?? [];
+  if (!matchers.length) return 0;
+  const rows = [...document.querySelectorAll('.mg-skill-row, [data-skill-name], [class*="skill"]')];
+  let best = 0;
+  for (const row of rows) {
+    const explicitName = row?.dataset?.skillName ?? '';
+    const text = `${explicitName} ${row?.textContent ?? ''}`;
+    if (!matchers.some((pattern) => pattern.test(text))) continue;
+    best = Math.max(best, parseAllocatedSkillLevel(row));
+  }
+  return best;
+}
+
+function masteryRatioFromLevel(level) {
+  const masteryLevel = Math.min(10, Math.max(0, Math.floor(number(level))));
+  return (0.1 + masteryLevel / 10) * 0.8;
+}
+
+function getPhysicalMasteryRatio(skill, profile) {
+  if (skill.mastery !== undefined) return skill.mastery;
+  const masteryLevel = findDisplayedMasteryLevel(profile.family);
+  return masteryLevel > 0 ? masteryRatioFromLevel(masteryLevel) : 0.08;
+}
+
 function calcPhysicalRange({ skill, level, id, watk, profile }) {
   const { primary, secondary } = primarySecondary(id);
   if (!primary || !watk) return null;
   const ratio = Math.max(0.01, skill.ratio(level));
-  const mastery = skill.mastery ?? 0.08;
+  const mastery = getPhysicalMasteryRatio(skill, profile);
   const mult = physicalMultiplier(profile, skill.mode);
   const min = (0.8 + (primary * mult * mastery + secondary) / 100) * watk * ratio;
   const max = (1.0 + (primary * mult + secondary) / 100) * watk * ratio;
-  return { min: Math.max(1, Math.round(Math.min(min, max))), max: Math.max(1, Math.round(Math.max(min, max))), hits: skill.hits ?? 1 };
+  return { min: Math.max(1, Math.round(Math.min(min, max))), max: Math.max(1, Math.round(Math.max(min, max))), hits: skill.hits ?? 1, mastery };
 }
 
 function getMagicAttackFromTwoIntRule() {
@@ -197,6 +254,8 @@ function patchDamageRows() {
     if (value.textContent !== next) {
       value.textContent = next;
       value.dataset.classicFormulaPatched = '1';
+      value.dataset.weaponFamily = profile.family;
+      if (range.mastery !== undefined) value.dataset.masteryRatio = String(range.mastery);
     }
   });
 }
