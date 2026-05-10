@@ -7,78 +7,35 @@ const STAT_KEYS = ['STR', 'DEX', 'INT', 'LUK'];
 const MIN_STAT_AP = 4;
 const BASE_URL = import.meta.env?.BASE_URL || '/';
 
-function asset(path) {
-  return `${BASE_URL}${String(path || '').replace(/^\/+/, '')}`;
-}
+const CMS_SKILL_BY_NAME = {
+  powerstrike: ['1001004', '强力攻击'], slashblast: ['1001005', '群体攻击'], improvedhprecovery: ['1000000', '生命恢复'], improvinghprecovery: ['1000000', '生命恢复'], maxhpincrease: ['1000001', '生命强化'], improvingmaxhpincrease: ['1000001', '生命强化'], precisestrikes: ['1000002', '恢复术'], endure: ['1000002', '恢复术'], ironbody: ['1001003', '圣甲术'],
+  swordmastery: ['1100000', '精准剑'], axemastery: ['1100001', '精准斧'], finalattacksword: ['1100002', '终极剑'], finalattackaxe: ['1100003', '终极斧'], swordbooster: ['1101004', '快速剑'], axebooster: ['1101005', '快速斧'], rage: ['1101006', '愤怒之火'], powerguard: ['1101007', '伤害反击'],
+  bluntweaponmastery: ['1200001', '精准钝器'], finalattackbluntweapon: ['1200003', '终极钝器'], bluntweaponbooster: ['1201005', '快速钝器'], threaten: ['1201006', '压制术'],
+  spearmastery: ['1300000', '精准枪'], polearmmastery: ['1300001', '精准矛'], polearmmastery2: ['1300001', '精准矛'], finalattackspear: ['1300002', '终极枪'], finalattackpolearm: ['1300003', '终极矛'], spearbooster: ['1301004', '快速枪'], polearmbooster: ['1301005', '快速矛'], ironwill: ['1301006', '神圣之火'], hyperbody: ['1301007', '极限防御'],
+  energybolt: ['2001004', '魔法弹'], magicclaw: ['2001005', '魔法双击'], improvedmprecovery: ['2000000', '魔力恢复'], maxmpincrease: ['2000001', '魔力强化'], magicguard: ['2001002', '魔法盾'], magicarmor: ['2001003', '魔法铠甲'], mpeater: ['2100000', '魔力吸收'], meditation: ['2101001', '精神力'], teleport: ['2101002', '瞬间移动'], slow: ['2101003', '缓速术'], firearrow: ['2101004', '火焰箭'], poisonbreath: ['2101005', '毒雾术'], coldbeam: ['2201004', '冰冻术'], thunderbolt: ['2201005', '雷电术'], heal: ['2301002', '治愈术'], invincible: ['2301003', '神之保护'], bless: ['2301004', '祝福'], holyarrow: ['2301005', '圣箭术'],
+  criticalshot: ['3000001', '精准箭'], amazonsbless: ['3000000', '强力箭'], amazonsjudgement: ['3000000', '强力箭'], theeyeofamazon: ['3000002', '远程箭'], eyeofamazon: ['3000002', '远程箭'], focus: ['3001003', '集中术'], arrowblow: ['3001004', '断魂箭'], doubleshot: ['3001005', '二连射'], bowmastery: ['3100000', '精准弓'], finalattackbow: ['3100001', '终极弓'], bowbooster: ['3101002', '快速弓'], powerknockback: ['3101003', '强弓'], soularrowbow: ['3101004', '无形箭：弓'], arrowbombbow: ['3101005', '爆炸箭'], arrowbomb: ['3101005', '爆炸箭'], crossbowmastery: ['3200000', '精准弩'], finalattackcrossbow: ['3200001', '终极弩'], crossbowbooster: ['3201002', '快速弩'], soularrowcrossbow: ['3201004', '无形箭：弩'], ironarrowcrossbow: ['3201005', '穿透箭'], ironarrow: ['3201005', '穿透箭'],
+  nimblebody: ['4000000', '集中术'], keeneyes: ['4000001', '远程暗器'], disorder: ['4001002', '诅咒术'], darksight: ['4001003', '隐身术'], doublestab: ['4001334', '二连击'], luckyseven: ['4001344', '双飞斩'], clawmastery: ['4100000', '精准暗器'], criticalthrow: ['4100001', '强力投掷'], clawbooster: ['4101003', '快速暗器'], haste: ['4101004', '轻功'], drain: ['4101005', '生命吸收'], daggermastery: ['4200000', '精准短刀'], daggerbooster: ['4201002', '快速短刀'], steal: ['4201004', '神通术'], savageblow: ['4201005', '回旋斩'],
+};
 
-function skillId(value) {
-  return String(value || '').match(/(\d{6,8})(?:_iconDisabled|_iconMouseOver|_raw)?\.png/i)?.[1]
-    || String(value || '').replace(/\.0$/, '').replace(/\D+/g, '');
-}
+function key(value) { return String(value || '').toLowerCase().replace(/&apos;|&#39;/g, '').replace(/[^a-z0-9]+/g, ''); }
+function asset(path) { return `${BASE_URL}${String(path || '').replace(/^\/+/, '')}`; }
+function skillId(value) { return String(value || '').match(/(\d{6,8})(?:_iconDisabled|_iconMouseOver|_raw)?\.png/i)?.[1] || String(value || '').replace(/\.0$/, '').replace(/\D+/g, ''); }
+function skillMeta(skill) { return CMS_SKILL_BY_NAME[key(skill?.name)] || CMS_SKILL_BY_NAME[key(skill?.displayName)] || null; }
+function cmsSkillId(skill) { return skillId(skill?.id) || skillId(skill?.skillId) || skillId(skill?.skill_id) || skillId(skill?.cms_icon_path) || skillId(skill?.thumbnail) || skillId(skill?.iconKey) || skillMeta(skill)?.[0] || ''; }
+function cmsSkillIcon(skill) { const id = cmsSkillId(skill); return id ? asset(`cms_icons/skills/${id}.png`) : ''; }
+function displaySkillName(skill) { const raw = String(skill?.name || ''); if (/^\d{6,8}$/.test(raw)) return raw; return skill?.cmsName || skill?.displayName || skillMeta(skill)?.[1] || raw; }
 
-function cmsSkillIcon(skill) {
-  const id = skillId(skill?.id) || skillId(skill?.skillId) || skillId(skill?.skill_id) || skillId(skill?.cms_icon_path) || skillId(skill?.thumbnail) || skillId(skill?.iconKey);
-  return id ? asset(`cms_icons/skills/${id}.png`) : '';
-}
-
-function clearSkillTier(skills, onSkillChange) {
-  for (const skill of skills) {
-    if (skill.locked) continue;
-    for (let i = 0; i < Math.max(0, Math.round(Number(skill.level) || 0)); i += 1) onSkillChange(skill.name, -1);
-  }
-}
-
-function PanelHead({ kicker, title, action, onAction, secondaryAction, onSecondaryAction }) {
-  return <div className="mg-character-panel-head"><div><span>{kicker}</span><h2>{title}</h2></div><div className="mg-panel-head-actions">{action && <button onClick={onAction}>{action}</button>}{secondaryAction && <button className="mg-panel-head-secondary" onClick={onSecondaryAction}>{secondaryAction}</button>}</div></div>;
-}
-
-function PointRow({ label, value, points, minValue, canMinus, canPlus, onMinus, onPlus }) {
-  return <article className="mg-ap-box"><div><span>{label}</span><strong>{value}</strong><em>AP {points} · 最低 {minValue}</em></div><div className="mg-mini-controls"><button onClick={onMinus} disabled={!canMinus}>-</button><button onClick={onPlus} disabled={!canPlus}>+</button></div></article>;
-}
-
-function SkillBadge({ skill }) {
-  const src = cmsSkillIcon(skill);
-  return <div className="mg-skill-badge">{src ? <img className="mg-skill-icon-img" src={src} alt="" draggable="false" loading="lazy" decoding="async" /> : <span>{String(skill?.name || '?').replace(/\s+/g, '').slice(0, 2)}</span>}</div>;
-}
-
-function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus, onInspect }) {
-  const rowClass = ['mg-skill-row clickable', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
-  return <article className={rowClass} role="button" tabIndex={0} onClick={onInspect}>
-    <button type="button" className="mg-skill-icon-button" onClick={(event) => { event.stopPropagation(); if (canPlus) onPlus(); else if (canMinus) onMinus(); }} disabled={!canPlus && !canMinus} aria-label={`${skill.name} 调整技能点`}>
-      <SkillBadge skill={skill} />
-    </button>
-    <div className="mg-skill-main"><strong>{skill.name}</strong><span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · 点击图标加点'}</span></div>
-    <div className="mg-mini-controls" onClick={(event) => event.stopPropagation()}><button onClick={onMinus} disabled={!canMinus}>-</button><button onClick={onPlus} disabled={!canPlus}>+</button></div>
-  </article>;
-}
-
-function SkillList({ skills, plan, onSkillChange, onSkillInspect }) {
-  return <div className="mg-skill-stack compact">{skills.map((skill) => {
-    const remainingForTier = plan.remainingByTier?.[skill.tier] ?? plan.remainingSp;
-    return <SkillPointRow key={skill.id || skill.name} skill={skill} canMinus={!skill.locked && skill.level > 0} canPlus={!skill.locked && remainingForTier > 0 && skill.level < skill.max} onMinus={() => onSkillChange(skill.name, -1)} onPlus={() => onSkillChange(skill.name, 1)} onInspect={() => onSkillInspect(skill)} />;
-  })}</div>;
-}
-
-function SkillGroupCard({ title, kicker, action, onAction, secondaryAction, onSecondaryAction, note, remaining, total, skills, plan, onSkillChange, onSkillInspect, glass = false, className = '' }) {
-  const cardClass = [glass ? 'mg-glass-panel mg-sp-panel' : 'mg-skill-side-card', className].filter(Boolean).join(' ');
-  return <section className={cardClass}><PanelHead kicker={kicker} title={title} action={action} onAction={onAction} secondaryAction={secondaryAction} onSecondaryAction={onSecondaryAction} />{note && <p className="mg-character-note">{note}</p>}<div className="mg-character-meter mg-sp-meter"><span>剩余 SP</span><strong>{remaining}</strong><em>{title} {remaining}/{total}</em></div><SkillList skills={skills} plan={plan} onSkillChange={onSkillChange} onSkillInspect={onSkillInspect} /></section>;
-}
+function clearSkillTier(skills, onSkillChange) { for (const skill of skills) { if (skill.locked) continue; for (let i = 0; i < Math.max(0, Math.round(Number(skill.level) || 0)); i += 1) onSkillChange(skill.name, -1); } }
+function PanelHead({ kicker, title, action, onAction, secondaryAction, onSecondaryAction }) { return <div className="mg-character-panel-head"><div><span>{kicker}</span><h2>{title}</h2></div><div className="mg-panel-head-actions">{action && <button onClick={onAction}>{action}</button>}{secondaryAction && <button className="mg-panel-head-secondary" onClick={onSecondaryAction}>{secondaryAction}</button>}</div></div>; }
+function PointRow({ label, value, points, minValue, canMinus, canPlus, onMinus, onPlus }) { return <article className="mg-ap-box"><div><span>{label}</span><strong>{value}</strong><em>AP {points} · 最低 {minValue}</em></div><div className="mg-mini-controls"><button onClick={onMinus} disabled={!canMinus}>-</button><button onClick={onPlus} disabled={!canPlus}>+</button></div></article>; }
+function SkillBadge({ skill }) { const src = cmsSkillIcon(skill); return <div className="mg-skill-badge">{src ? <img className="mg-skill-icon-img" src={src} alt="" draggable="false" loading="lazy" decoding="async" /> : <span>{displaySkillName(skill).replace(/\s+/g, '').slice(0, 2)}</span>}</div>; }
+function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus, onInspect }) { const rowClass = ['mg-skill-row clickable', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' '); const name = displaySkillName(skill); return <article className={rowClass} role="button" tabIndex={0} onClick={onInspect}><button type="button" className="mg-skill-icon-button" onClick={(event) => { event.stopPropagation(); if (canPlus) onPlus(); else if (canMinus) onMinus(); }} disabled={!canPlus && !canMinus} aria-label={`${name} 调整技能点`}><SkillBadge skill={skill} /></button><div className="mg-skill-main"><strong>{name}</strong><span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · 点击图标加点'}</span></div><div className="mg-mini-controls" onClick={(event) => event.stopPropagation()}><button onClick={onMinus} disabled={!canMinus}>-</button><button onClick={onPlus} disabled={!canPlus}>+</button></div></article>; }
+function SkillList({ skills, plan, onSkillChange, onSkillInspect }) { return <div className="mg-skill-stack compact">{skills.map((skill) => { const remainingForTier = plan.remainingByTier?.[skill.tier] ?? plan.remainingSp; return <SkillPointRow key={skill.id || skill.name} skill={skill} canMinus={!skill.locked && skill.level > 0} canPlus={!skill.locked && remainingForTier > 0 && skill.level < skill.max} onMinus={() => onSkillChange(skill.name, -1)} onPlus={() => onSkillChange(skill.name, 1)} onInspect={() => onSkillInspect(skill)} />; })}</div>; }
+function SkillGroupCard({ title, kicker, action, onAction, secondaryAction, onSecondaryAction, note, remaining, total, skills, plan, onSkillChange, onSkillInspect, glass = false, className = '' }) { const cardClass = [glass ? 'mg-glass-panel mg-sp-panel' : 'mg-skill-side-card', className].filter(Boolean).join(' '); return <section className={cardClass}><PanelHead kicker={kicker} title={title} action={action} onAction={onAction} secondaryAction={secondaryAction} onSecondaryAction={onSecondaryAction} />{note && <p className="mg-character-note">{note}</p>}<div className="mg-character-meter mg-sp-meter"><span>剩余 SP</span><strong>{remaining}</strong><em>{title} {remaining}/{total}</em></div><SkillList skills={skills} plan={plan} onSkillChange={onSkillChange} onSkillInspect={onSkillInspect} /></section>; }
 
 export default function SkillPanel({ plan, apNote, statPlan, classLine, level = 10, apAllocation, onApChange, onApReset, onSkillChange, onSkillReset }) {
   const [selectedSkill, setSelectedSkill] = useState(null);
   const firstJobSkills = plan.skills.filter((skill) => skill.tier !== 'second');
   const secondJobSkills = plan.skills.filter((skill) => skill.tier === 'second');
-
-  return <section className="mg-dashboard mg-character-dashboard mg-character-dashboard-figure1">
-    <h1 className="mg-dashboard-title">MapleGuide: 角色能力与技能分配</h1>
-    <p className="mg-dashboard-subtitle">SP/AP Distribution · 当前 {classLine?.name ?? '角色'} Lv.{level}</p>
-    <div className="mg-character-figure1-layout-v2">
-      <section className="mg-glass-panel mg-ap-summary-panel-v2"><PanelHead kicker="AP 加点" title="能力值分配" action="系统推荐" onAction={onApReset} /><div className="mg-ap-summary-inline-v2"><p className="mg-character-note">{apNote}</p><div className="mg-character-meter mg-ap-meter-compact"><span>可分配 AP</span><strong>{statPlan.remainingAp}</strong><em>最低值按职业转职要求保护</em></div></div></section>
-      <section className="mg-glass-panel mg-ap-stats-panel-v2"><div className="mg-ap-grid mg-ap-grid-horizontal-v2">{STAT_KEYS.map((stat) => { const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP; const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP; return <PointRow key={stat} label={stat} value={statPlan.stats[stat]} points={apValue} minValue={minValue} canMinus={apValue > minValue} canPlus={statPlan.remainingAp > 0} onMinus={() => onApChange(stat, -1)} onPlus={() => onApChange(stat, 1)} />; })}</div></section>
-      <div className="mg-character-skill-row-v2"><div className="mg-character-skill-rail mg-character-left-rail-v2"><SkillGroupCard title="一转技能" kicker="SP 加点" action="系统推荐" onAction={onSkillReset} secondaryAction="清空" onSecondaryAction={() => clearSkillTier(firstJobSkills, onSkillChange)} note={plan.summary} remaining={plan.remainingByTier?.first ?? 0} total={plan.totalSpByTier?.first ?? 0} skills={firstJobSkills} plan={plan} onSkillChange={onSkillChange} onSkillInspect={setSelectedSkill} glass /></div><div className="mg-character-skill-rail mg-character-right-rail-v2">{secondJobSkills.length > 0 && <SkillGroupCard title="二转技能" kicker={Number(level) >= 30 ? '已开放' : 'Lv.30 后开放'} action="系统推荐" onAction={onSkillReset} secondaryAction="清空" onSecondaryAction={() => clearSkillTier(secondJobSkills, onSkillChange)} remaining={plan.remainingByTier?.second ?? 0} total={plan.totalSpByTier?.second ?? 0} skills={secondJobSkills} plan={plan} onSkillChange={onSkillChange} onSkillInspect={setSelectedSkill} className="mg-second-skill-card" />}</div></div>
-    </div>
-    <div className="mg-actions mg-character-actions"><button className="mg-action-small">分享</button><button className="mg-action-main">更换推荐 / 生成路线</button><button className="mg-action-small">百科</button></div>
-    <p className="mg-footer">© 2026 MapleGuide | by SduckyDuck</p>
-    <SkillDetailSheet skill={selectedSkill} plan={plan} onClose={() => setSelectedSkill(null)} />
-  </section>;
+  return <section className="mg-dashboard mg-character-dashboard mg-character-dashboard-figure1"><h1 className="mg-dashboard-title">MapleGuide: 角色能力与技能分配</h1><p className="mg-dashboard-subtitle">SP/AP Distribution · 当前 {classLine?.name ?? '角色'} Lv.{level}</p><div className="mg-character-figure1-layout-v2"><section className="mg-glass-panel mg-ap-summary-panel-v2"><PanelHead kicker="AP 加点" title="能力值分配" action="系统推荐" onAction={onApReset} /><div className="mg-ap-summary-inline-v2"><p className="mg-character-note">{apNote}</p><div className="mg-character-meter mg-ap-meter-compact"><span>可分配 AP</span><strong>{statPlan.remainingAp}</strong><em>最低值按职业转职要求保护</em></div></div></section><section className="mg-glass-panel mg-ap-stats-panel-v2"><div className="mg-ap-grid mg-ap-grid-horizontal-v2">{STAT_KEYS.map((stat) => { const apValue = statPlan.apAllocation?.[stat] ?? apAllocation?.[stat] ?? MIN_STAT_AP; const minValue = statPlan.apMinStats?.[stat] ?? MIN_STAT_AP; return <PointRow key={stat} label={stat} value={statPlan.stats[stat]} points={apValue} minValue={minValue} canMinus={apValue > minValue} canPlus={statPlan.remainingAp > 0} onMinus={() => onApChange(stat, -1)} onPlus={() => onApChange(stat, 1)} />; })}</div></section><div className="mg-character-skill-row-v2"><div className="mg-character-skill-rail mg-character-left-rail-v2"><SkillGroupCard title="一转技能" kicker="SP 加点" action="系统推荐" onAction={onSkillReset} secondaryAction="清空" onSecondaryAction={() => clearSkillTier(firstJobSkills, onSkillChange)} note={plan.summary} remaining={plan.remainingByTier?.first ?? 0} total={plan.totalSpByTier?.first ?? 0} skills={firstJobSkills} plan={plan} onSkillChange={onSkillChange} onSkillInspect={setSelectedSkill} glass /></div><div className="mg-character-skill-rail mg-character-right-rail-v2">{secondJobSkills.length > 0 && <SkillGroupCard title="二转技能" kicker={Number(level) >= 30 ? '已开放' : 'Lv.30 后开放'} action="系统推荐" onAction={onSkillReset} secondaryAction="清空" onSecondaryAction={() => clearSkillTier(secondJobSkills, onSkillChange)} remaining={plan.remainingByTier?.second ?? 0} total={plan.totalSpByTier?.second ?? 0} skills={secondJobSkills} plan={plan} onSkillChange={onSkillChange} onSkillInspect={setSelectedSkill} className="mg-second-skill-card" />}</div></div></div><div className="mg-actions mg-character-actions"><button className="mg-action-small">分享</button><button className="mg-action-main">更换推荐 / 生成路线</button><button className="mg-action-small">百科</button></div><p className="mg-footer">© 2026 MapleGuide | by SduckyDuck</p><SkillDetailSheet skill={selectedSkill ? { ...selectedSkill, name: displaySkillName(selectedSkill), id: cmsSkillId(selectedSkill) || selectedSkill.id, thumbnail: cmsSkillIcon(selectedSkill) } : null} plan={plan} onClose={() => setSelectedSkill(null)} /></section>;
 }
