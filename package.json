@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && find dist/cms_icons -type f \( -name '*_raw.png' -o -name '*_iconDisabled.png' -o -name '*_iconMouseOver.png' \) -delete",
+    "build": "vite build && find dist/cms_icons -type f -name '*_raw.png' -delete && find dist/cms_icons -type f -name '*_iconDisabled.png' -delete && find dist/cms_icons -type f -name '*_iconMouseOver.png' -delete",
     "preview": "vite preview"
   },
   "dependencies": {
