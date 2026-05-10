@@ -24,7 +24,7 @@ function copyPlan(plan) {
   };
 }
 
-function applyLevel30SecondJobSp(plan, level) {
+function applyLevel30SecondJobSp(plan, level, autoFillMissing = true) {
   const next = copyPlan(plan);
   const currentLevel = number(level, 1);
   if (currentLevel < 30) return recalcPlan(next);
@@ -37,6 +37,8 @@ function applyLevel30SecondJobSp(plan, level) {
   const expectedSecondSp = 1 + Math.max(0, currentLevel - 30) * 3;
   next.totalSpByTier = { ...(next.totalSpByTier ?? {}), second: Math.max(currentSecondSp, expectedSecondSp) };
 
+  if (!autoFillMissing) return recalcPlan(next);
+
   const usedSecondSp = (next.skills ?? [])
     .filter((skill) => skill.tier === 'second')
     .reduce((sum, skill) => sum + roundSkillValue(skill.level), 0);
@@ -48,6 +50,30 @@ function applyLevel30SecondJobSp(plan, level) {
     const add = Math.min(available, missingSecondSp);
     skill.level = roundSkillValue(skill.level) + add;
     missingSecondSp -= add;
+  }
+
+  return recalcPlan(next);
+}
+
+function applyExactSkillAllocation(plan, customSkills = {}) {
+  const next = copyPlan(plan);
+  const totals = {
+    first: roundSkillValue(next.totalSpByTier?.first),
+    second: roundSkillValue(next.totalSpByTier?.second),
+  };
+  const used = { first: 0, second: 0 };
+
+  for (const skill of next.skills ?? []) {
+    if (skill.locked) {
+      skill.level = 0;
+      continue;
+    }
+    const tier = skill.tier === 'second' ? 'second' : 'first';
+    const available = Math.max(0, totals[tier] - used[tier]);
+    const requested = roundSkillValue(customSkills?.[skill.name]);
+    const level = Math.min(requested, roundSkillValue(skill.max), available);
+    skill.level = level;
+    used[tier] += level;
   }
 
   return recalcPlan(next);
@@ -81,12 +107,15 @@ function recalcPlan(plan) {
 }
 
 export function getRecommendedSkillAllocation(args = {}) {
-  const plan = applyLevel30SecondJobSp(getSkillPlanBase({ ...args, customSkills: undefined }), args.level);
+  const plan = applyLevel30SecondJobSp(getSkillPlanBase({ ...args, customSkills: undefined }), args.level, true);
   return Object.fromEntries((plan.skills ?? []).map((skill) => [skill.name, roundSkillValue(skill.level)]));
 }
 
 export function getSkillPlan(args = {}) {
-  return applyLevel30SecondJobSp(getSkillPlanBase(args), args.level);
+  const hasCustomSkills = args.customSkills && typeof args.customSkills === 'object';
+  const basePlan = getSkillPlanBase({ ...args, customSkills: undefined });
+  const planWithSp = applyLevel30SecondJobSp(basePlan, args.level, !hasCustomSkills);
+  return hasCustomSkills ? applyExactSkillAllocation(planWithSp, args.customSkills) : planWithSp;
 }
 
 export { getApNote, getRecommendedSkillAllocationBase };
