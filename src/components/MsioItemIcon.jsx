@@ -85,6 +85,10 @@ const EQUIPMENT_FOLDER_BY_SLOT = {
   accessory: 'Accessory',
 };
 
+const GMS83_EQUIPMENT_ID_OVERRIDES = {
+  // CMS item id: GMS v83 item id. Most classic equipment IDs are shared.
+};
+
 function assetUrl(path) {
   return `${BASE_URL}${String(path || '').replace(/^\/+/, '')}`;
 }
@@ -101,8 +105,10 @@ function inferCmsEquipmentFolder(item, itemId) {
 }
 
 export function getMappedMsioItemId(item) {
-  const raw = String(item?.id ?? '').replace(/^0+/, '');
-  const n = Number(raw);
+  const explicit = item?.gms83Id ?? item?.gms83_id ?? item?.gmsId ?? item?.gms_id;
+  const cmsId = padItemId(explicit || item?.id || item?.itemId || item?.item_id || item?.code);
+  const mapped = GMS83_EQUIPMENT_ID_OVERRIDES[cmsId] ?? GMS83_EQUIPMENT_ID_OVERRIDES[cmsId.replace(/^0+/, '')] ?? cmsId;
+  const n = Number(String(mapped).replace(/^0+/, ''));
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
