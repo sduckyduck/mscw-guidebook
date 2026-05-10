@@ -7,6 +7,7 @@ import CommunityBuildsPage from './components/CommunityBuildsPage.jsx';
 import AdminBuildsPage from './components/AdminBuildsPage.jsx';
 import './utils/cmsNoCacheFetchPatch.js';
 import './utils/cmsSkillFetchPatch.js';
+import './utils/cmsIconFallback.js';
 import './utils/officialDataSanityPatch.js';
 import './utils/warriorStarterGearPatch.js';
 import './utils/dashboardActionButtons.js';
