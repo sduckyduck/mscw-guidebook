@@ -59,6 +59,8 @@ const MASTERY = {
   dagger: [/dagger mastery/i, /精准短刀|短刀精准/],
 };
 
+const STORAGE_KEY = 'mscw-guidebook-state-v2';
+
 const num = (v) => {
   const parsed = Number(String(v ?? '').replace(/[^0-9.-]/g, ''));
   return Number.isFinite(parsed) ? parsed : 0;
@@ -91,7 +93,25 @@ function weaponProfile(item, fallback = '') {
   const row = WEAPONS.find(([pattern]) => pattern.test(text));
   return row ? { swing: row[1], stab: row[2], family: row[3] } : { swing: 2, stab: 2, family: '' };
 }
-function masteryLevel(family) {
+function savedSkillAllocation() {
+  try {
+    const parsed = JSON.parse(window.localStorage?.getItem(STORAGE_KEY) || '{}');
+    return parsed?.skillAllocation && typeof parsed.skillAllocation === 'object' ? parsed.skillAllocation : {};
+  } catch {
+    return {};
+  }
+}
+function storedMasteryLevel(family) {
+  const patterns = MASTERY[family] ?? [];
+  if (!patterns.length) return 0;
+  let best = 0;
+  const allocation = savedSkillAllocation();
+  for (const [skillName, level] of Object.entries(allocation)) {
+    if (patterns.some((pattern) => pattern.test(skillName))) best = Math.max(best, num(level));
+  }
+  return best;
+}
+function visibleMasteryLevel(family) {
   const patterns = MASTERY[family] ?? [];
   if (!patterns.length) return 0;
   let best = 0;
@@ -102,6 +122,9 @@ function masteryLevel(family) {
     }
   }
   return best;
+}
+function masteryLevel(family) {
+  return Math.max(visibleMasteryLevel(family), storedMasteryLevel(family));
 }
 function masteryRatio(family, forced) {
   if (forced !== undefined) return forced;
@@ -179,6 +202,7 @@ function patchRows() {
     value.textContent = format(range);
     value.dataset.classicFormulaPatched = '1';
     value.dataset.weaponFamily = profile.family;
+    value.dataset.masteryLevel = String(masteryLevel(profile.family));
   });
 }
 function installBaseAttackFormulaPatch() {
@@ -188,5 +212,8 @@ function installBaseAttackFormulaPatch() {
   const run = () => window.requestAnimationFrame(patchRows);
   run();
   new MutationObserver(run).observe(document.body, { childList: true, subtree: true, characterData: true });
+  window.addEventListener('hashchange', run);
+  window.addEventListener('popstate', run);
+  window.addEventListener('storage', run);
 }
 installBaseAttackFormulaPatch();
