@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import './utils/staffWeaponPickerPatch.js';
 import AppMediaEnhanced from './AppMediaEnhanced.jsx';
 import CoverIntro from './components/CoverIntro.jsx';
 import CraftingMaterialsPageSafe from './components/CraftingMaterialsPageSafe.jsx';
