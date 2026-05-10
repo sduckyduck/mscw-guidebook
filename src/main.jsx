@@ -9,6 +9,7 @@ import './utils/cmsNoCacheFetchPatch.js';
 import './utils/cmsSkillFetchPatch.js';
 import './utils/cmsIconDataPathPatch.js';
 import './utils/cmsIconFallback.js';
+import './utils/cmsLegacySkillIconPatch.js';
 import './utils/officialDataSanityPatch.js';
 import './utils/warriorStarterGearPatch.js';
 import './utils/dashboardActionButtons.js';
