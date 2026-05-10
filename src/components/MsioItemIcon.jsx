@@ -1,8 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
-
-const API_REGION = 'MCW';
-const API_VERSION = '1';
-
 const EQUIPMENT_FOLDER_BY_PREFIX = {
   '0100': 'Cap',
   '0101': 'Accessory',
@@ -69,63 +64,44 @@ const EQUIPMENT_FOLDER_BY_PREFIX = {
   '0170': 'Weapon',
 };
 
-const EQUIPMENT_FOLDER_BY_WORD = [
-  [/weapon|sword|axe|blunt|spear|pole|wand|staff|bow|crossbow|claw|dagger|gun|knuckle/i, 'Weapon'],
-  [/cap|hat|helmet|帽|盔/i, 'Cap'],
-  [/coat|top|shirt|上衣/i, 'Coat'],
-  [/longcoat|overall|robe|套服|长袍/i, 'Longcoat'],
-  [/pants|bottom|裤/i, 'Pants'],
-  [/shoes|shoe|boot|鞋/i, 'Shoes'],
-  [/glove|手套/i, 'Glove'],
-  [/shield|盾/i, 'Shield'],
-  [/cape|披风/i, 'Cape'],
-  [/accessory|earring|face|eye|ring|pendant|belt|medal|饰|耳环|戒指|项链|腰带|勋章/i, 'Accessory'],
-];
-
-function idNum(value) {
-  const n = Number(String(value ?? '').replace(/^0+/, ''));
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
+const EQUIPMENT_FOLDER_BY_SLOT = {
+  weapon: 'Weapon',
+  cap: 'Cap',
+  hat: 'Cap',
+  top: 'Coat',
+  coat: 'Coat',
+  overall: 'Longcoat',
+  longcoat: 'Longcoat',
+  bottom: 'Pants',
+  pants: 'Pants',
+  shoes: 'Shoes',
+  shoe: 'Shoes',
+  glove: 'Glove',
+  shield: 'Shield',
+  cape: 'Cape',
+  earring: 'Accessory',
+  accessory: 'Accessory',
+};
 
 function padItemId(value) {
   const raw = String(value ?? '').replace(/\.0$/, '').replace(/\D+/g, '');
   return raw ? raw.padStart(8, '0') : '';
 }
 
-function unique(values) {
-  return [...new Set(values.filter(Boolean))];
-}
-
 function inferCmsEquipmentFolder(item, itemId) {
-  const text = [
-    item?.type,
-    item?.itemType,
-    item?.subCategory,
-    item?.sub_category,
-    item?.categoryName,
-    item?.category,
-    item?.slot,
-    item?.equipSlot,
-    item?.label,
-    item?.weaponType,
-    item?.weapon_type,
-    item?.name,
-    item?.title,
-  ].filter(Boolean).join(' ');
-
-  for (const [pattern, folder] of EQUIPMENT_FOLDER_BY_WORD) {
-    if (pattern.test(text)) return folder;
-  }
+  const slot = String(item?.slot ?? item?.equipSlot ?? '').toLowerCase();
+  if (EQUIPMENT_FOLDER_BY_SLOT[slot]) return EQUIPMENT_FOLDER_BY_SLOT[slot];
   return EQUIPMENT_FOLDER_BY_PREFIX[itemId.slice(0, 4)] || 'Accessory';
 }
 
 export function getMappedMsioItemId(item) {
-  return idNum(item?.id);
+  const raw = String(item?.id ?? '').replace(/^0+/, '');
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-export function getMsioIconUrl(item) {
-  const id = getMappedMsioItemId(item);
-  return id ? `https://maplestory.io/api/${API_REGION}/${API_VERSION}/item/${id}/icon` : '';
+export function getMsioIconUrl() {
+  return '';
 }
 
 export function getCmsItemIconUrl(item) {
@@ -136,26 +112,14 @@ export function getCmsItemIconUrl(item) {
 }
 
 export default function MsioItemIcon({ item, size = 32 }) {
-  const [sourceIndex, setSourceIndex] = useState(0);
-
-  useEffect(() => setSourceIndex(0), [item?.id, item?.thumbnail, item?.cms_icon_path, item?.icon, item?.image]);
-
-  const sources = useMemo(() => unique([
-    item?.cms_icon_path,
-    getCmsItemIconUrl(item),
-    item?.thumbnail,
-    item?.icon,
-    item?.image,
-    getMsioIconUrl(item),
-  ]), [item]);
+  const src = getCmsItemIconUrl(item);
 
   return (
     <div style={{ width: size + 8, height: size + 8, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', marginBottom: 5 }}>
-      {sources[sourceIndex] ? (
+      {src ? (
         <img
-          src={sources[sourceIndex]}
+          src={src}
           alt=""
-          onError={() => setSourceIndex((value) => value + 1)}
           style={{ width: size, height: size, objectFit: 'contain', imageRendering: 'pixelated' }}
         />
       ) : (
