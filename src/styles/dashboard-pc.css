@@ -1817,6 +1817,108 @@
     color: #fff !important;
     padding: 20px !important;
   }
+
+  /* ============================================================
+     Unified page tone: wrap every tab body in the same teal
+     gradient used by the overview / monster pages, so 地图 /
+     任务 / 材料 stop reading as navy slabs.
+     ============================================================ */
+
+  body .app-shell > .section-card.mg-quest-section,
+  body .app-shell > .section-card.mg-maps-section,
+  body .app-shell > .craft-safe-page {
+    background:
+      radial-gradient(circle at 88% 8%, rgba(255, 255, 255, 0.16), transparent 220px),
+      linear-gradient(160deg, #0f6d67 0%, #155c68 100%) !important;
+    border: 1px solid rgba(16, 62, 64, 0.58) !important;
+    border-radius: 22px !important;
+    box-shadow: 0 22px 54px rgba(12, 75, 80, 0.28) !important;
+    color: #fff !important;
+    padding: clamp(16px, 3vw, 26px) !important;
+    margin-top: 14px;
+    overflow: hidden !important;
+  }
+
+  /* Inner cards (quest cards, map cards, craft cards) -> glassy white-on-teal */
+  body .mg-quest-section .mg-quest-hero,
+  body .mg-quest-section .mg-quest-toolbar,
+  body .mg-quest-section .mg-quest-card,
+  body .mg-quest-section .mg-quest-empty,
+  body .craft-safe-page .craft-safe-hero,
+  body .craft-safe-page .craft-safe-tabs,
+  body .craft-safe-page .craft-safe-card,
+  body .craft-safe-page .craft-safe-controls {
+    background: rgba(255, 255, 255, 0.085) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 12px 28px rgba(15, 76, 80, 0.18) !important;
+    color: #fff !important;
+    backdrop-filter: blur(14px);
+  }
+
+  /* Map cards: keep the white photo card body, but soften the heavy border */
+  body .mg-maps-section .mg-map-card-redesign {
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    box-shadow: 0 14px 30px rgba(15, 76, 80, 0.22) !important;
+  }
+
+  /* Light text inside the unified containers */
+  body .mg-quest-section h2,
+  body .mg-quest-section h3,
+  body .mg-quest-section strong,
+  body .mg-quest-section label,
+  body .craft-safe-page h1,
+  body .craft-safe-page h2,
+  body .craft-safe-page h3,
+  body .craft-safe-page strong {
+    color: #fff !important;
+  }
+
+  body .mg-quest-section .mg-quest-hero p,
+  body .mg-quest-section .mg-quest-hero span,
+  body .mg-quest-section .mg-quest-toolbar span,
+  body .mg-quest-section .mg-quest-card header span,
+  body .mg-quest-section .mg-quest-meta span,
+  body .mg-quest-section .mg-quest-lines span,
+  body .mg-quest-section .mg-quest-rewards span,
+  body .mg-quest-section .mg-quest-empty span,
+  body .craft-safe-page p,
+  body .craft-safe-page small,
+  body .craft-safe-page span,
+  body .craft-safe-page em {
+    color: rgba(255, 255, 255, 0.78) !important;
+  }
+
+  /* Quest toolbar pills */
+  body .mg-quest-toolbar input,
+  body .craft-safe-controls input,
+  body .craft-safe-controls select {
+    background: rgba(255, 255, 255, 0.92) !important;
+    color: #0f172a !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+  }
+  body .mg-quest-toolbar input::placeholder { color: rgba(15, 23, 42, 0.5); }
+
+  body .mg-quest-toolbar button {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid rgba(255, 255, 255, 0.26) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+  }
+  body .mg-quest-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.26) !important;
+  }
+  body .mg-quest-toolbar button.is-active {
+    background: rgba(58, 198, 165, 0.32) !important;
+    border-color: rgba(120, 220, 200, 0.6) !important;
+    color: #fff !important;
+  }
+
+  /* Maps page title at top of wrapper */
+  body .app-shell > .section-card.mg-maps-section > h2 {
+    color: #fff !important;
+  }
+  body .app-shell > .section-card.mg-maps-section > .section-copy {
+    color: rgba(255, 255, 255, 0.82) !important;
+  }
 }
 
 @media (min-width: 1480px) {
