@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'mscw-guidebook-state-v2';
 const PATCH_NODE_ID = 'china-beta-materials-replacement';
 const STYLE_NODE_ID = 'china-beta-feature-styles';
+let scheduled = false;
 
 function readSavedEdition() {
   try {
@@ -22,6 +23,12 @@ function isChinaEdition() {
   return select?.value === 'china' || readSavedEdition() === 'china';
 }
 
+function setTextIfNeeded(node, value) {
+  if (!node || node.textContent === value) return false;
+  node.textContent = value;
+  return true;
+}
+
 function setTabLabel(button, chinaActive) {
   const nextLabel = chinaActive ? '拍卖行' : '材料';
   const previousLabel = chinaActive ? '材料' : '拍卖行';
@@ -29,12 +36,13 @@ function setTabLabel(button, chinaActive) {
     .find((span) => span.textContent.trim() === previousLabel || span.textContent.trim() === nextLabel);
 
   if (labelSpan) {
-    labelSpan.textContent = nextLabel;
+    setTextIfNeeded(labelSpan, nextLabel);
     return;
   }
 
-  if (button.textContent.trim() === previousLabel || button.textContent.trim() === nextLabel) {
-    button.textContent = nextLabel;
+  const buttonText = button.textContent.trim();
+  if (buttonText === previousLabel || buttonText === nextLabel) {
+    setTextIfNeeded(button, nextLabel);
   }
 }
 
@@ -45,7 +53,8 @@ function syncNavigationLabels() {
   });
 
   document.querySelectorAll('.mg-app-search input').forEach((input) => {
-    input.placeholder = chinaActive ? '搜索地图 / 怪物 / 拍卖行...' : '搜索地图 / 怪物 / 材料...';
+    const placeholder = chinaActive ? '搜索地图 / 怪物 / 拍卖行...' : '搜索地图 / 怪物 / 材料...';
+    if (input.placeholder !== placeholder) input.placeholder = placeholder;
   });
 }
 
@@ -242,32 +251,42 @@ function mountChinaBetaPage() {
   const shouldReplace = Boolean(craftPage && isChinaEdition());
 
   if (!shouldReplace) {
-    if (craftPage) craftPage.hidden = false;
-    existing?.remove();
+    if (craftPage && craftPage.hidden) craftPage.hidden = false;
+    if (existing) existing.remove();
     return;
   }
 
   ensureStyles();
-  craftPage.hidden = true;
+  if (!craftPage.hidden) craftPage.hidden = true;
   if (!existing) craftPage.insertAdjacentElement('afterend', createChinaBetaPage());
 }
 
 function applyChinaBetaPatch() {
+  scheduled = false;
   syncNavigationLabels();
   mountChinaBetaPage();
 }
 
+function scheduleChinaBetaPatch() {
+  if (scheduled) return;
+  scheduled = true;
+  window.requestAnimationFrame(applyChinaBetaPatch);
+}
+
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  const observer = new MutationObserver(() => applyChinaBetaPatch());
   const start = () => {
     applyChinaBetaPatch();
-    observer.observe(document.body, { childList: true, subtree: true });
+    const appRoot = document.querySelector('#root');
+    if (appRoot) {
+      const observer = new MutationObserver(scheduleChinaBetaPatch);
+      observer.observe(appRoot, { childList: true, subtree: true });
+    }
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 
-  window.addEventListener('hashchange', () => window.setTimeout(applyChinaBetaPatch, 0));
-  document.addEventListener('click', () => window.setTimeout(applyChinaBetaPatch, 0), true);
-  document.addEventListener('change', () => window.setTimeout(applyChinaBetaPatch, 0), true);
+  window.addEventListener('hashchange', () => window.setTimeout(scheduleChinaBetaPatch, 0));
+  document.addEventListener('click', () => window.setTimeout(scheduleChinaBetaPatch, 0), true);
+  document.addEventListener('change', () => window.setTimeout(scheduleChinaBetaPatch, 0), true);
 }
