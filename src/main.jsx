@@ -22,6 +22,7 @@ import './utils/equipmentSlotInspect.js';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
+import './styles/monsters-page.css';
 import './styles/layout-unify.css';
 import './styles/community-build-detail.css';
 import './styles/saved-build-cleanup.css';

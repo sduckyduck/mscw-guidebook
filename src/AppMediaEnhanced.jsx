@@ -3,6 +3,7 @@ import CharacterPreview from './components/CharacterPreview.jsx';
 import CraftingMaterialsPageSafe from './components/CraftingMaterialsPageSafe.jsx';
 import IconFallback, { baseUrl } from './components/IconFallback.jsx';
 import MonsterIcon from './components/MonsterIcon.jsx';
+import MonsterReportPage from './components/MonsterReportPage.jsx';
 import MsioItemIcon from './components/MsioItemIcon.jsx';
 import OsmsDataImage from './components/OsmsDataImage.jsx';
 import SkillPanel from './components/SkillPanel.jsx';
@@ -18,7 +19,7 @@ import './styles/character-dashboard.css';
 import './styles/skill-gating.css';
 import './styles/dashboard-pc.css';
 
-const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['quests', '任务'], ['materials', '材料']];
+const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['monsters', '怪物'], ['quests', '任务'], ['materials', '材料']];
 const JOBS = [['warrior', '战士'], ['magician', '魔法师'], ['bowman', '弓箭手'], ['thief', '飞侠'], ['pirate', '海盗']].map(([id, name]) => ({ id, name }));
 const BUDGETS = [['low', '低资金'], ['mid', '普通'], ['high', '有钱']].map(([id, name]) => ({ id, name }));
 const PRIORITIES = [['stable', '稳定'], ['exp', '经验'], ['material', '材料'], ['meso', '金币']].map(([id, name]) => ({ id, name }));
@@ -211,6 +212,7 @@ export default function AppMediaEnhanced() {
     {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} maps={maps} weapon={weapon} gear={gear} stats={stats} skillPlan={skillPlan} statPlan={statPlan} effectiveApAllocation={effectiveApAllocation} candidatesBySlot={candidatesBySlot} items={activeData.items} budget={budget} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} onApChange={changeAp} />}
     {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
+    {tab === 'monsters' && <MonsterReportPage data={activeData} />}
     {tab === 'quests' && <QuestPage level={level} classLine={classLine} />}
     {tab === 'materials' && <MaterialsPage data={activeData} />}
     {pickerSlot && <GearPicker slot={pickerSlot} items={candidatesBySlot[pickerSlot] ?? []} current={gear.find((item) => item.slot === pickerSlot)} onChoose={(item) => chooseGear(pickerSlot, item)} onClose={() => setPickerSlot(null)} />}
@@ -276,6 +278,7 @@ function AppHeaderBar({ tab, onTabChange, classLine, level }) {
     ['overview', '总览', 'OV'],
     ['character', '角色', 'CH'],
     ['maps', '地图', 'MP'],
+    ['monsters', '怪物', 'MN'],
     ['quests', '任务', 'Q'],
     ['materials', '材料', 'MT'],
   ];
