@@ -52,8 +52,19 @@ function currentEditionId() {
   }
 }
 
+function hpRouteEnabled(custom = {}) {
+  if (custom.hpWashingEnabled === false || custom.hpRouteEnabled === false) return false;
+  if (typeof window === 'undefined') return true;
+  try {
+    const saved = JSON.parse(window.localStorage.getItem('mscw-guidebook-state-v2') || '{}');
+    return saved.hpWashingEnabled !== false && saved.hpRouteEnabled !== false;
+  } catch {
+    return true;
+  }
+}
+
 function routeIdFromCustom(custom = {}) {
-  if (currentEditionId() !== 'china') return 'none';
+  if (currentEditionId() !== 'china' || !hpRouteEnabled(custom)) return 'none';
   const value = custom.hpRoute ?? custom.hpWashingRoute ?? custom.budget;
   return ['low', 'mid', 'high'].includes(value) ? value : 'none';
 }
