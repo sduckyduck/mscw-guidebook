@@ -3,6 +3,8 @@ const MIN_STAT_AP = 4;
 const LEVEL_10_TOTAL_AP = 70;
 const FIRST_JOB_START_LEVEL = 10;
 const SECOND_JOB_START_LEVEL = 30;
+const APP_STORAGE_KEY = 'mscw-guidebook-state-v2';
+const HP_TOGGLE_STORAGE_KEY = 'mscw-guidebook-china-hp-washing-enabled';
 
 const JOB_AP_MINIMUMS = {
   warrior: { STR: 35 },
@@ -45,7 +47,7 @@ function currentEditionId() {
     ?.querySelector('select');
   if (select?.value) return select.value;
   try {
-    const saved = JSON.parse(window.localStorage.getItem('mscw-guidebook-state-v2') || '{}');
+    const saved = JSON.parse(window.localStorage.getItem(APP_STORAGE_KEY) || '{}');
     return saved.editionId === 'china' ? 'china' : 'global';
   } catch {
     return 'global';
@@ -54,13 +56,9 @@ function currentEditionId() {
 
 function hpRouteEnabled(custom = {}) {
   if (custom.hpWashingEnabled === false || custom.hpRouteEnabled === false) return false;
-  if (typeof window === 'undefined') return true;
-  try {
-    const saved = JSON.parse(window.localStorage.getItem('mscw-guidebook-state-v2') || '{}');
-    return saved.hpWashingEnabled !== false && saved.hpRouteEnabled !== false;
-  } catch {
-    return true;
-  }
+  if (custom.hpWashingEnabled === true || custom.hpRouteEnabled === true) return true;
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(HP_TOGGLE_STORAGE_KEY) === 'true';
 }
 
 function routeIdFromCustom(custom = {}) {
