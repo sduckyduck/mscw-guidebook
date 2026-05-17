@@ -678,6 +678,9 @@
    dashboard-pc.css `body .top-tabs { display: none !important }`.          */
 .top-tabs.mg-mobile-tabs {
   display: flex;
+  position: sticky;
+  top: max(0px, env(safe-area-inset-top));
+  z-index: 60;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;

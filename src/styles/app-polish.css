@@ -860,6 +860,42 @@ body {
     right: 8px;
     max-width: none;
   }
+
+  /* Quest page — single-column hero fixes vertical letter stacking */
+  .mg-quest-hero {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .mg-quest-toolbar {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .mg-quest-filter-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .mg-quest-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mg-quest-filter-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Materials hero — wrap on narrow screens */
+  .craft-safe-hero {
+    flex-wrap: wrap;
+  }
+
+  .craft-safe-hero em {
+    width: 100%;
+  }
 }
 
 /* Immersive game-client glass theme.
