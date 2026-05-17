@@ -210,7 +210,7 @@ export default function AppMediaEnhanced() {
     <AppHeaderBar tab={tab} onTabChange={changeTab} classLine={classLine} level={level} />
     <MobileTabBar tab={tab} onTabChange={changeTab} />
     {edition.dataMode !== 'official-appdata' && <p className="load-error">国服数据/公式已预留，当前暂不启用真实推荐。</p>}
-    {tab === 'overview' && <Dashboard layout="overview" controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} maps={maps} weapon={weapon} gear={gear} stats={stats} skillPlan={skillPlan} statPlan={statPlan} effectiveApAllocation={effectiveApAllocation} candidatesBySlot={candidatesBySlot} items={activeData.items} budget={budget} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} onApChange={changeAp} />}
+    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} maps={maps} weapon={weapon} gear={gear} stats={stats} skillPlan={skillPlan} statPlan={statPlan} effectiveApAllocation={effectiveApAllocation} candidatesBySlot={candidatesBySlot} items={activeData.items} budget={budget} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} onApChange={changeAp} />}
     {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
     {tab === 'monsters' && <MonsterReportPage data={activeData} />}
@@ -221,30 +221,9 @@ export default function AppMediaEnhanced() {
   </main>;
 }
 
-function Dashboard({ controls, classLine, branch, gender, level, bestMonster, bestMap, maps, weapon, gear, stats, skillPlan, statPlan, effectiveApAllocation, candidatesBySlot, items, budget, onPickSlot, onOpenMaps, onApChange, layout }) {
+function Dashboard({ controls, classLine, branch, gender, level, bestMonster, bestMap, maps, weapon, gear, stats, skillPlan, statPlan, effectiveApAllocation, candidatesBySlot, items, budget, onPickSlot, onOpenMaps, onApChange }) {
   const buildId = `${classLine.id.toUpperCase()}-${String(level).padStart(3, '0')}`;
   const today = new Date().toISOString().slice(0, 10);
-
-  if (layout === 'overview') {
-    return (
-      <section className="mg-dashboard mg-overview-layout">
-        <div className="mg-overview-column">
-          <ConfigPanel {...controls} />
-          <ApAllocatorPanel classLine={classLine} apAllocation={effectiveApAllocation} statPlan={statPlan} onApChange={onApChange} />
-          <PreviewPanel classLine={classLine} branch={branch} gender={gender} level={level} weapon={weapon} gear={gear} stats={stats} />
-          <DashboardEquipmentSlots gear={gear} candidatesBySlot={candidatesBySlot} onPickSlot={onPickSlot} />
-          <OverviewDamagePanel classLine={classLine} skillPlan={skillPlan} />
-          <StatusPanel bestMonster={bestMonster} bestMap={bestMap} onOpenMaps={onOpenMaps} />
-          <GrowthRoutePanel maps={maps} level={level} onOpenMaps={onOpenMaps} />
-          <MonsterPickPanel bestMap={bestMap} onOpenMaps={onOpenMaps} />
-          <NextActionsPanel classLine={classLine} level={level} bestMap={bestMap} bestMonster={bestMonster} gear={gear} candidatesBySlot={candidatesBySlot} />
-          <WhyThisMapPanel bestMap={bestMap} level={level} classLine={classLine} />
-        </div>
-        <DashboardFooter />
-      </section>
-    );
-  }
-
   return <section className="mg-dashboard">
     <h1 className="mg-dashboard-title">MapleGuide: {classLine.name}开荒仪表盘</h1>
     <p className="mg-dashboard-subtitle">根据你的配置，为你推荐最佳路线与成长方案</p>
