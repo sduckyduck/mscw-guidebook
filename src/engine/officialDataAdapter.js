@@ -117,11 +117,11 @@ async function loadAppDataGuideData() {
 
 async function loadCmsGuideData() {
   const [itemsRaw, lookupsRaw, mapsRaw, monstersRaw, skillsRaw, questsRaw] = await Promise.all([
-    fetchJson(cmsPath('items')),
+    fetchJson(cmsPath('items')).catch(() => []),
     fetchJson(cmsPath('lookups')).catch(() => ({})),
-    fetchJson(cmsPath('maps')),
-    fetchJson(cmsPath('monsters')),
-    fetchJson(cmsPath('skills')),
+    fetchJson(cmsPath('maps')).catch(() => []),
+    fetchJson(cmsPath('monsters')).catch(() => []),
+    fetchJson(cmsPath('skills')).catch(() => []),
     fetchJson(cmsPath('quests')).catch(() => []),
   ]);
 
@@ -237,12 +237,10 @@ function normalizeAppMaps(regions, monsters) {
 
     const levels = mapMonsters.map((monster) => monster.level).filter(Number.isFinite);
     const spawnTotal = mapMonsters.reduce((sum, monster) => sum + Number(monster.spawnCount ?? 0), 0);
-    const tags = buildMapTags(metadata, mapMonsters, spawnTotal);
-
     return {
       ...metadata,
       levelRange: [Math.min(...levels), Math.max(...levels)],
-      tags,
+      tags: buildMapTags(metadata, mapMonsters, spawnTotal),
       monsters: mapMonsters.map((monster) => monster.id),
       monsterDetails: mapMonsters,
       spawnTotal,
@@ -284,9 +282,7 @@ function normalizeAppCrafting(disciplines) {
         for (const recipe of safeArray(levelGroup.recipes)) {
           const materials = safeArray(recipe.ingredients).map((ingredient) => {
             const id = slugify(ingredient.item_name);
-            if (!materialMap.has(id)) {
-              materialMap.set(id, { id, name: ingredient.item_name, source: '官方配方材料', valueTags: [] });
-            }
+            if (!materialMap.has(id)) materialMap.set(id, { id, name: ingredient.item_name, source: '官方配方材料', valueTags: [] });
             return { id, qty: Number(ingredient.count ?? 1) };
           });
 
@@ -314,23 +310,24 @@ function normalizeAppItems(items) {
   return safeArray(items).map((item) => ({
     ...item,
     id: String(item.id),
-    reqLevel: Number(item.stats?.reqLevel ?? 0),
-    reqJob: Number(item.stats?.reqJob ?? 0),
-    reqSTR: Number(item.stats?.reqSTR ?? 0),
-    reqDEX: Number(item.stats?.reqDEX ?? 0),
-    reqINT: Number(item.stats?.reqINT ?? 0),
-    reqLUK: Number(item.stats?.reqLUK ?? 0),
-    incPAD: Number(item.stats?.incPAD ?? 0),
-    incMAD: Number(item.stats?.incMAD ?? 0),
-    incACC: Number(item.stats?.incACC ?? item.stats?.incACCr ?? 0),
-    incSpeed: Number(item.stats?.incSpeed ?? 0),
+    name: item.name ?? item.title ?? `Item ${item.id}`,
+    title: item.title ?? item.name ?? `Item ${item.id}`,
+    reqLevel: Number(item.stats?.reqLevel ?? item.reqLevel ?? 0),
+    reqJob: Number(item.stats?.reqJob ?? item.reqJob ?? 0),
+    reqSTR: Number(item.stats?.reqSTR ?? item.reqSTR ?? 0),
+    reqDEX: Number(item.stats?.reqDEX ?? item.reqDEX ?? 0),
+    reqINT: Number(item.stats?.reqINT ?? item.reqINT ?? 0),
+    reqLUK: Number(item.stats?.reqLUK ?? item.reqLUK ?? 0),
+    incPAD: Number(item.stats?.incPAD ?? item.incPAD ?? 0),
+    incMAD: Number(item.stats?.incMAD ?? item.incMAD ?? 0),
+    incACC: Number(item.stats?.incACC ?? item.stats?.incACCr ?? item.incACC ?? 0),
+    incSpeed: Number(item.stats?.incSpeed ?? item.incSpeed ?? 0),
     thumbnail: item.thumbnail ? appDataPath(`AppData/${item.thumbnail}`) : appItemIconPath(item.id),
   }));
 }
 
 function normalizeAppSkillGroups(rawSkillData) {
   const normalizedGroups = [];
-
   for (const [baseClass, node] of Object.entries(rawSkillData ?? {})) {
     for (const group of collectSkillGroups(node)) {
       const skills = safeArray(group.skills).map((skill) => ({
@@ -352,7 +349,6 @@ function normalizeAppSkillGroups(rawSkillData) {
       });
     }
   }
-
   return normalizedGroups;
 }
 
@@ -361,7 +357,6 @@ function collectSkillGroups(node) {
   if (Array.isArray(node)) return node.flatMap(collectSkillGroups);
   if (typeof node !== 'object') return [];
   if (Array.isArray(node.skills)) return [node];
-
   const candidateKeys = ['groups', 'jobs', 'classes', 'data', 'children'];
   for (const key of candidateKeys) {
     if (node[key]) {
@@ -369,7 +364,6 @@ function collectSkillGroups(node) {
       if (nested.length) return nested;
     }
   }
-
   return Object.values(node).flatMap((value) => collectSkillGroups(value));
 }
 
@@ -383,9 +377,7 @@ function safeArray(value) {
 function parseElements(elements) {
   if (!elements) return { weak: [], resist: [] };
   if (Array.isArray(elements)) return { weak: elements, resist: [] };
-  if (typeof elements === 'string') {
-    return { weak: elements.split(/[;,/|]/).map((item) => item.trim()).filter(Boolean), resist: [] };
-  }
+  if (typeof elements === 'string') return { weak: elements.split(/[;,/|]/).map((item) => item.trim()).filter(Boolean), resist: [] };
   return { weak: elements.weak ?? elements.weakness ?? [], resist: elements.resist ?? elements.resistance ?? [] };
 }
 
@@ -400,9 +392,7 @@ function slugify(value) {
 function normalizeLookups(raw) {
   const out = { items: {}, monsters: {}, maps: {}, skills: {}, quests: {} };
   const source = raw && typeof raw === 'object' ? raw : {};
-  for (const key of Object.keys(out)) {
-    out[key] = source[key] ?? source[`${key}ById`] ?? source[key.slice(0, -1)] ?? {};
-  }
+  for (const key of Object.keys(out)) out[key] = source[key] ?? source[`${key}ById`] ?? source[key.slice(0, -1)] ?? {};
   return out;
 }
 
@@ -412,11 +402,16 @@ function records(raw, preferredKeys = []) {
   for (const key of preferredKeys) {
     const value = raw[key];
     if (Array.isArray(value)) return value;
-    if (value && typeof value === 'object') return Object.values(value);
+    if (value && typeof value === 'object') return objectRecords(value);
   }
-  const values = Object.values(raw);
-  if (values.every((value) => value && typeof value === 'object' && !Array.isArray(value))) return values;
-  return [];
+  return objectRecords(raw);
+}
+
+function objectRecords(obj) {
+  return Object.entries(obj ?? {}).map(([key, value]) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) return { __recordKey: key, ...value };
+    return { __recordKey: key, id: key, value };
+  });
 }
 
 function read(obj, keys, fallback = undefined) {
@@ -472,28 +467,22 @@ function lookupName(lookups, bucket, id, fallback) {
 function cleanCmsDisplayName(value, prefix, id) {
   const raw = String(value ?? '').trim();
   const normalizedId = normalizeCmsLookupId(id);
-  const bad = !raw
-    || raw === '0'
-    || raw === String(id)
-    || raw === normalizedId
-    || /^0?\d+(\.img)?$/i.test(raw)
-    || /(^|\/)0?\d+\.img$/i.test(raw);
+  const bad = !raw || raw === '0' || raw === String(id) || raw === normalizedId || /^0?\d+(\.img)?$/i.test(raw) || /(^|\/)0?\d+\.img$/i.test(raw);
   return bad ? `${prefix} ${normalizedId || id}` : raw;
 }
 
 function normalizeCmsItems(items, lookups) {
   return items.map((item) => {
-    const id = String(read(item, ['id', 'itemId', 'item_id', 'code'], '')).replace(/\.0$/, '');
+    const id = String(read(item, ['id', 'itemId', 'item_id', 'code', '__recordKey'], '')).replace(/\.0$/, '').replace(/\.img$/i, '');
     const padded = padItemId(id);
-    const name = cleanCmsDisplayName(text(item, ['name', 'displayName', 'label', 'title'], lookupName(lookups, 'items', id, `Item ${id}`)), '物品', id);
-    const type = text(item, ['type', 'itemType', 'subCategory', 'sub_category', 'categoryName'], '').toLowerCase();
     const stats = item.stats ?? item.info ?? item;
+    const type = text(item, ['type', 'itemType', 'subCategory', 'sub_category', 'categoryName'], '').toLowerCase();
     const slot = detectSlot({ id: padded, type });
     const isWeapon = slot === 'weapon';
+    const name = cleanCmsDisplayName(text(item, ['name', 'displayName', 'label', 'title'], lookupName(lookups, 'items', id, `Item ${id}`)), '物品', id);
     const reqJob = num(stats, ['reqJob', 'req_job', 'job'], num(item, ['reqJob', 'req_job', 'job'], 0));
-    const reqJobLabel = text(item, ['reqJobLabel', 'req_job_label'], jobLabel(reqJob));
-    const weaponType = normalizeWeaponType(text(item, ['weaponType', 'weapon_type', 'type', 'subCategory', 'sub_category'], ''));
     const thumbnail = text(item, ['thumbnail', 'icon', 'image'], '');
+    const weaponType = normalizeWeaponType(text(item, ['weaponType', 'weapon_type', 'type', 'subCategory', 'sub_category'], ''));
 
     return {
       ...item,
@@ -505,7 +494,7 @@ function normalizeCmsItems(items, lookups) {
       weaponType,
       weapon_type: weaponType,
       reqJob,
-      reqJobLabel,
+      reqJobLabel: text(item, ['reqJobLabel', 'req_job_label'], jobLabel(reqJob)),
       reqLevel: num(stats, ['reqLevel', 'req_level', 'level'], num(item, ['reqLevel', 'req_level', 'level'], 0)),
       reqSTR: num(stats, ['reqSTR', 'req_str', 'str'], 0),
       reqDEX: num(stats, ['reqDEX', 'req_dex', 'dex'], 0),
@@ -576,7 +565,7 @@ function jobLabel(reqJob) {
 
 function normalizeCmsMonsters(monsters, lookups) {
   return monsters.map((monster) => {
-    const id = String(read(monster, ['id', 'mobId', 'monsterId', 'code'], '')).replace(/\.0$/, '').replace(/\.img$/i, '');
+    const id = String(read(monster, ['id', 'mobId', 'monsterId', 'code', '__recordKey'], '')).replace(/\.0$/, '').replace(/\.img$/i, '');
     const level = num(monster, ['level', 'lv'], 1);
     const avoid = num(monster, ['eva', 'avoid', 'avoidability'], 0);
     const thumbnail = text(monster, ['thumbnail', 'icon', 'image'], '');
@@ -605,7 +594,7 @@ function normalizeCmsMonsters(monsters, lookups) {
       gif: null,
       maps: normalizeMapRefs(mapRefs),
     };
-  }).filter((monster) => monster.id);
+  }).filter((monster) => monster.id && monster.level <= CHINA_BETA_MAX_LEVEL);
 }
 
 function normalizeMapRefs(value) {
@@ -614,9 +603,7 @@ function normalizeMapRefs(value) {
       ? { id: Number(read(entry, ['id', 'mapId'], 0)), name: text(entry, ['name'], ''), count: num(entry, ['count', 'spawnCount'], 1), mobTime: num(entry, ['mobTime', 'mob_time'], 0) }
       : { id: Number(entry), name: '', count: 1, mobTime: 0 }).filter((entry) => entry.id);
   }
-  if (value && typeof value === 'object') {
-    return Object.entries(value).map(([id, entry]) => ({ id: Number(id), name: text(entry, ['name'], ''), count: num(entry, ['count', 'spawnCount'], Number(entry) || 1), mobTime: num(entry, ['mobTime', 'mob_time'], 0) }));
-  }
+  if (value && typeof value === 'object') return Object.entries(value).map(([id, entry]) => ({ id: Number(id), name: text(entry, ['name'], ''), count: num(entry, ['count', 'spawnCount'], Number(entry) || 1), mobTime: num(entry, ['mobTime', 'mob_time'], 0) }));
   return [];
 }
 
@@ -636,7 +623,7 @@ function searchableText(value, depth = 0) {
 }
 
 function isChinaBetaMapCandidate(map, lookups) {
-  const id = read(map, ['id', 'mapId', 'code', 'rawId'], '');
+  const id = read(map, ['id', 'mapId', 'code', 'rawId', '__recordKey'], '');
   if (isChinaBetaMapId(id)) return true;
   const haystack = [
     text(map, ['name', 'displayName', 'streetName', 'street_name', 'region', 'continent'], ''),
@@ -656,68 +643,56 @@ function hasIdVariant(set, id) {
   return set.has(String(id).replace(/\.0$/, '').replace(/\.img$/i, '')) || set.has(normalizeCmsLookupId(id));
 }
 
-function getRawMapMonsterRefs(map) {
-  return normalizeMapMonsterRefs(read(map, ['monsters', 'mobs', 'spawns', 'life'], []));
-}
-
-function collectRawMapMonsterIds(map, out) {
-  for (const ref of getRawMapMonsterRefs(map)) addIdVariants(out, ref.id);
-}
-
-function filterRawMapMonsterRefs(map, allowedMonsterIds) {
-  const next = { ...map };
-  for (const key of ['monsters', 'mobs', 'spawns', 'life']) {
-    const value = next[key];
-    if (Array.isArray(value)) {
-      next[key] = value.filter((entry) => {
-        const id = typeof entry === 'object' ? read(entry, ['id', 'mobId', 'monsterId'], '') : entry;
-        return hasIdVariant(allowedMonsterIds, id);
-      });
-    } else if (value && typeof value === 'object') {
-      next[key] = Object.fromEntries(Object.entries(value).filter(([id, entry]) => hasIdVariant(allowedMonsterIds, read(entry, ['id', 'mobId', 'monsterId'], id))));
-    }
-  }
-  return next;
-}
-
-function filterMonsterMapRefs(monster, allowedMapIds) {
-  const maps = safeArray(monster.maps).filter((ref) => allowedMapIds.has(Number(ref.id)) || isChinaBetaMapId(ref.id));
-  return { ...monster, maps };
-}
-
 function scopeCmsChinaBetaWorld(mapsRaw, monsters, lookups) {
+  const levelScopedMonsters = monsters.filter((monster) => monster.level <= CHINA_BETA_MAX_LEVEL);
   const mapRecords = recordsFromRegions(mapsRaw).filter(Boolean);
-  const allowedMaps = mapRecords.filter((map) => isChinaBetaMapCandidate(map, lookups));
-  const allowedMapIds = new Set(allowedMaps.map((map) => Number(read(map, ['id', 'mapId', 'code', 'rawId'], 0))).filter(Number.isFinite));
 
-  const monsterIdsFromAllowedMaps = new Set();
-  for (const map of allowedMaps) collectRawMapMonsterIds(map, monsterIdsFromAllowedMaps);
+  if (!mapRecords.length) {
+    return { monsters: levelScopedMonsters, maps: createPseudoMapsFromMonsters(levelScopedMonsters) };
+  }
 
-  const scopedMonsters = monsters.map((monster) => filterMonsterMapRefs(monster, allowedMapIds)).filter((monster) => {
-    if (monster.level > CHINA_BETA_MAX_LEVEL) return false;
-    return monster.maps.length > 0 || hasIdVariant(monsterIdsFromAllowedMaps, monster.id);
-  });
-
-  const allowedMonsterIds = new Set();
-  for (const monster of scopedMonsters) addIdVariants(allowedMonsterIds, monster.id);
-
-  const scopedRawMaps = allowedMaps.map((map) => filterRawMapMonsterRefs(map, allowedMonsterIds));
-
-  const scopedMaps = normalizeCmsMaps(scopedRawMaps, scopedMonsters, lookups)
-    .filter((map) => isChinaBetaMapCandidate(map, lookups) && map.levelRange[0] <= CHINA_BETA_MAX_LEVEL);
+  const allMaps = normalizeCmsMaps(mapRecords, levelScopedMonsters, lookups)
+    .filter((map) => map.levelRange[0] <= CHINA_BETA_MAX_LEVEL);
+  const areaMaps = allMaps.filter((map) => isChinaBetaMapCandidate(map, lookups));
+  const scopedMaps = areaMaps.length ? areaMaps : allMaps;
 
   const monsterIdsInMaps = new Set();
   for (const map of scopedMaps) {
-    for (const monster of map.monsterDetails) addIdVariants(monsterIdsInMaps, monster.id);
+    for (const monster of safeArray(map.monsterDetails)) addIdVariants(monsterIdsInMaps, monster.id);
   }
 
-  const usedMapIds = new Set(scopedMaps.map((map) => Number(map.rawId)));
-  const monstersInScope = scopedMonsters.filter((monster) => {
-    if (hasIdVariant(monsterIdsInMaps, monster.id)) return true;
-    return safeArray(monster.maps).some((ref) => usedMapIds.has(Number(ref.id)));
-  });
+  const monstersInScope = monsterIdsInMaps.size
+    ? levelScopedMonsters.filter((monster) => hasIdVariant(monsterIdsInMaps, monster.id))
+    : levelScopedMonsters;
 
-  return { monsters: monstersInScope, maps: scopedMaps };
+  const usableMaps = scopedMaps.filter((map) => safeArray(map.monsterDetails).length > 0);
+  return {
+    monsters: monstersInScope,
+    maps: usableMaps.length ? usableMaps : createPseudoMapsFromMonsters(monstersInScope),
+  };
+}
+
+function createPseudoMapsFromMonsters(monsters) {
+  return monsters
+    .filter((monster) => monster.level <= CHINA_BETA_MAX_LEVEL)
+    .sort((a, b) => a.level - b.level || b.exp - a.exp)
+    .map((monster) => ({
+      id: `cms-monster-${monster.id}`,
+      rawId: Number(monster.id) || 0,
+      name: `${monster.name} 推荐练级点`,
+      streetName: 'CMS 怪物数据',
+      region: '国服内测',
+      isTown: false,
+      mobRate: 1,
+      minimap: null,
+      thumbnail: null,
+      levelRange: [monster.level, monster.level],
+      tags: ['怪物数据', `Lv.${monster.level}`],
+      monsters: [monster.id],
+      monsterDetails: [{ ...monster, spawnCount: 1, mobTime: 0 }],
+      spawnTotal: 1,
+      routeNote: 'CMS 当前没有可用的地图刷怪关系，先按怪物等级生成临时路线，避免页面空白。',
+    }));
 }
 
 function normalizeCmsMaps(mapsRaw, monsters, lookups) {
@@ -733,22 +708,20 @@ function normalizeCmsMaps(mapsRaw, monsters, lookups) {
       }
       const map = mapById.get(Number(ref.id));
       if (!map) continue;
-      if (!map.monsterDetails.some((item) => String(item.id) === String(monster.id))) {
-        map.monsterDetails.push({ ...monster, spawnCount: ref.count, mobTime: ref.mobTime });
-      }
+      if (!map.monsterDetails.some((item) => String(item.id) === String(monster.id))) map.monsterDetails.push({ ...monster, spawnCount: ref.count, mobTime: ref.mobTime });
     }
   }
 
-  return [...mapById.values()].map(finalizeMap).filter((map) => map.monsterDetails.length && !map.isTown)
+  return [...mapById.values()].map(finalizeMap).filter((map) => !map.isTown)
     .sort((a, b) => a.levelRange[0] - b.levelRange[0] || b.spawnTotal - a.spawnTotal);
 }
 
 function recordsFromRegions(raw) {
-  return raw.flatMap((entry) => Array.isArray(entry?.maps) ? entry.maps.map((map) => ({ ...map, region: map.region ?? entry.region ?? entry.name })) : [entry]);
+  return safeArray(raw).flatMap((entry) => Array.isArray(entry?.maps) ? entry.maps.map((map) => ({ ...map, region: map.region ?? entry.region ?? entry.name })) : [entry]);
 }
 
 function normalizeMap(map, monsterById, lookups) {
-  const id = String(read(map, ['id', 'mapId', 'code'], '')).replace(/\.0$/, '');
+  const id = String(read(map, ['id', 'mapId', 'code', '__recordKey'], '')).replace(/\.0$/, '').replace(/\.img$/i, '');
   if (!id) return null;
   const thumbnail = text(map, ['thumbnail', 'minimap', 'image'], '');
   const refs = normalizeMapMonsterRefs(read(map, ['monsters', 'mobs', 'spawns', 'life'], []));
@@ -756,7 +729,7 @@ function normalizeMap(map, monsterById, lookups) {
   return {
     ...map,
     id,
-    rawId: Number(id),
+    rawId: Number(normalizeCmsLookupId(id)) || 0,
     name: mapName,
     streetName: text(map, ['streetName', 'street_name'], ''),
     region: text(map, ['region', 'continent'], '国服'),
@@ -780,7 +753,7 @@ function normalizeMapMonsterRefs(value) {
 }
 
 function finalizeMap(map) {
-  const monsters = map.monsterDetails ?? [];
+  const monsters = safeArray(map.monsterDetails);
   const levels = monsters.map((monster) => monster.level).filter(Number.isFinite);
   const spawnTotal = monsters.reduce((sum, monster) => sum + Number(monster.spawnCount ?? 1), 0);
   const levelRange = levels.length ? [Math.min(...levels), Math.max(...levels)] : [1, 1];
@@ -790,33 +763,24 @@ function finalizeMap(map) {
     monsters: monsters.map((monster) => monster.id),
     spawnTotal,
     tags: [spawnTotal >= 35 ? '高密度' : spawnTotal >= 18 ? '稳定刷怪' : '普通密度', map.region].filter(Boolean),
-    routeNote: `怪物等级 Lv.${levelRange[0]}-${levelRange[1]}，刷怪数 ${spawnTotal}。`,
+    routeNote: monsters.length ? `怪物等级 Lv.${levelRange[0]}-${levelRange[1]}，刷怪数 ${spawnTotal}。` : '地图数据已载入，但 CMS 暂未提供怪物刷怪关系。',
   };
 }
 
 function normalizeCmsQuests(quests, lookups) {
   return quests.map((quest) => {
-    const id = String(read(quest, ['id', 'questId', 'quest_id', 'code'], '')).replace(/\.0$/, '');
+    const id = String(read(quest, ['id', 'questId', 'quest_id', 'code', '__recordKey'], '')).replace(/\.0$/, '').replace(/\.img$/i, '');
     const minLevel = num(quest, ['minLevel', 'reqLevel', 'startLevel', 'level', 'info.level'], 1);
     const rawMaxLevel = num(quest, ['maxLevel', 'levelMax', 'endLevel', 'requiredMaxLevel'], CHINA_BETA_MAX_LEVEL);
     const maxLevel = Math.min(rawMaxLevel || CHINA_BETA_MAX_LEVEL, CHINA_BETA_MAX_LEVEL);
     const name = cleanCmsDisplayName(text(quest, ['name', 'displayName', 'label', 'title'], lookupName(lookups, 'quests', id, `Quest ${id}`)), '任务', id);
-
-    return {
-      ...quest,
-      id,
-      name,
-      title: name,
-      level: minLevel,
-      minLevel,
-      maxLevel,
-    };
+    return { ...quest, id, name, title: name, level: minLevel, minLevel, maxLevel };
   }).filter((quest) => quest.id && quest.minLevel <= CHINA_BETA_MAX_LEVEL);
 }
 
 function normalizeCmsSkillGroups(skills, lookups) {
   const rows = skills.map((skill) => {
-    const id = String(read(skill, ['id', 'skillId', 'code'], '')).replace(/\.0$/, '');
+    const id = String(read(skill, ['id', 'skillId', 'code', '__recordKey'], '')).replace(/\.0$/, '').replace(/\.img$/i, '');
     const jobKey = text(skill, ['job', 'jobName', 'className'], '') || JOB_BY_SKILL_PREFIX[id.slice(0, 3)] || 'unknown';
     const thumbnail = text(skill, ['thumbnail', 'icon', 'image'], '');
     return {
