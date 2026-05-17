@@ -770,3 +770,126 @@
   .planner-head { align-items: stretch; flex-direction: column; }
   .planner-reset { width: 100%; }
 }
+
+/* ── Phone single-column layout (≤640px) ───────────────────────────────────
+   Override the 760px two-column lock. All three stacks flow top-to-bottom:
+   角色配置 → avatar/属性 → 技能伤害 → 地图推荐.
+   Desktop (≥1100px, dashboard-pc.css) is completely unaffected.           */
+@media (max-width: 640px) {
+  .mg-dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+  .mg-left-stack,
+  .mg-center-stack,
+  .mg-right-stack {
+    gap: 10px;
+  }
+
+  /* Panel chrome — more padding now that width is no longer rationed */
+  .mg-glass-panel,
+  .mg-status-panel,
+  .mg-equipment-board {
+    padding: 12px;
+    border-radius: 18px;
+  }
+  .mg-panel-title {
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+  }
+
+  /* Form controls — comfortable at full width */
+  .mg-field label,
+  .mg-level label {
+    font-size: .68rem;
+    margin-bottom: 4px;
+  }
+  .mg-select {
+    height: 38px;
+    border-radius: 12px;
+    font-size: .76rem;
+  }
+  .mg-level-row {
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    gap: 6px;
+  }
+  .mg-level-btn,
+  .mg-level-value {
+    height: 38px;
+    border-radius: 12px;
+  }
+  .mg-level-btn { font-size: 1.1rem; }
+  .mg-level-value { font-size: .92rem; }
+  .mg-range { margin-top: 5px; }
+
+  /* Character frame — taller now that it has full width */
+  .mg-character-frame {
+    min-height: 200px;
+    background-size: 22px 22px;
+  }
+  .mg-character-frame .real-character-preview { max-height: 200px; }
+
+  /* Preview card — single column (was already 1fr at 760px, restore padding) */
+  .mg-preview-card {
+    grid-template-columns: 1fr !important;
+    padding: 10px;
+    border-radius: 18px;
+    gap: 8px;
+  }
+
+  /* Stats grid — full-width 2-col with breathing room */
+  .mg-stats-title {
+    font-size: .92rem;
+    margin-bottom: 6px;
+  }
+  .mg-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mg-stat-box {
+    min-height: 52px;
+    border-radius: 12px;
+    padding: 8px 10px;
+  }
+  .mg-stat-box span { font-size: .68rem; }
+  .mg-stat-box strong {
+    font-size: 1.28rem;
+    margin-top: 2px;
+  }
+
+  /* Equipment — 3-col wrap instead of cramming into half-screen */
+  .mg-equipment-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px;
+  }
+  .mg-equip-tile {
+    min-height: 68px;
+    padding: 7px 6px;
+    border-radius: 13px;
+  }
+  .mg-equip-tile > div {
+    width: 30px !important;
+    height: 30px !important;
+    margin-bottom: 2px !important;
+  }
+  .mg-equip-tile img {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .mg-equip-tile span { font-size: .56rem; line-height: 1.1; }
+  .mg-equip-tile strong { font-size: .6rem; line-height: 1.1; }
+
+  /* Damage card */
+  .mg-overview-damage-card { padding: 10px; border-radius: 15px; }
+  .mg-overview-damage-head h2 { font-size: .9rem; }
+  .mg-overview-damage-row {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 7px;
+    padding: 7px;
+    border-radius: 11px;
+  }
+  .mg-overview-damage-icon { width: 32px; height: 32px; }
+  .mg-overview-damage-img { width: 26px; height: 26px; }
+  .mg-overview-damage-row strong { font-size: .76rem; }
+  .mg-overview-damage-row em { font-size: .78rem; }
+}
