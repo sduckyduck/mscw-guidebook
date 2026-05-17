@@ -1,5 +1,5 @@
 const PATCH_FLAG = '__mscwCmsNoCacheFetchPatchInstalled';
-const CMS_DATA_VERSION = 'cms-china-beta-scope-20260517-v1';
+const CMS_DATA_VERSION = 'cms-china-beta-fallback-20260517-v2';
 
 function isCmsJsonRequest(input) {
   const raw = typeof input === 'string' ? input : input?.url;
