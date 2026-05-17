@@ -672,7 +672,7 @@
   /* === Bottom row (white cards) === */
   .mg-bottom-row {
     display: grid;
-    grid-template-columns: 1.05fr 1.15fr 1fr;
+    grid-template-columns: 2fr 1fr;
     gap: 22px;
     margin-top: 22px;
   }
@@ -685,120 +685,38 @@
     box-shadow: 0 16px 36px rgba(15, 76, 80, 0.1);
   }
   .mg-bottom-panel-head {
-    display: flex; align-items: baseline; justify-content: space-between;
-    gap: 10px; margin-bottom: 16px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 10px; margin-bottom: 18px;
   }
-  .mg-bottom-panel-head h2 { margin: 0; color: #0f172a; font-size: 1.18rem; font-weight: 1000; }
-  .mg-bottom-panel-head span { color: var(--muted); font-size: .78rem; font-weight: 900; }
+  .mg-bottom-panel-head h2 { margin: 0; color: #0f172a; font-size: 1.18rem; font-weight: 1000; line-height: 1.25; }
+  .mg-bottom-panel-head span { color: var(--muted); font-size: .78rem; font-weight: 900; white-space: nowrap; flex: 0 0 auto; }
 
-  /* Gear progression */
-  .mg-gear-timeline { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); align-items: center; gap: 4px; }
-  .mg-gear-step {
-    display: grid; gap: 6px;
-    grid-column: span 2;
-    text-align: center;
+  /* Next actions panel */
+  .mg-next-actions-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .mg-next-action-item { display: grid; grid-template-columns: 32px 1fr; gap: 14px; align-items: start; }
+  .mg-next-action-num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #21806b, #1a6b5a);
+    color: #fff; display: grid; place-items: center;
+    font-size: .9rem; font-weight: 1000; flex: 0 0 auto;
+    box-shadow: 0 4px 12px rgba(33, 128, 107, .28);
   }
-  .mg-gear-step-icon {
-    width: 76px; height: 76px;
-    margin: 0 auto;
-    border-radius: 16px;
-    background: #f8fbf9;
-    border: 1px solid var(--border);
-    display: grid; place-items: center;
-    overflow: hidden;
-  }
-  .mg-gear-step-icon img { width: 58px; height: 58px; object-fit: contain; image-rendering: pixelated; }
-  .mg-gear-step strong { color: #0f172a; font-size: .92rem; font-weight: 1000; }
-  .mg-gear-step span { color: var(--muted); font-size: .76rem; font-weight: 900; }
-  .mg-gear-arrow {
-    color: var(--muted);
-    font-size: 1.4rem;
-    text-align: center;
-    grid-column: span 1;
-  }
-  .mg-gear-step.is-current .mg-gear-step-icon {
-    border-color: #21806b;
-    box-shadow: 0 0 0 3px rgba(33, 128, 107, .22);
-  }
-  .mg-gear-step.is-current strong { color: #21806b; }
+  .mg-next-action-body strong { display: block; color: #0f172a; font-size: 1.04rem; font-weight: 1000; line-height: 1.3; }
+  .mg-next-action-body span { display: block; margin-top: 4px; color: var(--muted); font-size: .8rem; font-weight: 900; }
 
-  /* Daily tasks */
-  .mg-task-list { display: grid; gap: 10px; }
-  .mg-task-row {
-    display: grid;
-    grid-template-columns: 22px minmax(0, 1fr) auto auto auto;
-    align-items: center; gap: 14px;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    background: #f8fbf9;
+  /* Why this map panel */
+  .mg-why-map-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  .mg-why-map-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 13px; border-radius: 11px;
+    background: #f8fbf9; border: 1px solid var(--border);
   }
-  .mg-task-check {
-    width: 20px; height: 20px;
-    border: 1.5px solid var(--border-strong);
-    border-radius: 6px;
-    background: #fff;
-    flex: 0 0 auto;
-  }
-  .mg-task-row.is-done .mg-task-check {
-    background: #21806b; border-color: #21806b;
-    position: relative;
-  }
-  .mg-task-row.is-done .mg-task-check::after {
-    content: '✓'; position: absolute; inset: 0;
-    display: grid; place-items: center;
-    color: #fff; font-size: .78rem; font-weight: 1000;
-  }
-  .mg-task-name { color: #0f172a; font-size: .98rem; font-weight: 1000; }
-  .mg-task-reward {
-    display: flex; align-items: center; gap: 6px;
-    color: var(--muted);
-    font-size: .8rem; font-weight: 900;
-  }
-  .mg-task-reward strong { color: #0f172a; font-weight: 1000; }
-  .mg-task-reward.is-exp::before { content: '★'; color: #21806b; font-size: .94rem; }
-  .mg-task-reward.is-meso::before { content: '◉'; color: #f7b500; font-size: .94rem; }
-  .mg-task-status {
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: .74rem; font-weight: 1000;
-    flex: 0 0 auto;
-  }
-  .mg-task-status.in-progress { background: rgba(218, 247, 240, .96); color: #1d6878; }
-  .mg-task-status.available { background: #eef3f0; color: var(--muted); }
-
-  /* Resource priorities */
-  .mg-resource-list { display: grid; gap: 10px; }
-  .mg-resource-row {
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
-    align-items: center; gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    background: #f8fbf9;
-  }
-  .mg-resource-icon {
-    width: 34px; height: 34px;
-    border-radius: 10px;
-    background: #fff;
-    border: 1px solid var(--border);
-    display: grid; place-items: center;
-    font-size: 1.06rem;
-    overflow: hidden;
-  }
-  .mg-resource-icon img { width: 28px; height: 28px; object-fit: contain; image-rendering: pixelated; }
-  .mg-resource-text { display: grid; gap: 2px; min-width: 0; }
-  .mg-resource-text strong { color: #0f172a; font-size: .96rem; font-weight: 1000; }
-  .mg-resource-text span { color: var(--muted); font-size: .76rem; font-weight: 900; }
-  .mg-resource-priority {
-    padding: 4px 13px;
-    border-radius: 999px;
-    font-size: .76rem; font-weight: 1000;
-  }
-  .mg-resource-priority.high { background: #ffe1d8; color: #c9493c; }
-  .mg-resource-priority.mid { background: #fff2d0; color: #b58800; }
-  .mg-resource-priority.low { background: #dceee7; color: var(--green-dark); }
+  .mg-why-map-row.is-good { background: #e8fff8; border-color: #b2f0dc; }
+  .mg-why-map-row.is-warn { background: #fff8ee; border-color: #fcd9a0; }
+  .mg-why-map-label { color: var(--muted); font-size: .82rem; font-weight: 950; }
+  .mg-why-map-value { color: #0f172a; font-size: .88rem; font-weight: 1000; text-align: right; }
+  .mg-why-map-row.is-good .mg-why-map-value { color: #21806b; }
+  .mg-why-map-row.is-warn .mg-why-map-value { color: #c2410c; }
 
   /* === Sticky bottom action bar — slimmer so it doesn't clip bottom row === */
   .mg-dashboard-footer {
@@ -1502,21 +1420,18 @@
   }
 
   .mg-bottom-row {
-    grid-template-columns: 1.03fr 1.05fr .98fr;
+    grid-template-columns: 2fr 1fr;
     gap: 16px;
     margin-top: 16px;
   }
 
   .mg-bottom-panel {
-    min-height: 114px;
-    max-height: 122px;
-    overflow: hidden;
     padding: 14px 16px;
     border-radius: 10px;
   }
 
   .mg-bottom-panel-head {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 
   .mg-bottom-panel-head h2 {
@@ -1527,93 +1442,16 @@
     font-size: .62rem;
   }
 
-  .mg-gear-timeline {
-    gap: 6px;
-  }
+  .mg-next-actions-list { gap: 10px; }
+  .mg-next-action-item { grid-template-columns: 24px 1fr; gap: 10px; }
+  .mg-next-action-num { width: 24px; height: 24px; font-size: .72rem; }
+  .mg-next-action-body strong { font-size: .84rem; }
+  .mg-next-action-body span { font-size: .68rem; }
 
-  .mg-gear-step {
-    gap: 4px;
-  }
-
-  .mg-gear-step-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 8px;
-  }
-
-  .mg-gear-step-icon img {
-    width: 40px;
-    height: 40px;
-  }
-
-  .mg-gear-step strong {
-    font-size: .66rem;
-  }
-
-  .mg-gear-step span {
-    font-size: .58rem;
-  }
-
-  .mg-gear-arrow {
-    font-size: 1.2rem;
-  }
-
-  .mg-task-list,
-  .mg-resource-list {
-    gap: 5px;
-  }
-
-  .mg-task-row {
-    min-height: 24px;
-    grid-template-columns: 16px minmax(0, 1fr) auto auto auto;
-    gap: 8px;
-    padding: 4px 8px;
-    border-radius: 7px;
-  }
-
-  .mg-task-check {
-    width: 14px;
-    height: 14px;
-    border-radius: 4px;
-  }
-
-  .mg-task-name,
-  .mg-task-reward,
-  .mg-task-status {
-    font-size: .6rem;
-  }
-
-  .mg-task-status {
-    padding: 3px 8px;
-  }
-
-  .mg-resource-row {
-    min-height: 24px;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
-    gap: 8px;
-    padding: 4px 8px;
-    border-radius: 7px;
-  }
-
-  .mg-resource-icon {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    font-size: .82rem;
-  }
-
-  .mg-resource-text strong {
-    font-size: .66rem;
-  }
-
-  .mg-resource-text span,
-  .mg-resource-priority {
-    font-size: .58rem;
-  }
-
-  .mg-resource-priority {
-    padding: 3px 8px;
-  }
+  .mg-why-map-list { gap: 6px; }
+  .mg-why-map-row { padding: 6px 10px; border-radius: 8px; }
+  .mg-why-map-label { font-size: .7rem; }
+  .mg-why-map-value { font-size: .76rem; }
 
   .mg-dashboard-footer {
     position: sticky;

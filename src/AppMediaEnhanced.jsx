@@ -256,9 +256,8 @@ function Dashboard({ controls, classLine, branch, gender, level, bestMonster, be
       </div>
     </div>
     <div className="mg-bottom-row">
-      <GearProgressionPanel classLine={classLine} branch={branch} gender={gender} level={level} budget={budget} statPlan={statPlan} items={items} />
-      <DailyTasksPanel classLine={classLine} bestMonster={bestMonster} bestMap={bestMap} />
-      <ResourcePriorityPanel classLine={classLine} bestMonster={bestMonster} />
+      <NextActionsPanel classLine={classLine} level={level} bestMap={bestMap} bestMonster={bestMonster} gear={gear} candidatesBySlot={candidatesBySlot} />
+      <WhyThisMapPanel bestMap={bestMap} level={level} classLine={classLine} />
     </div>
     <DashboardFooter />
     <div className="mg-copyright-row">
@@ -433,136 +432,134 @@ function MonsterPickPanel({ bestMap, onOpenMaps }) {
   </section>;
 }
 
-const GEAR_PROGRESSION_LEVELS = [10, 25, 40, 60];
+const CLASS_PRIMARY_STAT = { warrior: 'STR', magician: 'INT', bowman: 'DEX', thief: 'LUK', pirate: 'STR' };
+const CLASS_ACCURACY_STAT = { warrior: 'DEX', magician: 'INT', bowman: 'STR', thief: 'DEX', pirate: 'DEX' };
+const SLOT_LABELS = { weapon: '武器', cap: '帽子', overall: '套服', top: '上衣', bottom: '裤子', shoes: '鞋子', glove: '手套', cape: '披风', earring: '耳环', shield: '盾牌' };
 
-function GearProgressionPanel({ classLine, branch, gender, level, budget, statPlan, items }) {
-  const steps = useMemo(() => {
-    const used = new Set();
-    return GEAR_PROGRESSION_LEVELS.map((lv) => {
-      const bySlot = getGearCandidatesBySlot({ classLine, branch, level: lv, budget, gender, statPlan, items, manualMode: true });
-      const pool = [...(bySlot.overall ?? []), ...(bySlot.top ?? []), ...(bySlot.cap ?? [])];
-      const eligible = pool.filter((item) => Number(item.reqLevel ?? 0) <= lv);
-      eligible.sort((a, b) => Number(b.reqLevel ?? 0) - Number(a.reqLevel ?? 0));
-      const armor = eligible.find((item) => !used.has(item.id ?? item.title)) ?? eligible[0] ?? null;
-      if (armor) used.add(armor.id ?? armor.title);
-      const next = GEAR_PROGRESSION_LEVELS.find((v) => v > lv);
-      const isCurrent = level >= lv && (next == null || level < next);
-      return { lv, item: armor, isCurrent };
-    });
-  }, [classLine, branch, gender, budget, statPlan, items, level]);
-  return <section className="mg-bottom-panel">
-    <div className="mg-bottom-panel-head">
-      <h2>装备成长路线</h2>
-      <span>关键节点</span>
-    </div>
-    <div className="mg-gear-timeline">
-      {steps.map((step, index) => <Fragment key={step.lv}>
-        <article className={step.isCurrent ? 'mg-gear-step is-current' : 'mg-gear-step'}>
-          <div className="mg-gear-step-icon">
-            {step.item ? <MsioItemIcon item={step.item} size={44} /> : <span>GEAR</span>}
-          </div>
-          <strong>{step.item?.title ?? step.item?.name ?? '推荐装备'}</strong>
-          <span>Lv.{step.lv}{step.lv === GEAR_PROGRESSION_LEVELS[GEAR_PROGRESSION_LEVELS.length - 1] ? '+' : ''}</span>
-        </article>
-        {index < steps.length - 1 && <div className="mg-gear-arrow" aria-hidden>→</div>}
-      </Fragment>)}
-    </div>
-  </section>;
+function computeNextActions({ classLine, level, bestMap, bestMonster, gear, candidatesBySlot }) {
+  const actions = [];
+
+  const monsterName = bestMonster?.name ?? bestMap?.monsters?.[0]?.name;
+  if (bestMap?.name) {
+    const grindText = monsterName ? `去 ${bestMap.name} 打 ${monsterName}` : `去 ${bestMap.name} 练级`;
+    const grindDetail = bestMap.score != null ? `综合评分 ${Math.round(bestMap.score)}` : null;
+    actions.push({ id: 'grind', text: grindText, detail: grindDetail });
+  }
+
+  const topMonster = bestMap?.monsters?.[0];
+  const hitRate = bestMonster?.hitRate ?? topMonster?.hitRate ?? null;
+  const classId = classLine?.id ?? 'warrior';
+  const primaryStat = CLASS_PRIMARY_STAT[classId] ?? 'STR';
+  const accStat = CLASS_ACCURACY_STAT[classId] ?? 'DEX';
+  if (hitRate !== null && hitRate < 0.95) {
+    actions.push({ id: 'ap', text: `下一点 AP 加 ${accStat}`, detail: `当前命中率 ${Math.round(hitRate * 100)}%，低于 95%` });
+  } else {
+    const detail = hitRate !== null ? `命中率 ${Math.round(hitRate * 100)}%，继续堆主属性` : `堆主属性 ${primaryStat}`;
+    actions.push({ id: 'ap', text: `下一点 AP 加 ${primaryStat}`, detail });
+  }
+
+  const currentBySlot = Object.fromEntries((gear ?? []).map((g) => [g.slot, g]));
+  let bestSlot = null;
+  let bestItem = null;
+  let bestGap = 0;
+  for (const [slot, candidates] of Object.entries(candidatesBySlot ?? {})) {
+    if (!candidates?.length) continue;
+    const top = candidates[0];
+    const current = currentBySlot[slot];
+    if (!current) continue;
+    const gap = Number(top?.reqLevel ?? 0) - Number(current?.reqLevel ?? 0);
+    if (gap > bestGap) { bestGap = gap; bestSlot = slot; bestItem = top; }
+  }
+  if (bestSlot && bestItem) {
+    const slotName = SLOT_LABELS[bestSlot] ?? bestSlot;
+    const itemName = bestItem.title ?? bestItem.name ?? slotName;
+    actions.push({ id: 'gear', text: `优先换 Lv.${bestItem.reqLevel} ${slotName}「${itemName}」`, detail: `比当前装备高 ${bestGap} 级` });
+  }
+
+  return actions;
 }
 
-function DailyTasksPanel({ classLine, bestMonster, bestMap }) {
-  const tasks = useMemo(() => {
-    const monsterName = bestMonster?.name ?? bestMap?.name ?? '推荐怪';
-    const expReward = Math.max(8000, Math.min(40000, Math.round(((bestMonster?.exp ?? 100) * 200) / 100) * 100));
-    const mesoReward = Math.round(expReward * 0.32);
-    const dropName = `${monsterName}掉落物`;
-    return [
-      { id: 't1', name: `消灭 ${monsterName} 100 只`, exp: expReward, meso: mesoReward, status: 'in-progress', done: false },
-      { id: 't2', name: `收集 ${dropName} 30 个`, exp: Math.round(expReward * 0.72), meso: Math.round(mesoReward * 0.75), status: 'in-progress', done: false },
-      { id: 't3', name: '完成组队任务 1 次', exp: Math.round(expReward * 0.6), meso: Math.round(mesoReward * 0.62), status: 'available', done: false },
-    ];
-  }, [classLine, bestMonster, bestMap]);
-  const [doneTasks, setDoneTasks] = useState(() => new Set());
-  const toggleTask = (taskId) => {
-    setDoneTasks((current) => {
-      const next = new Set(current);
-      if (next.has(taskId)) next.delete(taskId);
-      else next.add(taskId);
-      return next;
-    });
-  };
-  return <section className="mg-bottom-panel">
-    <div className="mg-bottom-panel-head">
-      <h2>每日推荐任务</h2>
-      <span>每日刷新</span>
-    </div>
-    <div className="mg-task-list">
-      {tasks.map((task) => {
-        const done = doneTasks.has(task.id);
-        return <article className={done ? 'mg-task-row is-done' : 'mg-task-row'} key={task.id}>
-        <button type="button" className="mg-task-check" aria-pressed={done} aria-label={`Toggle ${task.name}`} onClick={() => toggleTask(task.id)} />
-        <span className="mg-task-name">{task.name}</span>
-        <span className="mg-task-reward is-exp">经验值 <strong>{task.exp.toLocaleString()}</strong></span>
-        <span className="mg-task-reward is-meso">金币 <strong>{task.meso.toLocaleString()}</strong></span>
-        <span className={`mg-task-status ${task.status}`}>{task.status === 'in-progress' ? '进行中' : '可接取'}</span>
-      </article>;
-      })}
-    </div>
-  </section>;
+function NextActionsPanel({ classLine, level, bestMap, bestMonster, gear, candidatesBySlot }) {
+  const actions = useMemo(
+    () => computeNextActions({ classLine, level, bestMap, bestMonster, gear, candidatesBySlot }),
+    [classLine, level, bestMap, bestMonster, gear, candidatesBySlot],
+  );
+  if (!actions.length) return null;
+  return (
+    <section className="mg-next-actions-panel mg-bottom-panel">
+      <div className="mg-bottom-panel-head">
+        <h2>你现在该做什么</h2>
+        <span>推荐行动</span>
+      </div>
+      <ol className="mg-next-actions-list">
+        {actions.map((action, i) => (
+          <li key={action.id} className="mg-next-action-item">
+            <span className="mg-next-action-num">{i + 1}</span>
+            <div className="mg-next-action-body">
+              <strong>{action.text}</strong>
+              {action.detail && <span>{action.detail}</span>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
 }
 
-const CLASS_RESOURCE_PROFILES = {
-  warrior: [
-    { name: '野猪獠牙', source: '制作材料', priority: 'high', icon: '牙' },
-    { name: '蝙蝠翅膀', source: '制作材料', priority: 'mid', icon: '翼' },
-    { name: '枫叶', source: '通用材料', priority: 'mid', icon: '叶' },
-    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
-  ],
-  magician: [
-    { name: '怪物精华', source: '制作材料', priority: 'high', icon: '精' },
-    { name: '基础结晶', source: '融合材料', priority: 'high', icon: '晶' },
-    { name: '柔软布料', source: '制作材料', priority: 'mid', icon: '布' },
-    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
-  ],
-  bowman: [
-    { name: '普通木材', source: '弓木材料', priority: 'high', icon: '木' },
-    { name: '动物皮', source: '皮革材料', priority: 'mid', icon: '皮' },
-    { name: '羽毛', source: '裁缝材料', priority: 'mid', icon: '羽' },
-    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
-  ],
-  thief: [
-    { name: '动物皮', source: '皮革材料', priority: 'high', icon: '皮' },
-    { name: '怪物精华', source: '制作材料', priority: 'high', icon: '精' },
-    { name: '飞镖/标', source: '消耗品', priority: 'mid', icon: '标' },
-    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
-  ],
-  pirate: [
-    { name: '青铜矿石', source: '锻造材料', priority: 'high', icon: '矿' },
-    { name: '动物皮', source: '皮革材料', priority: 'mid', icon: '皮' },
-    { name: '怪物精华', source: '制作材料', priority: 'mid', icon: '精' },
-    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
-  ],
-};
+function WhyThisMapPanel({ bestMap, level, classLine }) {
+  if (!bestMap) return null;
+  const bullets = [];
+  const topMonster = bestMap.monsters?.[0];
 
-function ResourcePriorityPanel({ classLine }) {
-  const profile = CLASS_RESOURCE_PROFILES[classLine?.id] ?? CLASS_RESOURCE_PROFILES.warrior;
-  const labels = { high: '高', mid: '中', low: '低' };
-  return <section className="mg-bottom-panel">
-    <div className="mg-bottom-panel-head">
-      <h2>资源收集优先级</h2>
-      <span>当前职业</span>
-    </div>
-    <div className="mg-resource-list">
-      {profile.map((res) => <article className="mg-resource-row" key={res.name}>
-        <div className="mg-resource-icon" aria-hidden>{res.icon}</div>
-        <div className="mg-resource-text">
-          <strong>{res.name}</strong>
-          <span>{res.source}</span>
-        </div>
-        <span className={`mg-resource-priority ${res.priority}`}>{labels[res.priority]}</span>
-      </article>)}
-    </div>
-  </section>;
+  const lvMin = bestMap.levelRange?.[0] ?? bestMap.level ?? null;
+  const lvMax = bestMap.levelRange?.[1] ?? null;
+  if (lvMin != null) {
+    const rangeStr = lvMax ? `Lv.${lvMin}–${lvMax}` : `Lv.${lvMin}+`;
+    bullets.push({ label: '等级差', value: `你 Lv.${level} vs ${rangeStr}`, highlight: '' });
+  }
+
+  const hitRate = topMonster?.hitRate ?? (bestMap.canHitAll ? 1 : null);
+  if (hitRate !== null) {
+    const pct = Math.round(hitRate * 100);
+    bullets.push({ label: '命中率', value: `${pct}%`, highlight: hitRate >= 0.99 ? 'good' : hitRate >= 0.85 ? 'ok' : 'warn' });
+  }
+
+  const densityScore = bestMap.scoreParts?.density ?? null;
+  if (densityScore !== null) {
+    bullets.push({ label: '怪物密度', value: densityScore >= 70 ? '高' : densityScore >= 40 ? '中' : '低', highlight: densityScore >= 70 ? 'good' : 'ok' });
+  }
+
+  const safetyScore = bestMap.scoreParts?.safety ?? null;
+  if (safetyScore !== null) {
+    bullets.push({ label: '药水消耗', value: safetyScore >= 70 ? '低' : safetyScore >= 40 ? '中' : '高', highlight: safetyScore >= 70 ? 'good' : safetyScore >= 40 ? 'ok' : 'warn' });
+  }
+
+  const classFit = bestMap.scoreParts?.classFit ?? null;
+  if (classFit !== null) {
+    const fitLabel = classFit >= 70 ? '非常适合' : classFit >= 40 ? '一般' : '勉强';
+    bullets.push({ label: `适合${classLine?.name ?? ''}`, value: fitLabel, highlight: classFit >= 70 ? 'good' : 'ok' });
+  }
+
+  if (bestMap.warning) {
+    bullets.push({ label: '注意', value: bestMap.warning, highlight: 'warn' });
+  }
+
+  return (
+    <section className="mg-why-map-panel mg-bottom-panel">
+      <div className="mg-bottom-panel-head">
+        <h2>为什么推荐 {bestMap.name}？</h2>
+        <span>评分 {Math.round(bestMap.score ?? 0)}</span>
+      </div>
+      <ul className="mg-why-map-list">
+        {bullets.map((b) => (
+          <li key={b.label} className={`mg-why-map-row${b.highlight ? ` is-${b.highlight}` : ''}`}>
+            <span className="mg-why-map-label">{b.label}</span>
+            <span className="mg-why-map-value">{b.value}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 function DashboardFooter() {
