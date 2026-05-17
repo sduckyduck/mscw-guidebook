@@ -40,7 +40,8 @@ const BUDGET_GEAR_PROFILES = {
     mobilityWeight: 0.8,
     slotLevelLag: { weapon: 5, cap: 13, overall: 14, top: 14, bottom: 14, shoes: 12, shield: 18, glove: 99, cape: 99, earring: 99 },
     minMaxReqLevel: { weapon: 10, cap: 5, overall: 5, top: 5, bottom: 5, shoes: 5, shield: 5 },
-    autoSlots: new Set(['weapon', 'cap', 'top', 'bottom', 'shoes']),
+    autoSlots: new Set(['weapon', 'cap', 'overall', 'top', 'bottom', 'shoes']),
+    conditionalSlots: { glove: 30, cape: 40, earring: 40 },
     note: '低资金：保持便宜核心装备；武器永远不能空，只是会用价格和等级滞后降权。',
   },
   mid: {
@@ -82,6 +83,7 @@ const LOW_BUDGET_STARTER_ORDER = ['weapon', 'cap', 'top', 'bottom', 'shoes'];
 const CORE_EARLY_SLOTS = new Set(['weapon', 'cap', 'top', 'bottom', 'shoes']);
 const EARLY_GEAR_LEVEL_CUTOFF = 20;
 const LOW_BUDGET_STARTER_CUTOFF = 15;
+const LOW_BUDGET_STARTER_OUTFIT_EXIT_LEVEL = 20;
 const STARTER_REQ_LEVEL_MAX = 10;
 const BANNED_NAME_PATTERN = /\b(gm|admin|administrator|test|tester|beginner gm|maple admin|event|cash|nx|donor|vip|wedding|birthday|anniversary|invincible|wizet|nemi|inkwell|dr\. lim|lim hat|staff|developer|manager)\b/i;
 const BANNED_SLOT_NAMES = /\b(paper box|rice cake|snowboard|surfboard|flag|balloon|rose|bouquet|valentine|chocolate|lollipop|fan|umbrella|tube|swim|swimming|swimsuit|swimwear|marine|sailor|pilot|chef|school|student|uniform|party|festival|costume|transparent|invisible|underwear|undershirt|under shirt|tubetop|tube top|tanktop|tank top|panties|panty|briefs|boxers)\b/i;
@@ -116,6 +118,10 @@ const STARTER_FALLBACKS = {
     shoes: { id: '1072007', name: 'Yellow Basic Boots', slot: 'shoes', reqLevel: 0 },
   },
 };
+
+const STARTER_OUTFIT_NAMES = new Set(Object.values(STARTER_NAME_PRIORITY)
+  .flatMap((profile) => Object.values(profile).flat())
+  .map(normalizeText));
 
 const STARTER_WEAPON_FALLBACKS = {
   warrior: { id: '1302000', name: "Beginner's Sword", slot: 'weapon', weaponType: '1h sword', weapon_type: '1h Sword', incPAD: 17, reqLevel: 0 },
@@ -283,6 +289,7 @@ function smoothLowBudgetProgression(selected, args) {
     .map((item) => {
       const previousItem = previousBySlot[item.slot];
       if (previousItem && sameGear(previousItem, item)) return item;
+      if (shouldExitStarterOutfit(item, previousItem, args)) return item;
       const gain = practicalGearUtility(item, args.classLine, args.budget, args.level, args.statPlan)
         - (previousItem ? practicalGearUtility(previousItem, args.classLine, args.budget, args.level, args.statPlan) : 0);
       const threshold = getLowBudgetUpgradeThreshold(item.slot, level);
@@ -290,6 +297,21 @@ function smoothLowBudgetProgression(selected, args) {
       return item;
     })
     .filter(Boolean);
+}
+
+function shouldExitStarterOutfit(item, previousItem, args) {
+  if (!item || !previousItem) return false;
+  if (args.budget !== 'low') return false;
+  if (Number(args.level ?? 1) < LOW_BUDGET_STARTER_OUTFIT_EXIT_LEVEL) return false;
+  if (!isStarterOutfitItem(previousItem) || isStarterOutfitItem(item)) return false;
+  if (item.slot === 'weapon') return false;
+  return Number(item.reqLevel ?? 0) > 0 && (isClassSpecific(item, args.classLine) || hasAnyStatOrAttack(item));
+}
+
+function isStarterOutfitItem(item) {
+  if (!item || item.slot === 'weapon') return false;
+  const key = normalizeText(`${item.name ?? ''} ${item.title ?? ''}`);
+  return [...STARTER_OUTFIT_NAMES].some((name) => key === name || key.includes(name));
 }
 
 function getLowBudgetUpgradeThreshold(slot, level) {

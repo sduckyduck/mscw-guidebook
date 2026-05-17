@@ -1,0 +1,2095 @@
+:root {
+  --mg-surface: #ffffff;
+  --mg-surface-soft: rgba(255, 255, 255, 0.94);
+  --mg-text: #0f172a;
+  --mg-muted: #718096;
+  --mg-line: rgba(15, 118, 110, 0.13);
+  --mg-teal: #2f8f89;
+  --mg-teal-dark: #176d6a;
+  --mg-blue: #1987f5;
+  --mg-gold: #d99a20;
+  --mg-radius-lg: 16px;
+  --mg-radius-sm: 8px;
+  --mg-shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --mg-shadow-card: 0 16px 40px rgba(15, 76, 80, 0.12);
+  --mg-mono: "JetBrains Mono", "Roboto Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.78), transparent 260px),
+    radial-gradient(circle at 84% 8%, rgba(255, 255, 255, 0.68), transparent 280px),
+    linear-gradient(180deg, #eaf8f6 0%, #d8efe4 58%, #b5d8b1 100%);
+}
+
+.app-shell {
+  color: var(--mg-text);
+}
+
+@media (min-width: 1100px) {
+  .app-shell {
+    width: min(1520px, calc(100vw - 80px)) !important;
+    max-width: 1520px !important;
+  }
+}
+
+.top-tabs {
+  border: 1px solid rgba(209, 224, 220, 0.78) !important;
+  border-radius: var(--mg-radius-lg) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  box-shadow: var(--mg-shadow-soft) !important;
+  backdrop-filter: blur(18px);
+}
+
+.top-tabs button {
+  border-radius: var(--mg-radius-sm) !important;
+}
+
+.top-tabs button.active {
+  background: #dbeee9 !important;
+  color: var(--mg-teal-dark) !important;
+}
+
+.app-shell > .section-card:not(.mg-maps-section),
+.craft-safe-card,
+.craft-safe-controls {
+  border: 1px solid var(--mg-line) !important;
+  border-radius: var(--mg-radius-lg) !important;
+  background: var(--mg-surface-soft) !important;
+  box-shadow: var(--mg-shadow-soft) !important;
+}
+
+.section-copy,
+.craft-safe-card p,
+.craft-safe-card .note,
+.recipe-grid span,
+.recipe-grid p {
+  color: var(--mg-muted) !important;
+}
+
+.mg-stat-box strong,
+.mg-ap-value,
+.mg-ap-box strong,
+.mg-level-value,
+.mg-status-chip-value,
+.mg-overview-damage-row em,
+.mg-task-reward strong,
+.mg-map-card-footer strong,
+.mg-sp-meter strong,
+.mg-skill-main span,
+.craft-safe-kpis strong,
+.craft-safe-list em,
+.recipe-grid span {
+  font-family: var(--mg-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1100px) {
+  .mg-app-header-bar {
+    border-bottom-color: rgba(209, 224, 220, 0.76) !important;
+    background: rgba(255, 255, 255, 0.84) !important;
+    box-shadow: 0 10px 28px rgba(33, 83, 86, 0.09) !important;
+    backdrop-filter: blur(20px);
+  }
+
+  .mg-left-stack,
+  .mg-center-stack,
+  .mg-right-stack .mg-status-panel,
+  .mg-right-stack .mg-route-panel,
+  .mg-right-stack .mg-monster-panel {
+    border-radius: var(--mg-radius-lg) !important;
+    box-shadow: var(--mg-shadow-card) !important;
+  }
+
+  .mg-character-column,
+  .mg-stats-card,
+  .mg-center-stack .mg-overview-damage-card,
+  .mg-bottom-panel {
+    border-radius: var(--mg-radius-lg) !important;
+    box-shadow: var(--mg-shadow-soft) !important;
+  }
+}
+
+.mg-character-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.mg-character-frame::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 0;
+  width: 46%;
+  max-width: 170px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.16);
+  filter: blur(3px);
+  transform: translateX(-50%);
+}
+
+.mg-character-frame .real-character-preview {
+  position: relative;
+  z-index: 1;
+}
+
+.mg-equip-tile {
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.mg-equip-tile:hover:not(:disabled) {
+  border-color: rgba(47, 143, 137, 0.42) !important;
+  box-shadow: 0 8px 18px rgba(15, 76, 80, 0.12) !important;
+  transform: scale(1.05);
+}
+
+.mg-stats-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.mg-stat-box {
+  border-radius: var(--mg-radius-sm) !important;
+}
+
+.mg-stat-box.stat-int {
+  border-color: rgba(25, 135, 245, 0.34) !important;
+  background: linear-gradient(180deg, rgba(230, 244, 255, 0.96), #ffffff) !important;
+}
+
+.mg-stat-box.stat-int strong {
+  color: var(--mg-blue) !important;
+}
+
+.mg-stat-box.stat-str {
+  border-color: rgba(217, 154, 32, 0.32) !important;
+}
+
+.mg-stat-box.stat-str strong {
+  color: #b87812 !important;
+}
+
+.mg-bottom-panel {
+  display: flex !important;
+  flex-direction: column;
+  min-height: 170px;
+}
+
+.mg-task-list {
+  flex: 1 1 auto;
+}
+
+.mg-task-row {
+  transition: background 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+
+.mg-task-check {
+  display: inline-grid !important;
+  place-items: center;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px;
+  border: 1px solid #cddbd6 !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  color: #ffffff;
+  padding: 0 !important;
+  cursor: pointer;
+}
+
+.mg-task-check::after {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  opacity: 0;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.mg-task-check[aria-pressed="true"] {
+  border-color: var(--mg-teal) !important;
+  background: var(--mg-teal) !important;
+}
+
+.mg-task-check[aria-pressed="true"]::after {
+  opacity: 1;
+}
+
+.mg-task-row.is-done {
+  background: rgba(241, 245, 249, 0.76) !important;
+  opacity: 0.72;
+}
+
+.mg-task-row.is-done .mg-task-name {
+  color: #94a3b8 !important;
+  text-decoration: line-through;
+}
+
+.mg-character-dashboard-figure1 {
+  border-radius: var(--mg-radius-lg) !important;
+  box-shadow: var(--mg-shadow-card) !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-summary-panel-v2,
+.mg-character-dashboard-figure1 .mg-ap-stats-panel-v2,
+.mg-character-dashboard-figure1 .mg-sp-panel,
+.mg-character-dashboard-figure1 .mg-skill-side-card,
+.mg-character-dashboard-figure1 .mg-second-skill-card {
+  border-radius: var(--mg-radius-lg) !important;
+  box-shadow: var(--mg-shadow-soft) !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 {
+  gap: 10px !important;
+}
+
+.mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 .mg-ap-box {
+  min-height: 96px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 251, 249, 0.96)) !important;
+}
+
+.mg-character-dashboard-figure1 .mg-mini-controls button,
+.mg-mini-controls button {
+  border-radius: 999px !important;
+  transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+}
+
+.mg-character-dashboard-figure1 .mg-mini-controls button:not(:disabled):hover,
+.mg-mini-controls button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.mg-character-dashboard-figure1 .mg-mini-controls button:disabled,
+.mg-mini-controls button:disabled {
+  opacity: 0.46;
+  cursor: not-allowed !important;
+}
+
+.mg-character-dashboard-figure1 .mg-character-skill-row-v2 {
+  gap: 14px !important;
+}
+
+.mg-skill-row {
+  position: relative;
+  border-color: rgba(15, 118, 110, 0.12) !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+}
+
+.mg-skill-icon-button {
+  border-radius: 10px !important;
+}
+
+.mg-skill-progress {
+  width: 100%;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: #e8f0ed;
+  overflow: hidden;
+}
+
+.mg-skill-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #52b7a8, #2f8f89);
+}
+
+.mg-skill-tooltip {
+  position: absolute;
+  left: 50px;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  min-width: 210px;
+  max-width: 260px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+  color: var(--mg-text);
+  padding: 10px 12px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.mg-skill-tooltip strong,
+.mg-skill-tooltip span {
+  display: block;
+}
+
+.mg-skill-tooltip strong {
+  margin-bottom: 4px;
+  font-size: 0.82rem;
+}
+
+.mg-skill-tooltip span {
+  color: var(--mg-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.mg-skill-row:hover .mg-skill-tooltip,
+.mg-skill-row:focus-within .mg-skill-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.app-shell > .section-card.mg-maps-section {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--mg-text) !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.app-shell > .section-card.mg-maps-section > h2 {
+  margin: 0 0 8px !important;
+  color: var(--mg-text) !important;
+  font-size: clamp(1.7rem, 3vw, 2.5rem) !important;
+  letter-spacing: 0 !important;
+}
+
+.app-shell > .section-card.mg-maps-section > .section-copy {
+  max-width: 780px;
+  margin: 0 0 16px !important;
+  color: var(--mg-muted) !important;
+  font-size: 0.98rem !important;
+}
+
+.app-shell > .section-card.mg-maps-section .mg-map-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  gap: 16px !important;
+}
+
+.app-shell > .section-card.mg-maps-section .mg-map-card-redesign {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(15, 118, 110, 0.12) !important;
+  border-radius: var(--mg-radius-lg) !important;
+  background: #ffffff !important;
+  box-shadow: var(--mg-shadow-soft) !important;
+  min-height: 318px;
+}
+
+.mg-map-card-hero {
+  position: relative;
+  min-height: 150px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(15, 76, 80, 0.1), rgba(15, 76, 80, 0.35)),
+    #dcefeb;
+}
+
+.mg-map-card-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 34, 40, 0.1) 0%, rgba(7, 34, 40, 0.74) 100%);
+}
+
+.mg-map-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  opacity: 0.9;
+}
+
+.mg-map-card-hero .mg-map-rank {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  padding: 5px 9px;
+  font-family: var(--mg-mono);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.mg-map-card-hero-copy {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 13px;
+  z-index: 2;
+  color: #ffffff;
+}
+
+.mg-map-card-hero-copy span {
+  display: block;
+  margin-bottom: 5px;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: var(--mg-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.mg-map-card-hero-copy h3 {
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 1.14rem !important;
+  line-height: 1.12;
+  letter-spacing: 0 !important;
+}
+
+.mg-map-card-redesign .mg-map-card-body {
+  flex: 1 1 auto;
+  padding: 14px !important;
+}
+
+.mg-map-card-redesign .mg-map-target {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.mg-map-card-redesign .small-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.app-shell > .section-card.mg-maps-section .small-tags span {
+  border: 1px solid rgba(47, 143, 137, 0.16) !important;
+  border-radius: 999px !important;
+  background: #effaf7 !important;
+  color: #176d6a !important;
+  padding: 6px 8px !important;
+  font-size: 0.7rem;
+}
+
+.mg-map-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid #edf2ef;
+  background: #fbfdfc;
+  padding: 10px 14px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.mg-map-card-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.mg-map-card-footer strong {
+  white-space: nowrap;
+}
+
+.mg-map-card-footer .is-exp {
+  color: #17845d;
+}
+
+.mg-map-card-footer .is-meso {
+  color: var(--mg-gold);
+}
+
+.mg-quest-section {
+  display: grid;
+  gap: 16px;
+  overflow: visible !important;
+}
+
+.mg-quest-hero,
+.mg-quest-toolbar,
+.mg-quest-card,
+.mg-quest-empty {
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: var(--mg-radius-lg);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--mg-shadow-soft);
+}
+
+.mg-quest-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.7fr);
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+}
+
+.mg-quest-hero span,
+.mg-quest-toolbar span,
+.mg-quest-card header span,
+.mg-quest-meta span,
+.mg-quest-lines span,
+.mg-quest-rewards span,
+.mg-quest-empty span {
+  color: var(--mg-muted);
+}
+
+.mg-quest-hero h3 {
+  margin: 4px 0 8px;
+  color: var(--mg-text);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.mg-quest-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mg-quest-kpis div {
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: var(--mg-radius-sm);
+  background: #f8faf9;
+  padding: 12px;
+}
+
+.mg-quest-kpis span,
+.mg-quest-kpis strong {
+  display: block;
+}
+
+.mg-quest-kpis strong {
+  margin-top: 4px;
+  color: var(--mg-text);
+  font-family: var(--mg-mono);
+  font-size: 1.2rem;
+}
+
+.mg-quest-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+}
+
+.mg-quest-toolbar label {
+  display: grid;
+  gap: 6px;
+}
+
+.mg-quest-toolbar input {
+  width: 100%;
+  border: 1px solid #dbe6e2;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--mg-text);
+  padding: 11px 12px;
+  font-weight: 900;
+  outline: none;
+}
+
+.mg-quest-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mg-quest-filter-tabs button {
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  border-radius: 999px;
+  background: #f7fbfa;
+  color: #176d6a;
+  padding: 10px 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.mg-quest-filter-tabs button.active {
+  border-color: rgba(47, 143, 137, 0.4);
+  background: #dceee9;
+}
+
+.mg-quest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.mg-quest-card {
+  display: grid;
+  gap: 11px;
+  padding: 14px;
+}
+
+.mg-quest-card header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.mg-quest-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #effaf7;
+}
+
+.mg-quest-card h3 {
+  margin: 2px 0 0;
+  color: var(--mg-text);
+  font-size: 1.02rem;
+  line-height: 1.15;
+}
+
+.mg-quest-card em {
+  border-radius: 999px;
+  background: #dceee9;
+  color: #176d6a;
+  padding: 6px 8px;
+  font-size: .68rem;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.mg-quest-card p {
+  margin: 0;
+  color: var(--mg-muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.mg-quest-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mg-quest-meta span,
+.mg-quest-lines span,
+.mg-quest-rewards span {
+  border: 1px solid rgba(15, 118, 110, 0.1);
+  border-radius: 10px;
+  background: #f8faf9;
+  padding: 8px;
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+.mg-quest-meta strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--mg-text);
+}
+
+.mg-quest-lines,
+.mg-quest-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mg-quest-rewards span {
+  color: #176d6a;
+}
+
+.mg-quest-empty {
+  padding: 18px;
+}
+
+.craft-safe-page {
+  display: grid !important;
+  grid-template-columns: minmax(260px, 25%) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px !important;
+}
+
+.craft-safe-hero {
+  grid-column: 1 / -1;
+  border-radius: var(--mg-radius-lg) !important;
+  background:
+    radial-gradient(circle at 86% 12%, rgba(255, 255, 255, 0.2), transparent 210px),
+    linear-gradient(145deg, #2f8f89 0%, #176d6a 100%) !important;
+  box-shadow: var(--mg-shadow-card) !important;
+}
+
+.craft-safe-hero h1 {
+  letter-spacing: 0 !important;
+}
+
+.craft-safe-tabs {
+  position: sticky;
+  top: 92px;
+  grid-column: 1;
+  grid-row: 2 / span 4;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-content: start;
+  border-radius: var(--mg-radius-lg) !important;
+  box-shadow: var(--mg-shadow-soft) !important;
+}
+
+.craft-safe-controls {
+  grid-column: 1;
+  grid-row: 6;
+}
+
+.craft-safe-grid {
+  display: contents !important;
+}
+
+.craft-safe-grid > .craft-safe-card:nth-child(1),
+.craft-safe-grid > .craft-safe-card:nth-child(2),
+.craft-safe-farm,
+.craft-safe-two,
+.craft-safe-page > .craft-safe-card:not(.craft-safe-controls) {
+  grid-column: 2;
+}
+
+.craft-safe-grid > .craft-safe-card:nth-child(3) {
+  grid-column: 1;
+  grid-row: 3 / span 3;
+}
+
+.craft-safe-grid > .craft-safe-card:nth-child(3) .craft-safe-chips {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 8px !important;
+}
+
+.craft-safe-grid > .craft-safe-card:nth-child(3) .craft-safe-chips button {
+  display: grid !important;
+  grid-template-rows: 24px minmax(0, 1fr);
+  place-items: center;
+  min-height: 74px;
+  border-radius: var(--mg-radius-sm) !important;
+  padding: 7px 5px !important;
+  text-align: center;
+  font-size: 0.58rem !important;
+  line-height: 1.12;
+}
+
+.craft-safe-grid > .craft-safe-card:nth-child(3) .craft-safe-material-icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+}
+
+.craft-safe-grid > .craft-safe-card:nth-child(3) .craft-safe-material-icon img {
+  width: 22px;
+  height: 22px;
+}
+
+.craft-safe-two,
+.recipe-grid {
+  gap: 12px !important;
+}
+
+.recipe-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+}
+
+.recipe-grid article {
+  border-radius: var(--mg-radius-sm) !important;
+  background: #ffffff !important;
+}
+
+@media (max-width: 980px) {
+  .app-shell {
+    width: min(100%, 940px) !important;
+    max-width: 940px !important;
+  }
+
+  .craft-safe-page {
+    grid-template-columns: 1fr !important;
+  }
+
+  .craft-safe-hero,
+  .craft-safe-tabs,
+  .craft-safe-controls,
+  .craft-safe-grid > .craft-safe-card:nth-child(1),
+  .craft-safe-grid > .craft-safe-card:nth-child(2),
+  .craft-safe-grid > .craft-safe-card:nth-child(3),
+  .craft-safe-farm,
+  .craft-safe-two,
+  .craft-safe-page > .craft-safe-card:not(.craft-safe-controls) {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
+  .craft-safe-tabs {
+    position: static;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .craft-safe-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    width: min(100%, calc(100vw - 18px)) !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mg-character-dashboard-figure1 .mg-character-skill-row-v2,
+  .craft-safe-two {
+    grid-template-columns: 1fr !important;
+  }
+
+  .craft-safe-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mg-skill-tooltip {
+    left: 8px;
+    right: 8px;
+    max-width: none;
+  }
+}
+
+/* Immersive game-client glass theme.
+   Replace these variables with another url(...) to swap the scene art. */
+:root {
+  --bg-image: url('/intro_setup/full_bg.png');
+  --preview-bg-image: url('/intro_setup/preview_bg.png');
+  --client-ink: #f8fcff;
+  --client-soft: #bcecff;
+  --client-muted: rgba(202, 233, 245, 0.74);
+  --client-gold: #ffd56f;
+  --client-blue: #00a8ff;
+  --client-cyan: #63f0ff;
+  --client-line: rgba(176, 241, 255, 0.18);
+  --client-line-strong: rgba(177, 246, 255, 0.34);
+  --client-glass:
+    linear-gradient(135deg, rgba(15, 45, 76, 0.76), rgba(8, 24, 43, 0.88));
+  --client-glass-deep:
+    linear-gradient(145deg, rgba(7, 32, 55, 0.88), rgba(3, 16, 31, 0.94));
+  --client-glass-soft:
+    linear-gradient(145deg, rgba(29, 82, 112, 0.42), rgba(8, 28, 48, 0.58));
+  --client-inset: rgba(0, 8, 18, 0.34);
+  --client-shadow:
+    0 24px 62px rgba(0, 12, 32, 0.36),
+    0 0 28px rgba(0, 184, 255, 0.12);
+  --client-shadow-soft:
+    0 14px 34px rgba(0, 12, 32, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --client-glow-blue:
+    0 0 18px rgba(0, 168, 255, 0.48),
+    inset 0 0 18px rgba(0, 168, 255, 0.22);
+}
+
+html {
+  background: #06182b;
+}
+
+body {
+  min-height: 100vh;
+  background-color: #071d34 !important;
+  background-image:
+    radial-gradient(circle at 50% 48%, rgba(74, 209, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(3, 32, 64, 0.04) 0%, rgba(4, 19, 34, 0.36) 72%, rgba(3, 12, 22, 0.72) 100%),
+    var(--bg-image) !important;
+  background-position: center, center, center center !important;
+  background-repeat: no-repeat !important;
+  background-size: cover, cover, cover !important;
+  background-attachment: fixed, fixed, fixed !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.46), transparent 4px),
+    radial-gradient(circle at 17% 28%, rgba(125, 238, 255, 0.5), transparent 3px),
+    radial-gradient(circle at 84% 14%, rgba(255, 240, 170, 0.55), transparent 4px),
+    radial-gradient(circle at 88% 42%, rgba(99, 240, 255, 0.42), transparent 3px),
+    linear-gradient(90deg, rgba(2, 16, 31, 0.3), transparent 15%, transparent 84%, rgba(2, 16, 31, 0.3));
+  opacity: 0.64;
+  filter: saturate(1.16);
+}
+
+body::after {
+  content: none !important;
+  display: none !important;
+}
+
+#root,
+.app-shell {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 1100px) {
+  body .app-shell > .top-tabs {
+    display: flex !important;
+  }
+
+  body .app-shell:has(.mg-dashboard) > .top-tabs {
+    display: none !important;
+  }
+}
+
+.app-shell,
+.mg-dashboard,
+.craft-safe-page {
+  color: var(--client-ink) !important;
+  text-shadow: 0 1px 10px rgba(0, 10, 20, 0.22);
+}
+
+.top-tabs,
+.mg-app-header-bar,
+.mg-left-stack,
+.mg-center-stack,
+.mg-right-stack .mg-status-panel,
+.mg-right-stack .mg-route-panel,
+.mg-right-stack .mg-monster-pick-panel,
+.mg-bottom-panel,
+.mg-dashboard-footer,
+.mg-character-dashboard-figure1,
+.app-shell > .section-card:not(.mg-maps-section),
+.craft-safe-hero,
+.craft-safe-tabs,
+.craft-safe-card,
+.craft-safe-controls {
+  border: 1px solid var(--client-line) !important;
+  background: var(--client-glass) !important;
+  box-shadow: var(--client-shadow) !important;
+  color: var(--client-ink) !important;
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+
+.mg-character-column,
+.mg-stats-card,
+.mg-center-stack .mg-overview-damage-card,
+.mg-preview-card,
+.mg-glass-panel,
+.mg-equipment-board,
+.mg-quest-hero,
+.mg-quest-toolbar,
+.mg-quest-card,
+.mg-quest-empty,
+.mg-ap-summary-panel-v2,
+.mg-ap-stats-panel-v2,
+.mg-sp-panel,
+.mg-skill-side-card,
+.mg-second-skill-card,
+.mg-map-card-redesign,
+.recipe-grid article,
+.craft-safe-list button,
+.matrix-list > div,
+.drop-grid article {
+  border: 1px solid var(--client-line) !important;
+  background: var(--client-glass-soft) !important;
+  box-shadow: var(--client-shadow-soft) !important;
+  color: var(--client-ink) !important;
+  backdrop-filter: blur(14px) saturate(145%);
+  -webkit-backdrop-filter: blur(14px) saturate(145%);
+}
+
+.mg-app-header-bar {
+  border-radius: 0 0 18px 18px !important;
+  background:
+    linear-gradient(90deg, rgba(6, 35, 67, 0.86), rgba(4, 25, 48, 0.78), rgba(6, 35, 67, 0.86)) !important;
+  box-shadow:
+    0 14px 42px rgba(0, 15, 34, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(99, 240, 255, 0.18) !important;
+}
+
+.mg-app-brand-logo {
+  border: 1px solid rgba(255, 213, 111, 0.55) !important;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.72), transparent 22%),
+    linear-gradient(135deg, #ffb43c, #e05b2d) !important;
+  box-shadow: 0 0 22px rgba(255, 191, 82, 0.35) !important;
+}
+
+.mg-app-brand-title,
+.mg-dashboard-title,
+.mg-main-card-title h1,
+.mg-panel-title,
+.mg-bottom-panel-head h2,
+.craft-safe-hero h1,
+.craft-safe-title h2,
+.app-shell > .section-card > h2,
+.app-shell > .section-card.mg-maps-section > h2 {
+  color: #ffffff !important;
+  letter-spacing: 0 !important;
+  text-shadow:
+    0 2px 10px rgba(0, 12, 24, 0.45),
+    0 0 18px rgba(99, 240, 255, 0.18);
+}
+
+.mg-panel-title,
+.mg-bottom-panel-head h2,
+.craft-safe-title h2 {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mg-panel-title::after,
+.mg-bottom-panel-head h2::after,
+.craft-safe-title h2::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #ffeaa1;
+  box-shadow:
+    0 0 8px rgba(255, 230, 120, 0.9),
+    9px -5px 0 -2px rgba(255, 255, 255, 0.85);
+}
+
+.mg-dashboard-subtitle,
+.mg-main-card-title p,
+.mg-app-brand-sub,
+.mg-app-profile-meta,
+.section-copy,
+.craft-safe-card p,
+.craft-safe-card .note,
+.recipe-grid span,
+.recipe-grid p,
+.mg-bottom-panel-head span,
+.mg-status-line span,
+.mg-route-text span,
+.mg-resource-text span,
+.mg-class-strip-text span,
+.mg-class-progress-meta,
+.mg-skill-tooltip span {
+  color: var(--client-muted) !important;
+}
+
+.mg-quest-hero h3,
+.mg-quest-card h3,
+.mg-quest-card strong,
+.mg-quest-empty strong {
+  color: #ffffff !important;
+  text-shadow: 0 0 14px rgba(99, 240, 255, 0.12);
+}
+
+.mg-quest-hero p,
+.mg-quest-hero span,
+.mg-quest-card p,
+.mg-quest-card header span,
+.mg-quest-meta span,
+.mg-quest-lines span,
+.mg-quest-rewards span,
+.mg-quest-toolbar span,
+.mg-quest-empty span {
+  color: var(--client-muted) !important;
+}
+
+.mg-app-header-tabs,
+.top-tabs {
+  border-color: rgba(156, 236, 255, 0.2) !important;
+  background:
+    linear-gradient(180deg, rgba(28, 83, 120, 0.5), rgba(4, 24, 45, 0.46)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(99, 240, 255, 0.12),
+    0 10px 28px rgba(0, 14, 28, 0.22) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.mg-app-header-tabs {
+  width: min(760px, 100%) !important;
+}
+
+.mg-app-header-tab,
+.top-tab,
+.mg-dashboard-footer-btn,
+.mg-route-badge,
+.mg-task-status,
+.mg-resource-priority,
+.mg-quest-filter-tabs button,
+.craft-safe-tabs button,
+.craft-safe-chips button,
+.recipe-toolbar select,
+.recipe-toolbar input {
+  border: 1px solid rgba(170, 239, 255, 0.16) !important;
+  background:
+    linear-gradient(180deg, rgba(36, 94, 128, 0.38), rgba(0, 14, 30, 0.28)) !important;
+  color: var(--client-ink) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.mg-app-header-tab.active,
+.top-tab.active,
+.craft-safe-tabs button.active,
+.mg-quest-filter-tabs button.active,
+.craft-safe-chips button.active,
+.mg-dashboard-footer-btn.is-primary {
+  border-color: rgba(116, 245, 255, 0.42) !important;
+  background:
+    radial-gradient(circle at 35% 20%, rgba(255, 255, 255, 0.32), transparent 28%),
+    linear-gradient(180deg, rgba(0, 168, 255, 0.62), rgba(0, 80, 145, 0.64)) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 18px rgba(0, 168, 255, 0.36),
+    inset 0 0 18px rgba(99, 240, 255, 0.2) !important;
+}
+
+.mg-app-header-tab:hover,
+.top-tab:hover,
+.mg-dashboard-footer-btn:hover,
+.mg-quest-filter-tabs button:hover,
+.craft-safe-tabs button:hover,
+.craft-safe-chips button:hover,
+.mg-level-btn:hover:not(:disabled),
+.mg-ap-row button:hover:not(:disabled),
+.mg-mini-controls button:hover:not(:disabled) {
+  filter: brightness(1.16);
+  box-shadow:
+    0 0 16px rgba(99, 240, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+
+.mg-select,
+.mg-level-value,
+.mg-ap-value,
+.mg-app-search input,
+.mg-quest-toolbar input,
+.craft-safe-controls select,
+.craft-safe-title select,
+.recipe-toolbar select,
+.recipe-toolbar input,
+.mg-ap-box,
+.mg-ap-row,
+.mg-task-row,
+.mg-resource-row,
+.mg-route-row,
+.mg-overview-damage-row,
+.mg-skill-row,
+.mg-status-chip,
+.mg-status-row,
+.mg-class-strip,
+.mg-class-strip-level,
+.mg-quest-kpis div,
+.mg-quest-meta span,
+.mg-quest-lines span,
+.mg-quest-rewards span {
+  border: 1px solid rgba(168, 238, 255, 0.15) !important;
+  background:
+    linear-gradient(180deg, rgba(0, 12, 28, 0.36), rgba(0, 6, 18, 0.22)) !important;
+  color: var(--client-ink) !important;
+  box-shadow:
+    inset 0 1px 8px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.mg-select option,
+.craft-safe-controls option,
+.craft-safe-title option,
+.recipe-toolbar option {
+  color: #071d34;
+  background: #ffffff;
+}
+
+.mg-status-row .mg-map-thumb,
+.mg-status-row .mg-monster-icon {
+  background: transparent !important;
+}
+
+.mg-status-row .mg-map-thumb {
+  padding: 0 !important;
+  object-fit: contain;
+}
+
+.mg-status-row .mg-monster-icon img {
+  filter:
+    drop-shadow(0 2px 2px rgba(0, 4, 12, 0.5))
+    drop-shadow(0 0 8px rgba(99, 240, 255, 0.16));
+}
+
+.mg-level-btn,
+.mg-ap-row button,
+.mg-mini-controls button,
+.mg-task-check,
+.mg-route-head button,
+.mg-monster-pick-head button,
+.mg-quest-filter-tabs button {
+  border: 1px solid rgba(145, 232, 255, 0.22) !important;
+  background:
+    linear-gradient(180deg, rgba(53, 126, 161, 0.5), rgba(1, 28, 53, 0.54)) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 12px rgba(0, 168, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+.mg-level-btn:disabled,
+.mg-ap-row button:disabled,
+.mg-mini-controls button:disabled {
+  border-color: rgba(170, 205, 214, 0.12) !important;
+  background: rgba(0, 8, 18, 0.22) !important;
+  color: rgba(210, 235, 242, 0.32) !important;
+  box-shadow: none !important;
+}
+
+.mg-range,
+.mg-class-progress-bar,
+.mg-skill-progress {
+  background: rgba(0, 8, 18, 0.46) !important;
+  box-shadow:
+    inset 0 1px 4px rgba(0, 0, 0, 0.4),
+    0 0 10px rgba(99, 240, 255, 0.08) !important;
+}
+
+.mg-range::-webkit-slider-thumb {
+  border: 2px solid #ffffff;
+  background: var(--client-cyan);
+  box-shadow: 0 0 18px rgba(99, 240, 255, 0.72);
+}
+
+.mg-class-progress-fill,
+.mg-skill-progress i {
+  background:
+    linear-gradient(90deg, #39e9ff, #28b6ff 52%, #8bf7ff) !important;
+  box-shadow: 0 0 14px rgba(57, 233, 255, 0.55);
+}
+
+.mg-center-stack .mg-character-frame,
+.mg-character-frame {
+  border: 1px solid rgba(151, 239, 255, 0.25) !important;
+  background:
+    linear-gradient(180deg, rgba(7, 35, 58, 0.02), rgba(2, 18, 32, 0.14)),
+    var(--preview-bg-image) center 58% / cover no-repeat !important;
+  box-shadow:
+    inset 0 0 30px rgba(0, 8, 18, 0.2),
+    0 0 24px rgba(0, 168, 255, 0.14) !important;
+}
+
+.mg-character-frame::before {
+  content: none !important;
+  display: none !important;
+}
+
+.mg-character-frame::after {
+  bottom: 24px !important;
+  background: rgba(0, 7, 18, 0.34) !important;
+  filter: blur(6px) !important;
+}
+
+.mg-stat-box {
+  border: 1px solid rgba(173, 241, 255, 0.14) !important;
+  background:
+    linear-gradient(180deg, rgba(31, 80, 111, 0.4), rgba(0, 17, 34, 0.32)) !important;
+  color: var(--client-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -12px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.mg-stat-box span,
+.mg-ap-row label,
+.mg-field label,
+.mg-level label,
+.craft-safe-controls span {
+  color: rgba(219, 248, 255, 0.78) !important;
+}
+
+.mg-stat-box strong,
+.mg-ap-value,
+.mg-level-value,
+.mg-overview-damage-row em,
+.mg-status-chip-value,
+.mg-class-strip-level,
+.mg-sp-meter strong,
+.craft-safe-kpis strong {
+  color: #ffffff !important;
+  text-shadow: 0 0 12px rgba(99, 240, 255, 0.16);
+}
+
+.mg-stat-box.stat-int {
+  border-color: rgba(99, 240, 255, 0.55) !important;
+  background:
+    radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.28), transparent 28%),
+    linear-gradient(135deg, rgba(0, 168, 255, 0.78), rgba(0, 87, 165, 0.74)) !important;
+  box-shadow: var(--client-glow-blue) !important;
+}
+
+.mg-stat-box.stat-int span,
+.mg-stat-box.stat-int strong,
+.mg-stat-box.stat-int small {
+  color: #ffffff !important;
+}
+
+.mg-stat-box.stat-str strong,
+.mg-resource-priority.mid,
+.mg-task-reward.is-meso strong,
+.mg-map-card-footer .is-meso {
+  color: var(--client-gold) !important;
+}
+
+.mg-task-reward.is-exp strong,
+.mg-route-badge.is-current,
+.mg-status-chip-value.is-stars,
+.mg-map-card-footer .is-exp {
+  color: var(--client-cyan) !important;
+}
+
+.mg-equip-tile,
+.mg-gear-step,
+.mg-monster-pick,
+.mg-map-target,
+.mg-quest-icon,
+.craft-safe-kpis div,
+.recipe-grid article {
+  border: 1px solid rgba(174, 238, 255, 0.15) !important;
+  background:
+    linear-gradient(180deg, rgba(21, 66, 96, 0.42), rgba(0, 14, 29, 0.28)) !important;
+  color: var(--client-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 12, 26, 0.18) !important;
+}
+
+.mg-equip-tile:hover:not(:disabled),
+.mg-gear-step.is-current,
+.mg-monster-pick:hover,
+.mg-map-card-redesign:hover {
+  border-color: rgba(99, 240, 255, 0.42) !important;
+  box-shadow:
+    0 0 18px rgba(0, 168, 255, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+.mg-status-route,
+.mg-main-card-meta,
+.mg-map-thumb,
+.mg-monster-pick-icon,
+.mg-quest-icon,
+.mg-gear-step-icon,
+.mg-resource-icon,
+.mg-overview-damage-icon,
+.mg-skill-badge,
+.craft-safe-prof-icon,
+.craft-safe-material-icon {
+  border-color: rgba(189, 244, 255, 0.18) !important;
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.22), transparent 30%),
+    rgba(0, 12, 28, 0.28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 14px rgba(99, 240, 255, 0.1) !important;
+}
+
+.mg-map-thumb,
+.mg-map-card-hero {
+  border: 1px solid rgba(160, 239, 255, 0.24) !important;
+  box-shadow:
+    0 0 22px rgba(0, 168, 255, 0.16),
+    inset 0 0 28px rgba(0, 6, 18, 0.24) !important;
+}
+
+.mg-map-card-hero::after {
+  background:
+    linear-gradient(180deg, rgba(4, 28, 48, 0.08) 0%, rgba(2, 18, 34, 0.78) 100%) !important;
+}
+
+.mg-map-card-hero-copy h3,
+.mg-map-card-hero-copy span {
+  text-shadow:
+    0 2px 8px rgba(0, 8, 20, 0.72),
+    0 0 14px rgba(99, 240, 255, 0.16);
+}
+
+.mg-map-card-redesign .mg-map-card-body,
+.mg-map-card-footer {
+  background: transparent !important;
+  color: var(--client-muted) !important;
+}
+
+.mg-map-card-footer {
+  border-top-color: rgba(177, 246, 255, 0.14) !important;
+}
+
+.app-shell > .section-card.mg-maps-section .small-tags span,
+.small-tags span,
+.mg-effect-pills span {
+  border-color: rgba(145, 232, 255, 0.18) !important;
+  background: rgba(0, 18, 36, 0.32) !important;
+  color: var(--client-soft) !important;
+}
+
+.mg-task-check[aria-pressed="true"] {
+  background:
+    linear-gradient(135deg, #21e2ff, #008bff) !important;
+  box-shadow:
+    0 0 14px rgba(0, 168, 255, 0.5),
+    inset 0 0 10px rgba(255, 255, 255, 0.18) !important;
+}
+
+.mg-task-row.is-done {
+  background: rgba(0, 11, 22, 0.26) !important;
+  opacity: 0.72;
+}
+
+.mg-task-row.is-done .mg-task-name {
+  color: rgba(202, 233, 245, 0.52) !important;
+}
+
+.mg-skill-tooltip {
+  border-color: rgba(151, 239, 255, 0.24) !important;
+  background: linear-gradient(145deg, rgba(7, 32, 55, 0.96), rgba(3, 16, 31, 0.98)) !important;
+  box-shadow:
+    0 20px 42px rgba(0, 10, 28, 0.48),
+    0 0 18px rgba(0, 168, 255, 0.2) !important;
+}
+
+.mg-skill-tooltip strong {
+  color: #ffffff !important;
+}
+
+.craft-safe-page {
+  text-shadow: none;
+}
+
+.craft-safe-hero {
+  background:
+    linear-gradient(135deg, rgba(15, 45, 76, 0.74), rgba(8, 24, 43, 0.84)) !important;
+}
+
+.craft-safe-list button,
+.matrix-list > div,
+.drop-grid article {
+  color: var(--client-ink) !important;
+}
+
+.craft-safe-list small,
+.matrix-list small,
+.drop-grid span,
+.zero-route span {
+  color: var(--client-muted) !important;
+}
+
+.craft-safe-list em,
+.matrix-list em {
+  border-color: rgba(255, 213, 111, 0.22) !important;
+  background: rgba(255, 213, 111, 0.14) !important;
+  color: var(--client-gold) !important;
+}
+
+.recipe-grid article p {
+  border-top-color: rgba(177, 246, 255, 0.12) !important;
+}
+
+.mg-dashboard-footer {
+  background:
+    linear-gradient(90deg, rgba(10, 48, 72, 0.84), rgba(6, 30, 52, 0.88)) !important;
+  box-shadow:
+    0 16px 44px rgba(0, 10, 24, 0.38),
+    0 0 26px rgba(99, 240, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+.mg-dashboard-tip-badge {
+  border: 1px solid rgba(255, 213, 111, 0.38);
+  background:
+    linear-gradient(135deg, #ffd56f, #f8a83b) !important;
+  box-shadow: 0 0 16px rgba(255, 213, 111, 0.36);
+}
+
+@media (max-width: 1099px) {
+  body::after {
+    height: 34vw;
+    min-height: 160px;
+    background-size: 150% auto;
+  }
+
+  .top-tabs {
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mg-app-header-tab,
+  .top-tab,
+  .mg-equip-tile,
+  .mg-monster-pick,
+  .mg-map-card-redesign,
+  .mg-dashboard-footer-btn,
+  .craft-safe-tabs button,
+  .craft-safe-chips button {
+    transition:
+      transform 160ms ease,
+      filter 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .mg-app-header-tab:hover,
+  .top-tab:hover,
+  .mg-dashboard-footer-btn:hover,
+  .craft-safe-tabs button:hover,
+  .craft-safe-chips button:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* The maplestory.io item wrapper ships with an inline white tile.
+   In the glass client theme the item art should float directly on the panel. */
+.mg-equip-tile > div[style],
+.mg-gear-step-icon > div[style],
+.mg-picker-item > div[style],
+.craft-safe-msio-icon > div[style],
+.craft-msio-icon > div[style],
+.saved-equip-tile > div[style] {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mg-equip-tile > div[style] img,
+.mg-gear-step-icon > div[style] img,
+.mg-picker-item > div[style] img,
+.craft-safe-msio-icon > div[style] img,
+.craft-msio-icon > div[style] img,
+.saved-equip-tile > div[style] img {
+  filter:
+    drop-shadow(0 2px 2px rgba(0, 4, 12, 0.55))
+    drop-shadow(0 0 8px rgba(99, 240, 255, 0.12));
+}
+
+.mg-equip-tile > div[style] span,
+.mg-gear-step-icon > div[style] span,
+.craft-safe-msio-icon > div[style] span,
+.craft-msio-icon > div[style] span,
+.saved-equip-tile > div[style] span {
+  color: rgba(220, 247, 255, 0.72) !important;
+  text-shadow: none !important;
+}
+
+:root {
+  --ms-cursor-default: url('/ui/Cursor.0.0.png') 0 3, auto;
+  --ms-cursor-pointer: url('/ui/Cursor.1.0.png') 3 6, pointer;
+  --ms-cursor-active: url('/ui/Cursor.1.1.png') 4 4, pointer;
+}
+
+html,
+body,
+.app-shell {
+  cursor: var(--ms-cursor-default);
+}
+
+a,
+button,
+select,
+summary,
+label,
+[role="button"],
+[role="tab"],
+.mg-equip-tile,
+.mg-picker-item,
+.mg-map-card-redesign,
+.mg-monster-pick,
+.mg-dashboard-footer-btn,
+.craft-safe-tabs button,
+.craft-safe-chips button {
+  cursor: var(--ms-cursor-pointer) !important;
+}
+
+a:active,
+button:active,
+select:active,
+summary:active,
+label:active,
+[role="button"]:active,
+[role="tab"]:active,
+.mg-equip-tile:active,
+.mg-picker-item:active,
+.mg-map-card-redesign:active,
+.mg-monster-pick:active,
+.mg-dashboard-footer-btn:active {
+  cursor: var(--ms-cursor-active) !important;
+}
+
+button:disabled,
+[aria-disabled="true"],
+.mg-equip-tile:disabled,
+.mg-level-btn:disabled,
+.mg-ap-row button:disabled,
+.mg-mini-controls button:disabled {
+  cursor: var(--ms-cursor-default) !important;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+}
+
+.mg-status-panel .mg-status-row {
+  background:
+    linear-gradient(180deg, rgba(0, 12, 28, 0.42), rgba(0, 6, 18, 0.2)) !important;
+}
+
+.mg-status-panel .mg-status-line,
+.mg-status-panel .mg-status-line strong {
+  color: #ffffff !important;
+}
+
+.mg-status-panel .mg-status-line span {
+  color: rgba(202, 233, 245, 0.78) !important;
+}
+
+.mg-status-panel .mg-monster-icon,
+.mg-status-panel .mg-monster-icon *,
+.mg-status-panel .mg-map-thumb {
+  background-color: transparent !important;
+}
+
+.mg-app-header-tab-icon {
+  min-width: 2.2em;
+  font-family: var(--mg-mono);
+  font-size: 0.68rem !important;
+  font-weight: 1000;
+  letter-spacing: 0;
+}
+
+.mg-panel-title,
+.mg-stats-title,
+.mg-overview-damage-head h2,
+.mg-equipment-head .mg-panel-title,
+.mg-bottom-panel-head h2,
+.mg-status-route-name,
+.mg-status-line strong,
+.mg-equip-tile strong,
+.mg-monster-pick strong,
+.mg-overview-damage-row strong,
+.mg-overview-damage-row em,
+.mg-task-name,
+.mg-resource-text strong,
+.mg-map-target strong,
+.mg-map-card-redesign h3,
+.craft-safe-page h1,
+.craft-safe-page h2,
+.craft-safe-page strong {
+  color: #ffffff !important;
+  text-shadow: 0 0 12px rgba(99, 240, 255, 0.16);
+}
+
+.mg-status-route-label,
+.mg-status-line span,
+.mg-equip-tile span,
+.mg-monster-pick span,
+.mg-overview-damage-head span,
+.mg-overview-damage-row span,
+.mg-equipment-head span,
+.mg-bottom-panel-head span,
+.mg-resource-text span,
+.mg-map-target span,
+.mg-map-card-redesign p,
+.mg-map-card-redesign .small-tags span,
+.craft-safe-page span,
+.craft-safe-page small,
+.craft-safe-page p,
+.craft-safe-page em {
+  color: rgba(220, 247, 255, 0.78) !important;
+}
+
+.mg-equip-tile strong {
+  color: rgba(221, 250, 255, 0.82) !important;
+}
+
+.mg-equip-tile:disabled strong,
+.mg-equip-tile:disabled span {
+  color: rgba(220, 247, 255, 0.52) !important;
+}
+
+.mg-left-stack,
+.mg-center-stack,
+.mg-right-stack .mg-status-panel,
+.mg-right-stack .mg-route-panel,
+.mg-right-stack .mg-monster-pick-panel,
+.mg-bottom-panel,
+.mg-preview-card,
+.mg-stats-card,
+.mg-overview-damage-card,
+.mg-equipment-board,
+.craft-safe-page .craft-safe-card,
+.craft-safe-page .craft-safe-controls {
+  border-radius: 18px !important;
+}
+
+.mg-select,
+.mg-level-btn,
+.mg-level-value,
+.mg-ap-row,
+.mg-ap-row button,
+.mg-equip-tile,
+.mg-stat-box,
+.mg-status-row,
+.mg-status-chip,
+.mg-route-row,
+.mg-monster-pick,
+.mg-overview-damage-row,
+.mg-task-row,
+.mg-resource-row,
+.mg-map-target,
+.mg-map-card-footer,
+.craft-safe-tabs button,
+.craft-safe-chips button,
+.craft-safe-list button,
+.recipe-grid article {
+  border-radius: 12px !important;
+}
+
+.mg-map-thumb,
+.mg-map-card-hero,
+.mg-character-frame,
+.mg-character-frame img {
+  border-radius: 14px !important;
+}
+
+.mg-monster-pick-icon,
+.mg-monster-pick-icon .mg-monster-icon,
+.mg-monster-pick-icon .mg-monster-icon *,
+.mg-map-target .mg-monster-icon,
+.mg-map-target .mg-monster-icon *,
+.drop-grid .mg-monster-icon,
+.drop-grid .mg-monster-icon * {
+  border-color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.mg-monster-pick-icon {
+  width: auto !important;
+  height: auto !important;
+  min-height: 58px;
+  display: grid;
+  place-items: center;
+}
+
+.mg-monster-pick-icon img,
+.mg-map-target .mg-monster-icon img,
+.drop-grid .mg-monster-icon img {
+  filter:
+    drop-shadow(0 3px 2px rgba(0, 5, 14, 0.62))
+    drop-shadow(0 0 10px rgba(99, 240, 255, 0.18));
+}
+
+.mg-status-panel .mg-map-thumb {
+  background:
+    linear-gradient(180deg, rgba(0, 13, 30, 0.26), rgba(0, 6, 16, 0.18)) !important;
+}
+
+.mg-task-reward::before,
+.mg-task-row.is-done .mg-task-check::after,
+.mg-app-search::before {
+  content: "" !important;
+}
+
+.craft-safe-page {
+  width: 100%;
+}
+
+.mg-app-header-tab.active {
+  border-color: rgba(118, 245, 255, 0.5) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(129, 244, 255, 0.28), transparent 38%),
+    linear-gradient(180deg, rgba(24, 88, 126, 0.84), rgba(2, 33, 63, 0.86)) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 18px rgba(70, 220, 255, 0.34),
+    inset 0 0 18px rgba(99, 240, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+.mg-app-header-tab.active .mg-app-header-tab-icon {
+  color: var(--client-cyan) !important;
+}
+
+.app-shell > .section-card.mg-maps-section {
+  color: var(--client-ink) !important;
+}
+
+.app-shell > .section-card.mg-maps-section > h2 {
+  color: #ffffff !important;
+  text-shadow: 0 0 16px rgba(99, 240, 255, 0.18);
+}
+
+.app-shell > .section-card.mg-maps-section > .section-copy {
+  color: rgba(220, 247, 255, 0.76) !important;
+}
+
+.app-shell > .section-card.mg-maps-section .mg-map-card-redesign {
+  border-color: rgba(176, 241, 255, 0.2) !important;
+  background:
+    linear-gradient(145deg, rgba(23, 68, 98, 0.72), rgba(4, 22, 40, 0.88)) !important;
+  box-shadow:
+    0 18px 38px rgba(0, 10, 24, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+.app-shell > .section-card.mg-maps-section .mg-map-target {
+  background:
+    linear-gradient(180deg, rgba(0, 16, 35, 0.32), rgba(0, 8, 20, 0.22)) !important;
+}
+
+.app-shell > .section-card.mg-maps-section .mg-map-card-footer {
+  border-top-color: rgba(177, 246, 255, 0.16) !important;
+  background: rgba(0, 10, 24, 0.22) !important;
+}
+
+.inventory-crafting-shell {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(420px, 1.35fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.inventory-panel-card,
+.inventory-recommend-card {
+  min-height: 100%;
+}
+
+.inventory-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.inventory-kpis div,
+.inventory-item-row,
+.craftable-recipe-card,
+.inventory-empty-state,
+.inventory-transfer textarea {
+  border: 1px solid rgba(168, 238, 255, 0.15);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(0, 12, 28, 0.36), rgba(0, 6, 18, 0.22));
+  box-shadow:
+    inset 0 1px 8px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.inventory-kpis div {
+  padding: 10px;
+}
+
+.inventory-kpis span,
+.inventory-item-row small,
+.craftable-recipe-main span,
+.craftable-recipe-meta,
+.inventory-empty-state span,
+.inventory-transfer span {
+  display: block;
+  color: rgba(220, 247, 255, 0.72) !important;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.inventory-kpis strong,
+.inventory-item-row strong,
+.craftable-recipe-main strong,
+.inventory-empty-state strong {
+  color: #ffffff !important;
+  font-weight: 1000;
+}
+
+.inventory-toolbar,
+.inventory-transfer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.inventory-toolbar input,
+.inventory-item-row input,
+.inventory-transfer textarea {
+  border: 1px solid rgba(168, 238, 255, 0.16);
+  border-radius: 11px;
+  background: rgba(0, 10, 24, 0.36);
+  color: #ffffff;
+  outline: none;
+}
+
+.inventory-toolbar input {
+  height: 40px;
+  padding: 0 12px;
+}
+
+.inventory-toolbar button,
+.inventory-transfer button,
+.missing-materials-list button {
+  border: 1px solid rgba(145, 232, 255, 0.22);
+  border-radius: 11px;
+  background:
+    linear-gradient(180deg, rgba(53, 126, 161, 0.5), rgba(1, 28, 53, 0.54));
+  color: #ffffff;
+  min-height: 40px;
+  padding: 0 12px;
+  font-weight: 950;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.inventory-item-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 72px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+}
+
+.inventory-item-row > button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.inventory-item-row input {
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  text-align: right;
+  font-family: var(--mg-mono);
+  font-weight: 950;
+}
+
+.inventory-transfer {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  margin: 12px 0 0;
+}
+
+.inventory-transfer textarea {
+  min-height: 58px;
+  padding: 9px 10px;
+  resize: vertical;
+  font-family: var(--mg-mono);
+  font-size: 0.72rem;
+}
+
+.craftable-recommendation-list {
+  display: grid;
+  gap: 12px;
+}
+
+.craftable-group {
+  display: grid;
+  gap: 8px;
+}
+
+.craftable-group h3 {
+  margin: 0;
+  color: var(--client-cyan);
+  font-size: 0.92rem;
+  font-weight: 1000;
+}
+
+.craftable-recipe-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.craftable-recipe-main {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.craftable-recipe-main em {
+  color: var(--client-gold) !important;
+  font-family: var(--mg-mono);
+  font-style: normal;
+  font-weight: 1000;
+}
+
+.craftable-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 8, 18, 0.5);
+}
+
+.craftable-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5df2ff, #2d8cff);
+  box-shadow: 0 0 12px rgba(99, 240, 255, 0.38);
+}
+
+.craftable-recipe-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.missing-materials-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.missing-materials-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+}
+
+.missing-materials-list.is-ready span {
+  color: #8fffea !important;
+  font-weight: 950;
+}
+
+.inventory-empty-state {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+}
+
+@media (max-width: 980px) {
+  .inventory-crafting-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-toolbar,
+  .inventory-transfer {
+    grid-template-columns: 1fr;
+  }
+}

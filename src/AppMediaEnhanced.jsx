@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import CharacterPreview from './components/CharacterPreview.jsx';
+import CraftingMaterialsPageSafe from './components/CraftingMaterialsPageSafe.jsx';
 import IconFallback, { baseUrl } from './components/IconFallback.jsx';
 import MonsterIcon from './components/MonsterIcon.jsx';
 import MsioItemIcon from './components/MsioItemIcon.jsx';
@@ -15,8 +16,9 @@ import { getApNote, getRecommendedSkillAllocation, getSkillPlan } from './engine
 import './styles/dashboard.css';
 import './styles/character-dashboard.css';
 import './styles/skill-gating.css';
+import './styles/dashboard-pc.css';
 
-const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['materials', '材料']];
+const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['quests', '任务'], ['materials', '材料']];
 const JOBS = [['warrior', '战士'], ['magician', '魔法师'], ['bowman', '弓箭手'], ['thief', '飞侠'], ['pirate', '海盗']].map(([id, name]) => ({ id, name }));
 const BUDGETS = [['low', '低资金'], ['mid', '普通'], ['high', '有钱']].map(([id, name]) => ({ id, name }));
 const PRIORITIES = [['stable', '稳定'], ['exp', '经验'], ['material', '材料'], ['meso', '金币']].map(([id, name]) => ({ id, name }));
@@ -204,31 +206,61 @@ export default function AppMediaEnhanced() {
   const resetSkills = () => setSkillAllocation(recommendedSkillAllocation);
 
   return <main className="app-shell">
-    <nav className="top-tabs">{TABS.map(([id, name]) => <button key={id} className={tab === id ? 'top-tab active' : 'top-tab'} onClick={() => changeTab(id)}>{name}</button>)}</nav>
+    <AppHeaderBar tab={tab} onTabChange={changeTab} classLine={classLine} level={level} />
     {edition.dataMode !== 'official-appdata' && <p className="load-error">国服数据/公式已预留，当前暂不启用真实推荐。</p>}
-    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} weapon={weapon} gear={gear} stats={stats} skillPlan={skillPlan} candidatesBySlot={candidatesBySlot} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} />}
+    {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} maps={maps} weapon={weapon} gear={gear} stats={stats} skillPlan={skillPlan} statPlan={statPlan} effectiveApAllocation={effectiveApAllocation} candidatesBySlot={candidatesBySlot} items={activeData.items} budget={budget} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} onApChange={changeAp} />}
     {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
+    {tab === 'quests' && <QuestPage level={level} classLine={classLine} />}
     {tab === 'materials' && <MaterialsPage data={activeData} />}
     {pickerSlot && <GearPicker slot={pickerSlot} items={candidatesBySlot[pickerSlot] ?? []} current={gear.find((item) => item.slot === pickerSlot)} onChoose={(item) => chooseGear(pickerSlot, item)} onClose={() => setPickerSlot(null)} />}
     {error && <p className="load-error">官方数据读取提示：{error}</p>}
   </main>;
 }
 
-function Dashboard({ controls, classLine, gender, level, bestMonster, bestMap, weapon, gear, stats, skillPlan, candidatesBySlot, onPickSlot, onOpenMaps }) {
+function Dashboard({ controls, classLine, branch, gender, level, bestMonster, bestMap, maps, weapon, gear, stats, skillPlan, statPlan, effectiveApAllocation, candidatesBySlot, items, budget, onPickSlot, onOpenMaps, onApChange }) {
+  const buildId = `${classLine.id.toUpperCase()}-${String(level).padStart(3, '0')}`;
+  const today = new Date().toISOString().slice(0, 10);
   return <section className="mg-dashboard">
     <h1 className="mg-dashboard-title">MapleGuide: {classLine.name}开荒仪表盘</h1>
-    <p className="mg-dashboard-subtitle">根据您的参数，为您推荐最佳路线</p>
+    <p className="mg-dashboard-subtitle">根据你的配置，为你推荐最佳路线与成长方案</p>
     <div className="mg-dashboard-grid">
       <div className="mg-left-stack">
         <ConfigPanel {...controls} />
+        <ApAllocatorPanel classLine={classLine} apAllocation={effectiveApAllocation} statPlan={statPlan} onApChange={onApChange} />
         <DashboardEquipmentSlots gear={gear} candidatesBySlot={candidatesBySlot} onPickSlot={onPickSlot} />
+      </div>
+      <div className="mg-center-stack">
+        <header className="mg-main-card-title">
+          <div>
+            <h1>MapleGuide: {classLine.name}开荒仪表盘</h1>
+            <p>根据你的配置，为你推荐最佳路线与成长方案</p>
+          </div>
+          <div className="mg-main-card-meta">
+            <span>Build ID</span>
+            <strong>#{buildId}</strong>
+            <span>最后更新</span>
+            <strong>{today}</strong>
+          </div>
+        </header>
+        <PreviewPanel classLine={classLine} branch={branch} gender={gender} level={level} weapon={weapon} gear={gear} stats={stats} />
+        <OverviewDamagePanel classLine={classLine} skillPlan={skillPlan} />
       </div>
       <div className="mg-right-stack">
         <StatusPanel bestMonster={bestMonster} bestMap={bestMap} onOpenMaps={onOpenMaps} />
-        <PreviewPanel classLine={classLine} gender={gender} level={level} weapon={weapon} gear={gear} stats={stats} />
-        <OverviewDamagePanel classLine={classLine} skillPlan={skillPlan} />
+        <GrowthRoutePanel maps={maps} level={level} onOpenMaps={onOpenMaps} />
+        <MonsterPickPanel bestMap={bestMap} onOpenMaps={onOpenMaps} />
       </div>
+    </div>
+    <div className="mg-bottom-row">
+      <GearProgressionPanel classLine={classLine} branch={branch} gender={gender} level={level} budget={budget} statPlan={statPlan} items={items} />
+      <DailyTasksPanel classLine={classLine} bestMonster={bestMonster} bestMap={bestMap} />
+      <ResourcePriorityPanel classLine={classLine} bestMonster={bestMonster} />
+    </div>
+    <DashboardFooter />
+    <div className="mg-copyright-row">
+      <span>© 2026 MapleGuide | 枫叶冒险者指南站</span>
+      <span>数据仅供参考 — 请以游戏内实际数据为准</span>
     </div>
     <div className="mg-actions">
       <button className="mg-action-small">分享</button>
@@ -237,6 +269,326 @@ function Dashboard({ controls, classLine, gender, level, bestMonster, bestMap, w
     </div>
     <p className="mg-footer">© 2026 MapleGuide | by SduckyDuck</p>
   </section>;
+}
+
+function AppHeaderBar({ tab, onTabChange, classLine, level }) {
+  const tabs = [
+    ['overview', '总览', 'OV'],
+    ['character', '角色', 'CH'],
+    ['maps', '地图', 'MP'],
+    ['quests', '任务', 'Q'],
+    ['materials', '材料', 'MT'],
+  ];
+  return <header className="mg-app-header-bar" role="navigation">
+    <div className="mg-app-brand">
+      <div className="mg-app-brand-logo" aria-hidden>
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2l1.6 4.4 4.4-.4-2.4 3.7 3.4 2.9-4.4 1.1 1.1 4.4-3.7-2.4-3.7 2.4 1.1-4.4-4.4-1.1 3.4-2.9-2.4-3.7 4.4.4z"/></svg>
+      </div>
+      <div className="mg-app-brand-text">
+        <span className="mg-app-brand-title">MapleGuide</span>
+        <span className="mg-app-brand-sub">{classLine?.name ?? '战士'}开荒仪表盘</span>
+      </div>
+    </div>
+    <div className="mg-app-header-tabs" role="tablist">
+      {tabs.map(([id, name, icon]) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={tab === id}
+          className={tab === id ? 'mg-app-header-tab active' : 'mg-app-header-tab'}
+          onClick={() => onTabChange(id)}
+        >
+          <span className="mg-app-header-tab-icon" aria-hidden>{icon}</span>
+          <span>{name}</span>
+        </button>
+      ))}
+    </div>
+    <div className="mg-app-header-right">
+      <label className="mg-app-search">
+        <input type="search" placeholder="搜索地图 / 怪物 / 材料..." aria-label="搜索" />
+      </label>
+      <button className="mg-app-bell" type="button" aria-label="通知">!</button>
+      <div className="mg-app-profile">
+        <div className="mg-app-profile-avatar" aria-hidden>{classLine?.name?.[0] ?? '冒'}</div>
+        <div className="mg-app-profile-text">
+          <span className="mg-app-profile-name">冒险家</span>
+          <span className="mg-app-profile-meta">Lv.{level} {classLine?.name ?? ''}</span>
+        </div>
+      </div>
+    </div>
+  </header>;
+}
+
+function ApAllocatorPanel({ classLine, apAllocation, statPlan, onApChange }) {
+  const stats = ['STR', 'DEX', 'INT', 'LUK'];
+  const labels = { STR: '力量 (STR)', DEX: '敏捷 (DEX)', INT: '智力 (INT)', LUK: '运气 (LUK)' };
+  const used = stats.reduce((sum, k) => sum + Math.max(0, Number(apAllocation?.[k] ?? 0)), 0);
+  const remaining = Math.max(0, (statPlan?.totalAp ?? 0) - used);
+  return <section className="mg-glass-panel mg-ap-allocator">
+    <div className="mg-ap-head">
+      <h2 className="mg-panel-title">属性加点</h2>
+      <span>可用点数: {remaining}</span>
+    </div>
+    <div className="mg-ap-list">
+      {stats.map((stat) => {
+        const added = Number(apAllocation?.[stat] ?? 0);
+        const total = Number(statPlan?.stats?.[stat] ?? 0);
+        return <div className="mg-ap-row" key={stat}>
+          <label>{labels[stat]}</label>
+          <div className="mg-ap-value">{total}</div>
+          <button type="button" onClick={() => onApChange(stat, -1)} disabled={added <= 0} aria-label={`减少 ${stat}`}>−</button>
+          <button type="button" onClick={() => onApChange(stat, 1)} disabled={remaining <= 0} aria-label={`增加 ${stat}`}>+</button>
+        </div>;
+      })}
+    </div>
+  </section>;
+}
+
+function ClassLevelStrip({ classLine, branch, level }) {
+  const progress = ((level % 1) === 0 ? 38.7 : 0);
+  const branchTheme = branch?.theme ?? classLine?.role ?? '';
+  return <div className="mg-class-strip" role="group">
+    <div className="mg-class-strip-left">
+      <div className="mg-class-strip-badge" aria-hidden>JOB</div>
+      <div className="mg-class-strip-text">
+        <strong>{classLine?.name ?? '战士'}</strong>
+        <span>{branchTheme || (classLine?.role ?? '')}</span>
+      </div>
+    </div>
+    <div className="mg-class-progress" style={{ minWidth: 180 }}>
+      <div className="mg-class-progress-bar" aria-hidden>
+        <div className="mg-class-progress-fill" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="mg-class-progress-meta">
+        <span>当前经验值 <strong>{progress.toFixed(1)}%</strong></span>
+        <span>距下一级 (Lv.{level + 1})</span>
+      </div>
+    </div>
+    <div className="mg-class-strip-level">Lv.{level}</div>
+  </div>;
+}
+
+function GrowthRoutePanel({ maps, level, onOpenMaps }) {
+  const stages = useMemo(() => buildGrowthStages(maps, level), [maps, level]);
+  if (!stages.length) return null;
+  return <section className="mg-glass-panel mg-route-panel">
+    <div className="mg-route-head">
+      <h2 className="mg-panel-title">成长路线建议</h2>
+      <button type="button" onClick={onOpenMaps}>查看更多</button>
+    </div>
+    <div className="mg-route-list">
+      {stages.map((stage) => <article className={stage.kind === 'current' ? 'mg-route-row is-current' : 'mg-route-row'} key={stage.id}>
+        <div className="mg-route-icon">
+          {stage.thumbnail
+            ? <OsmsDataImage src={stage.thumbnail} sources={[stage.minimap]} alt={stage.label} placeholder="Map" />
+            : <span>MAP</span>}
+        </div>
+        <div className="mg-route-text">
+          <strong>{stage.label}</strong>
+          <span>{stage.name}</span>
+        </div>
+        <span className={`mg-route-badge is-${stage.kind}`}>{stage.badgeLabel}</span>
+      </article>)}
+    </div>
+  </section>;
+}
+
+function MonsterPickPanel({ bestMap, onOpenMaps }) {
+  const monsters = (bestMap?.monsters ?? []).slice(0, 3);
+  if (!monsters.length) return null;
+  const tags = ['经验高', '掉率良好', '寄居出', '稳定推'];
+  return <section className="mg-glass-panel mg-monster-pick-panel">
+    <div className="mg-monster-pick-head">
+      <h2 className="mg-panel-title">怪物推荐</h2>
+      <button type="button" onClick={onOpenMaps}>查看更多</button>
+    </div>
+    <div className="mg-monster-pick-grid">
+      {monsters.map((monster, index) => <article className="mg-monster-pick" key={monster.id ?? monster.name}>
+        <div className="mg-monster-pick-icon">
+          <MonsterIcon monster={monster} size={50} />
+        </div>
+        <strong>{monster.name ?? '推荐怪'}</strong>
+        <span>Lv.{monster.level ?? '-'}</span>
+        <em>{tags[index] ?? '推荐'}</em>
+      </article>)}
+    </div>
+  </section>;
+}
+
+const GEAR_PROGRESSION_LEVELS = [10, 25, 40, 60];
+
+function GearProgressionPanel({ classLine, branch, gender, level, budget, statPlan, items }) {
+  const steps = useMemo(() => {
+    const used = new Set();
+    return GEAR_PROGRESSION_LEVELS.map((lv) => {
+      const bySlot = getGearCandidatesBySlot({ classLine, branch, level: lv, budget, gender, statPlan, items, manualMode: true });
+      const pool = [...(bySlot.overall ?? []), ...(bySlot.top ?? []), ...(bySlot.cap ?? [])];
+      const eligible = pool.filter((item) => Number(item.reqLevel ?? 0) <= lv);
+      eligible.sort((a, b) => Number(b.reqLevel ?? 0) - Number(a.reqLevel ?? 0));
+      const armor = eligible.find((item) => !used.has(item.id ?? item.title)) ?? eligible[0] ?? null;
+      if (armor) used.add(armor.id ?? armor.title);
+      const next = GEAR_PROGRESSION_LEVELS.find((v) => v > lv);
+      const isCurrent = level >= lv && (next == null || level < next);
+      return { lv, item: armor, isCurrent };
+    });
+  }, [classLine, branch, gender, budget, statPlan, items, level]);
+  return <section className="mg-bottom-panel">
+    <div className="mg-bottom-panel-head">
+      <h2>装备成长路线</h2>
+      <span>关键节点</span>
+    </div>
+    <div className="mg-gear-timeline">
+      {steps.map((step, index) => <Fragment key={step.lv}>
+        <article className={step.isCurrent ? 'mg-gear-step is-current' : 'mg-gear-step'}>
+          <div className="mg-gear-step-icon">
+            {step.item ? <MsioItemIcon item={step.item} size={44} /> : <span>GEAR</span>}
+          </div>
+          <strong>{step.item?.title ?? step.item?.name ?? '推荐装备'}</strong>
+          <span>Lv.{step.lv}{step.lv === GEAR_PROGRESSION_LEVELS[GEAR_PROGRESSION_LEVELS.length - 1] ? '+' : ''}</span>
+        </article>
+        {index < steps.length - 1 && <div className="mg-gear-arrow" aria-hidden>→</div>}
+      </Fragment>)}
+    </div>
+  </section>;
+}
+
+function DailyTasksPanel({ classLine, bestMonster, bestMap }) {
+  const tasks = useMemo(() => {
+    const monsterName = bestMonster?.name ?? bestMap?.name ?? '推荐怪';
+    const expReward = Math.max(8000, Math.min(40000, Math.round(((bestMonster?.exp ?? 100) * 200) / 100) * 100));
+    const mesoReward = Math.round(expReward * 0.32);
+    const dropName = `${monsterName}掉落物`;
+    return [
+      { id: 't1', name: `消灭 ${monsterName} 100 只`, exp: expReward, meso: mesoReward, status: 'in-progress', done: false },
+      { id: 't2', name: `收集 ${dropName} 30 个`, exp: Math.round(expReward * 0.72), meso: Math.round(mesoReward * 0.75), status: 'in-progress', done: false },
+      { id: 't3', name: '完成组队任务 1 次', exp: Math.round(expReward * 0.6), meso: Math.round(mesoReward * 0.62), status: 'available', done: false },
+    ];
+  }, [classLine, bestMonster, bestMap]);
+  const [doneTasks, setDoneTasks] = useState(() => new Set());
+  const toggleTask = (taskId) => {
+    setDoneTasks((current) => {
+      const next = new Set(current);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+  return <section className="mg-bottom-panel">
+    <div className="mg-bottom-panel-head">
+      <h2>每日推荐任务</h2>
+      <span>每日刷新</span>
+    </div>
+    <div className="mg-task-list">
+      {tasks.map((task) => {
+        const done = doneTasks.has(task.id);
+        return <article className={done ? 'mg-task-row is-done' : 'mg-task-row'} key={task.id}>
+        <button type="button" className="mg-task-check" aria-pressed={done} aria-label={`Toggle ${task.name}`} onClick={() => toggleTask(task.id)} />
+        <span className="mg-task-name">{task.name}</span>
+        <span className="mg-task-reward is-exp">经验值 <strong>{task.exp.toLocaleString()}</strong></span>
+        <span className="mg-task-reward is-meso">金币 <strong>{task.meso.toLocaleString()}</strong></span>
+        <span className={`mg-task-status ${task.status}`}>{task.status === 'in-progress' ? '进行中' : '可接取'}</span>
+      </article>;
+      })}
+    </div>
+  </section>;
+}
+
+const CLASS_RESOURCE_PROFILES = {
+  warrior: [
+    { name: '野猪獠牙', source: '制作材料', priority: 'high', icon: '牙' },
+    { name: '蝙蝠翅膀', source: '制作材料', priority: 'mid', icon: '翼' },
+    { name: '枫叶', source: '通用材料', priority: 'mid', icon: '叶' },
+    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
+  ],
+  magician: [
+    { name: '怪物精华', source: '制作材料', priority: 'high', icon: '精' },
+    { name: '基础结晶', source: '融合材料', priority: 'high', icon: '晶' },
+    { name: '柔软布料', source: '制作材料', priority: 'mid', icon: '布' },
+    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
+  ],
+  bowman: [
+    { name: '普通木材', source: '弓木材料', priority: 'high', icon: '木' },
+    { name: '动物皮', source: '皮革材料', priority: 'mid', icon: '皮' },
+    { name: '羽毛', source: '裁缝材料', priority: 'mid', icon: '羽' },
+    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
+  ],
+  thief: [
+    { name: '动物皮', source: '皮革材料', priority: 'high', icon: '皮' },
+    { name: '怪物精华', source: '制作材料', priority: 'high', icon: '精' },
+    { name: '飞镖/标', source: '消耗品', priority: 'mid', icon: '标' },
+    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
+  ],
+  pirate: [
+    { name: '青铜矿石', source: '锻造材料', priority: 'high', icon: '矿' },
+    { name: '动物皮', source: '皮革材料', priority: 'mid', icon: '皮' },
+    { name: '怪物精华', source: '制作材料', priority: 'mid', icon: '精' },
+    { name: '金币', source: '通用货币', priority: 'high', icon: '◉' },
+  ],
+};
+
+function ResourcePriorityPanel({ classLine }) {
+  const profile = CLASS_RESOURCE_PROFILES[classLine?.id] ?? CLASS_RESOURCE_PROFILES.warrior;
+  const labels = { high: '高', mid: '中', low: '低' };
+  return <section className="mg-bottom-panel">
+    <div className="mg-bottom-panel-head">
+      <h2>资源收集优先级</h2>
+      <span>当前职业</span>
+    </div>
+    <div className="mg-resource-list">
+      {profile.map((res) => <article className="mg-resource-row" key={res.name}>
+        <div className="mg-resource-icon" aria-hidden>{res.icon}</div>
+        <div className="mg-resource-text">
+          <strong>{res.name}</strong>
+          <span>{res.source}</span>
+        </div>
+        <span className={`mg-resource-priority ${res.priority}`}>{labels[res.priority]}</span>
+      </article>)}
+    </div>
+  </section>;
+}
+
+function DashboardFooter() {
+  return <footer className="mg-dashboard-footer">
+    <div className="mg-dashboard-tip">
+      <div className="mg-dashboard-tip-badge" aria-hidden>i</div>
+      <span className="mg-dashboard-tip-text">小贴士：合理分配属性点与技能点，优先提升攻击力与生存能力！</span>
+    </div>
+    <button type="button" className="mg-dashboard-footer-btn is-primary">保存当前配置</button>
+    <button type="button" className="mg-dashboard-footer-btn is-secondary">导出 Build</button>
+    <button type="button" className="mg-dashboard-footer-btn is-secondary">分享 Build</button>
+  </footer>;
+}
+
+function buildGrowthStages(maps, level) {
+  const stagesDef = [
+    { lo: 30, hi: 40, label: 'Lv.30 - 40' },
+    { lo: 40, hi: 50, label: 'Lv.40 - 50' },
+    { lo: 50, hi: 60, label: 'Lv.50 - 60' },
+    { lo: 60, hi: 999, label: 'Lv.60+' },
+  ];
+  const fallbackNames = ['蚂蚁洞 / 火野猪', '玩具城 / 时间通道', '天空之城 / 星光精灵', '神木村 / 木妖'];
+  return stagesDef.map((stage, index) => {
+    const map = (maps ?? []).find((entry) => {
+      const range = entry?.levelRange ?? [];
+      const lo = Number(range[0] ?? 0);
+      const hi = Number(range[1] ?? 0);
+      return lo >= stage.lo && lo < stage.hi || (lo < stage.hi && hi >= stage.lo);
+    });
+    const inStage = level >= stage.lo && level < stage.hi;
+    const isFuture = level < stage.lo;
+    const kind = inStage ? 'current' : (isFuture ? 'advanced' : 'recommended');
+    const badgeLabel = inStage ? '当前阶段' : (isFuture ? '进阶' : '推荐');
+    return {
+      id: `${stage.lo}-${stage.hi}`,
+      label: stage.label,
+      name: map?.name ?? map?.region ?? fallbackNames[index] ?? '推荐地图',
+      thumbnail: map?.thumbnail,
+      minimap: map?.minimap,
+      kind,
+      badgeLabel,
+    };
+  });
 }
 
 function ConfigPanel(props) {
@@ -313,26 +665,54 @@ function DashboardEquipmentSlots({ gear, candidatesBySlot, onPickSlot }) {
 function StatusPanel({ bestMonster, bestMap, onOpenMaps }) {
   const hitValue = Number(bestMonster?.hitPercent);
   const hitText = Number.isFinite(hitValue) ? `${hitValue}%` : bestMap?.canHitAll ? '100%' : '偏紧';
+  const mapLevel = bestMap?.levelRange ? `Lv.${bestMap.levelRange[0]} - ${bestMap.levelRange[1]}` : '';
+  const monsterLevel = bestMonster?.level ? `Lv.${bestMonster.level}` : '';
+  const monsterRange = (bestMap?.monsters ?? []).reduce((acc, m) => {
+    const lv = Number(m?.level ?? 0);
+    if (!lv) return acc;
+    return [Math.min(acc[0] ?? lv, lv), Math.max(acc[1] ?? lv, lv)];
+  }, [null, null]);
+  const expScore = bestMap?.scoreParts?.exp != null ? `${Math.round(Math.max(0, Math.min(1, bestMap.scoreParts.exp / 100)) * 100)}%` : '100%';
+  const dropRate = '良好';
+  const danger = bestMap?.warning ? '中' : (Number(bestMonster?.deathRisk ?? 0) > 0.1 ? '高' : '低');
+  const stars = '5/5';
   return <button type="button" className="mg-status-panel mg-status-link" onClick={onOpenMaps}>
     <h2 className="mg-panel-title">地图刷怪推荐</h2>
+    <div className="mg-status-route">
+      <div className="mg-status-route-icon" aria-hidden>MAP</div>
+      <div className="mg-status-route-text">
+        <span className="mg-status-route-label">推荐地图</span>
+        <span className="mg-status-route-name">{bestMap?.name ?? '读取中'} {bestMonster?.name ? `/ ${bestMonster.name}` : ''}</span>
+      </div>
+    </div>
     <div className="mg-status-row">
       <div>
-        <p className="mg-status-line mg-status-monster"><MonsterIcon monster={bestMonster} size={42} /> <span>优先打</span><strong>{bestMonster?.name ?? '推荐怪物'}</strong></p>
-        <p className="mg-status-line mg-status-map"><span>推荐地图</span><strong>{bestMap?.name ?? '读取中'}</strong></p>
-        <p className="mg-status-line"><span>命中</span><strong>{hitText}</strong><span>刷怪数</span><strong>{bestMap?.spawnTotal ?? '-'}</strong></p>
+        <div className="mg-status-line mg-status-monster"><MonsterIcon monster={bestMonster} size={42} /> <span>优先打</span><strong>{bestMonster?.name ?? '推荐怪物'}</strong></div>
+        <div className="mg-status-line mg-status-map"><span>推荐地图</span><strong>{bestMap?.name ?? '读取中'}</strong></div>
+        <div className="mg-status-line"><span>命中</span><strong>{hitText}</strong><span>刷怪数</span><strong>{bestMap?.spawnTotal ?? '-'}</strong></div>
+        {(mapLevel || monsterLevel) && <div className="mg-status-line">{mapLevel && <><span>推荐等级</span><strong>{mapLevel}</strong></>}{monsterRange[0] && monsterRange[1] && <><span>怪物等级</span><strong>Lv.{monsterRange[0]} - {monsterRange[1]}</strong></>}</div>}
       </div>
       {bestMap?.thumbnail && <OsmsDataImage className="mg-map-thumb" src={bestMap.thumbnail} sources={[bestMap.minimap]} alt={bestMap.name} placeholder="Map" />}
+    </div>
+    <div className="mg-status-meta">
+      <div className="mg-status-chip"><span className="mg-status-chip-label">经验值</span><span className="mg-status-chip-value">{expScore}</span></div>
+      <div className="mg-status-chip"><span className="mg-status-chip-label">掉率</span><span className="mg-status-chip-value">{dropRate}</span></div>
+      <div className="mg-status-chip"><span className="mg-status-chip-label">危险度</span><span className="mg-status-chip-value">{danger}</span></div>
+      <div className="mg-status-chip"><span className="mg-status-chip-label">玩家推荐</span><span className="mg-status-chip-value is-stars">{stars}</span></div>
     </div>
   </button>;
 }
 
-function PreviewPanel({ classLine, gender, level, weapon, gear, stats }) {
+function PreviewPanel({ classLine, branch, gender, level, weapon, gear, stats }) {
   return <section className="mg-preview-card no-rail">
     <div className="mg-preview-main">
-      <div className="mg-character-frame"><CharacterPreview classLine={classLine} gender={gender} gear={gear} /></div>
-      <div>
+      <div className="mg-character-column">
+        <div className="mg-character-frame"><CharacterPreview classLine={classLine} gender={gender} gear={gear} /></div>
+        <ClassLevelStrip classLine={classLine} branch={branch} level={level} />
+      </div>
+      <div className="mg-stats-card">
         <h3 className="mg-stats-title">角色属性</h3>
-        <div className="mg-stats-grid">{stats.map((stat) => <div className="mg-stat-box" key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong>{stat.bonus ? <small className="mg-stat-breakdown">({stat.base}+{stat.bonus})</small> : null}</div>)}</div>
+        <div className="mg-stats-grid">{stats.map((stat) => <div className={`mg-stat-box stat-${String(stat.label).toLowerCase()}`} key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong>{stat.bonus ? <small className="mg-stat-breakdown">({stat.base}+{stat.bonus})</small> : null}</div>)}</div>
       </div>
       <div className="preview-meta"><strong>{classLine.name} Lv.{level}</strong><span>{weapon?.title ?? '装备读取中'}</span></div>
     </div>
@@ -413,17 +793,23 @@ function GearPicker({ slot, items, current, onChoose, onClose }) {
 }
 
 function MapsPage({ maps, data }) {
-  return <Section title="推荐路线">
+  return <Section title="推荐路线" className="mg-maps-section">
     <p className="section-copy">{data?.maps?.length ? '地图大图、怪物图和刷怪数来自当前国际服数据；卡片会优先展示当前等级最适合打的怪。' : '当前版本地图数据未启用。'}</p>
     <div className="mg-map-grid">
       {maps.map((map, index) => {
         const target = map.monsters?.[0];
-        return <article className="mg-map-card" key={map.id}>
-          <div className="mg-map-rank">#{index + 1}</div>
-          {map.thumbnail && <OsmsDataImage className="mg-map-card-image" src={map.thumbnail} sources={[map.minimap]} alt={map.name} placeholder="Map" />}
+        const expValue = target?.estimatedExpPerMp ?? '-';
+        const potionValue = Number(target?.expectedPotionCost) > 0 ? `${target.expectedPotionCost} meso/只` : '低消耗';
+        return <article className="mg-map-card mg-map-card-redesign" key={map.id}>
+          <div className="mg-map-card-hero">
+            {map.thumbnail && <OsmsDataImage className="mg-map-card-bg" src={map.thumbnail} sources={[map.minimap]} alt={map.name} placeholder="Map" />}
+            <div className="mg-map-rank">#{index + 1}</div>
+            <div className="mg-map-card-hero-copy">
+              <span>Lv.{map.levelRange?.[0]}-{map.levelRange?.[1]} · {map.region}</span>
+              <h3>{map.name}</h3>
+            </div>
+          </div>
           <div className="mg-map-card-body">
-            <span className="item-label">Lv.{map.levelRange?.[0]}-{map.levelRange?.[1]} · {map.region}</span>
-            <h3>{map.name}</h3>
             <div className="mg-map-target">
               <MonsterIcon monster={target} size={38} />
               <div>
@@ -442,10 +828,133 @@ function MapsPage({ maps, data }) {
               {Number(target?.deathRisk) > 0 && <span>死亡风险 {Math.round(target.deathRisk * 100)}%</span>}
             </div>
           </div>
+          <div className="mg-map-card-footer">
+            <span>EXP/MP <strong className="is-exp">{expValue}</strong></span>
+            <span>药水 <strong className="is-meso">{potionValue}</strong></span>
+          </div>
         </article>;
       })}
     </div>
   </Section>;
+}
+
+function QuestPage({ level, classLine }) {
+  const [payload, setPayload] = useState(null);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('near');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    fetch(`${baseUrl()}AppData/quests.json`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`quests.json ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (alive) setPayload(data);
+      })
+      .catch((err) => {
+        if (alive) setError(err.message || '任务数据读取失败');
+      });
+    return () => { alive = false; };
+  }, []);
+
+  const quests = useMemo(() => Array.isArray(payload?.quests) ? payload.quests : [], [payload]);
+  const visibleQuests = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return quests
+      .filter((quest) => {
+        const minLevel = Number(quest.level_min ?? quest.chain_level_min ?? 0);
+        const matchesFilter =
+          filter === 'all' ||
+          (filter === 'near' && minLevel <= level + 8 && minLevel >= Math.max(0, level - 12)) ||
+          (filter === 'daily' && quest.is_daily) ||
+          (filter === 'repeatable' && (quest.is_repeatable || quest.is_weekly));
+        if (!matchesFilter) return false;
+        if (!q) return true;
+        return [quest.name, quest.parent, quest.region, quest.npc_name, quest.requirements]
+          .some((value) => String(value ?? '').toLowerCase().includes(q));
+      })
+      .sort((a, b) => {
+        const aLevel = Number(a.level_min ?? 0);
+        const bLevel = Number(b.level_min ?? 0);
+        if (filter === 'near') return Math.abs(aLevel - level) - Math.abs(bLevel - level) || aLevel - bLevel;
+        return aLevel - bLevel || String(a.name).localeCompare(String(b.name));
+      })
+      .slice(0, 36);
+  }, [quests, query, filter, level]);
+
+  const totalRewards = visibleQuests.reduce((sum, quest) => sum + Number(quest.rewards_exp ?? 0), 0);
+  const repeatableCount = quests.filter((quest) => quest.is_daily || quest.is_weekly || quest.is_repeatable).length;
+  const filters = [
+    ['near', '适合当前等级'],
+    ['daily', '每日'],
+    ['repeatable', '可重复'],
+    ['all', '全部'],
+  ];
+
+  return <Section title="任务路线" className="mg-quest-section">
+    <div className="mg-quest-hero">
+      <div>
+        <span>Quest Data</span>
+        <h3>{classLine?.name ?? '冒险家'} Lv.{level} 任务板</h3>
+        <p>使用 AppData/quests.json，按等级、每日与可重复任务筛选。</p>
+      </div>
+      <div className="mg-quest-kpis">
+        <div><span>任务数</span><strong>{quests.length || '-'}</strong></div>
+        <div><span>可重复</span><strong>{repeatableCount || '-'}</strong></div>
+        <div><span>当前页经验</span><strong>{totalRewards.toLocaleString()}</strong></div>
+      </div>
+    </div>
+    <div className="mg-quest-toolbar">
+      <label>
+        <span>搜索任务 / NPC / 地区</span>
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nella / Olaf / Kerning..." />
+      </label>
+      <div className="mg-quest-filter-tabs" role="tablist">
+        {filters.map(([id, label]) => <button key={id} type="button" className={filter === id ? 'active' : ''} onClick={() => setFilter(id)}>{label}</button>)}
+      </div>
+    </div>
+    {error && <p className="load-error">任务数据读取提示：{error}</p>}
+    <div className="mg-quest-grid">
+      {visibleQuests.map((quest) => <QuestCard quest={quest} key={quest.id} />)}
+      {!visibleQuests.length && <article className="mg-quest-empty"><strong>没有匹配任务</strong><span>换一个筛选或搜索关键词试试。</span></article>}
+    </div>
+  </Section>;
+}
+
+function QuestCard({ quest }) {
+  const requirements = Array.isArray(quest.requirements_list) ? quest.requirements_list : [];
+  const rewards = Array.isArray(quest.rewards) ? quest.rewards : [];
+  const rewardText = [
+    Number(quest.rewards_exp ?? 0) > 0 ? `EXP ${Number(quest.rewards_exp).toLocaleString()}` : '',
+    Number(quest.rewards_money ?? 0) > 0 ? `${Number(quest.rewards_money).toLocaleString()} meso` : '',
+    ...rewards.filter((reward) => reward.type === 'item').slice(0, 2).map((reward) => `${reward.name ?? 'Item'} x${reward.count ?? 1}`),
+  ].filter(Boolean);
+  const description = String(quest.description ?? '').split('\n').find(Boolean) ?? '任务描述待补充。';
+
+  return <article className="mg-quest-card">
+    <header>
+      <div className="mg-quest-icon" aria-hidden>Q</div>
+      <div>
+        <span>{quest.region || 'Unknown'} · Lv.{quest.level_min ?? '-'}</span>
+        <h3>{quest.name}</h3>
+      </div>
+      {(quest.is_daily || quest.is_weekly || quest.is_repeatable) && <em>{quest.is_daily ? '每日' : quest.is_weekly ? '每周' : '重复'}</em>}
+    </header>
+    <p>{description}</p>
+    <div className="mg-quest-meta">
+      <span>NPC <strong>{quest.npc_name || '-'}</strong></span>
+      <span>系列 <strong>{quest.parent || quest.name}</strong></span>
+    </div>
+    <div className="mg-quest-lines">
+      {(requirements.length ? requirements : [{ label: quest.requirements || '无前置需求' }]).slice(0, 3).map((row, index) => <span key={`${quest.id}-req-${index}`}>{row.label ?? row.name ?? row.type}</span>)}
+    </div>
+    <div className="mg-quest-rewards">
+      {(rewardText.length ? rewardText : ['奖励未记录']).slice(0, 4).map((reward) => <span key={reward}>{reward}</span>)}
+    </div>
+  </article>;
 }
 
 function adjustPointAllocation(current, key, delta, totalPoints, maxForKey = Infinity) {
@@ -462,8 +971,8 @@ function adjustPointAllocation(current, key, delta, totalPoints, maxForKey = Inf
   return next;
 }
 
-function MaterialsPage() { return <Section title="材料 / 锻造"><p className="section-copy">材料价值指数和锻造路线保留在后续国服/国际服数据整理阶段继续接入。</p></Section>; }
-function Section({ title, children }) { return <section className="section-card"><h2>{title}</h2>{children}</section>; }
+function MaterialsPage() { return <CraftingMaterialsPageSafe />; }
+function Section({ title, className = '', children }) { return <section className={['section-card', className].filter(Boolean).join(' ')}><h2>{title}</h2>{children}</section>; }
 
 function statRow(label, base, bonus = 0) {
   const roundedBase = Math.round(Number(base) || 0);

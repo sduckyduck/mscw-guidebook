@@ -2,6 +2,7 @@ const SWIPE_TABS = [
   { id: 'overview', label: '总览' },
   { id: 'character', label: '角色' },
   { id: 'maps', label: '地图' },
+  { id: 'quests', label: '任务' },
   { id: 'materials', label: '材料' },
 ];
 

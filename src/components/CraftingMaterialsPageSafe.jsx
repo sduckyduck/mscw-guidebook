@@ -17,6 +17,7 @@ const PROFESSIONS = [
 
 const PROFESSION_BY_ID = Object.fromEntries(PROFESSIONS.map((p) => [p.id, p]));
 const MASTERY = [50, 115, 200, 308, 450, 635, 882, 1190, 1587];
+const INVENTORY_STORAGE_KEY = 'mscw_inventory_v1';
 
 const MODES = [
   { id: 'farm', zh: '刷怪友好', desc: '优先自刷材料，尽量少买 NPC 材料。' },
@@ -105,6 +106,116 @@ function translate(name) {
 
 function fmt(value) {
   return Number(value || 0).toLocaleString();
+}
+
+export function loadInventory() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(INVENTORY_STORAGE_KEY) || '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.fromEntries(Object.entries(parsed)
+      .map(([key, value]) => [norm(key), Math.max(0, Math.floor(Number(value) || 0))])
+      .filter(([, value]) => value > 0));
+  } catch {
+    return {};
+  }
+}
+
+export function saveInventory(inventory) {
+  if (typeof window === 'undefined') return false;
+  try {
+    window.localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventory));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function updateInventoryItem(inventory, itemKey, quantity) {
+  const key = norm(itemKey);
+  if (!key) return inventory;
+  const next = { ...(inventory || {}) };
+  const value = Math.max(0, Math.floor(Number(quantity) || 0));
+  if (value > 0) next[key] = value;
+  else delete next[key];
+  return next;
+}
+
+function inventoryQty(inventory, materialName) {
+  return Math.max(0, Number(inventory?.[norm(materialName)] ?? 0) || 0);
+}
+
+export function getMissingMaterials(recipe, inventory) {
+  return (recipe?.materials || [])
+    .map((material) => {
+      const owned = inventoryQty(inventory, material.name);
+      const required = Math.max(0, Number(material.qty || 0));
+      return { ...material, owned, required, missing: Math.max(0, required - owned) };
+    })
+    .filter((material) => material.missing > 0);
+}
+
+export function getRecipeCompletionScore(recipe, inventory) {
+  const materials = recipe?.materials || [];
+  const totalRequired = materials.reduce((sum, material) => sum + Math.max(0, Number(material.qty || 0)), 0);
+  if (!totalRequired) return 0;
+  const ownedRequired = materials.reduce((sum, material) => {
+    const required = Math.max(0, Number(material.qty || 0));
+    return sum + Math.min(required, inventoryQty(inventory, material.name));
+  }, 0);
+  return ownedRequired / totalRequired;
+}
+
+function getMaxCraftable(recipe, inventory) {
+  const materials = recipe?.materials || [];
+  if (!materials.length) return 0;
+  return Math.min(...materials.map((material) => {
+    const required = Math.max(1, Number(material.qty || 1));
+    return Math.floor(inventoryQty(inventory, material.name) / required);
+  }));
+}
+
+export function getCraftableRecipes(recipes, inventory) {
+  return (recipes || [])
+    .map((recipe) => {
+      const completionScore = getRecipeCompletionScore(recipe, inventory);
+      const maxCraftable = getMaxCraftable(recipe, inventory);
+      const missing = getMissingMaterials(recipe, inventory);
+      const status = maxCraftable > 0 ? 'ready' : completionScore >= 0.8 ? 'near' : 'blocked';
+      return { recipe, completionScore, maxCraftable, missing, status };
+    })
+    .filter((row) => row.completionScore > 0 || row.maxCraftable > 0)
+    .sort((a, b) => {
+      const order = { ready: 0, near: 1, blocked: 2 };
+      const typeScore = (row) => /equipment/i.test(row.recipe.outputType || '') ? 0 : 1;
+      return order[a.status] - order[b.status]
+        || typeScore(a) - typeScore(b)
+        || b.completionScore - a.completionScore
+        || b.maxCraftable - a.maxCraftable
+        || String(a.recipe.output).localeCompare(String(b.recipe.output));
+    });
+}
+
+function buildInventoryCatalog(recipes, bottlenecks, routeMaterials) {
+  const map = new Map();
+  const add = (material, weight = 0) => {
+    const name = material?.name || material?.zh;
+    const key = norm(name);
+    if (!key) return;
+    const existing = map.get(key) || { key, name, zh: material?.zh || translate(name), demand: 0, source: sourceFor(name), weight: 0 };
+    map.set(key, {
+      ...existing,
+      name,
+      zh: material?.zh || existing.zh,
+      demand: existing.demand + Math.max(0, Number(material?.qty || 0)),
+      weight: existing.weight + weight,
+    });
+  };
+  bottlenecks.slice(0, 40).forEach((material) => add(material, 8));
+  routeMaterials.slice(0, 40).forEach((material) => add(material, 6));
+  recipes.forEach((recipe) => recipe.materials.forEach((material) => add(material, 2 + Number(recipe.level || 0) / 10)));
+  DROP_GUIDES.forEach((guide) => add({ name: guide.material, zh: translate(guide.material), qty: 0 }, 3));
+  return [...map.values()].sort((a, b) => b.weight - a.weight || b.demand - a.demand || a.zh.localeCompare(b.zh));
 }
 
 function professionFromName(value) {
@@ -309,6 +420,163 @@ function MaterialIcon({ name, items, explicitId = null, size = 24 }) {
   return <span className="craft-safe-msio-icon"><MsioItemIcon item={item} size={size} /></span>;
 }
 
+function InventoryItemRow({ material, quantity, items, onChange, onSelectMaterial }) {
+  return <label className="inventory-item-row">
+    <button type="button" onClick={() => onSelectMaterial(material.name)} aria-label={`查看${material.zh}掉落`}>
+      <MaterialIcon name={material.name} items={items} size={24} />
+    </button>
+    <span>
+      <strong>{material.zh}</strong>
+      <small>{material.source}</small>
+    </span>
+    <input
+      type="number"
+      min="0"
+      step="1"
+      inputMode="numeric"
+      value={quantity || ''}
+      placeholder="0"
+      onChange={(event) => onChange(material.key, event.target.value)}
+      aria-label={`${material.zh}数量`}
+    />
+  </label>;
+}
+
+function MissingMaterialsList({ missing, items, onSelectMaterial }) {
+  if (!missing.length) return <div className="missing-materials-list is-ready"><span>材料已齐，可以制作</span></div>;
+  return <div className="missing-materials-list">
+    {missing.slice(0, 4).map((material) => <button type="button" key={material.name} onClick={() => onSelectMaterial(material.name)}>
+      <MaterialIcon name={material.name} items={items} size={18} />
+      <span>{material.zh || translate(material.name)} 缺 {material.missing}</span>
+    </button>)}
+  </div>;
+}
+
+function CraftableRecommendationPanel({ recommendations, items, onSelectMaterial }) {
+  const groups = [
+    ['ready', '可立即制作'],
+    ['near', '接近完成'],
+    ['blocked', '材料差距较大'],
+  ];
+  return <section className="craft-safe-card inventory-recommend-card">
+    <div className="craft-safe-title">
+      <h2>可制作推荐</h2>
+      <small>{recommendations.length ? `${recommendations.length} 条匹配` : '等待背包数据'}</small>
+    </div>
+    <div className="craftable-recommendation-list">
+      {groups.map(([status, label]) => {
+        const rows = recommendations.filter((row) => row.status === status).slice(0, status === 'blocked' ? 4 : 6);
+        if (!rows.length) return null;
+        return <div className={`craftable-group is-${status}`} key={status}>
+          <h3>{label}</h3>
+          {rows.map((row) => <article className="craftable-recipe-card" key={row.recipe.id}>
+            <div className="craftable-recipe-main">
+              <MaterialIcon name={row.recipe.output} explicitId={row.recipe.outputId} items={items} size={26} />
+              <div>
+                <strong>{translate(row.recipe.output)}</strong>
+                <span>{PROFESSION_BY_ID[row.recipe.profession]?.zh || row.recipe.profession} · Lv.{row.recipe.level}</span>
+              </div>
+              <em>{Math.round(row.completionScore * 100)}%</em>
+            </div>
+            <div className="craftable-progress" aria-hidden><span style={{ width: `${Math.round(row.completionScore * 100)}%` }} /></div>
+            <div className="craftable-recipe-meta">
+              <span>{row.maxCraftable > 0 ? `最多制作 ${row.maxCraftable} 件` : '暂不可制作'}</span>
+              <span>{fmt(row.recipe.mesoCost)} meso</span>
+            </div>
+            <MissingMaterialsList missing={row.missing} items={items} onSelectMaterial={onSelectMaterial} />
+          </article>)}
+        </div>;
+      })}
+      {!recommendations.length && <div className="inventory-empty-state"><strong>先在左侧填一些材料数量</strong><span>系统会按配方自动计算可制作、接近完成和缺口材料。</span></div>}
+    </div>
+  </section>;
+}
+
+function InventoryCraftingPanel({ recipes, bottlenecks, routeMaterials, items, onSelectMaterial }) {
+  const [inventory, setInventory] = useState(() => loadInventory());
+  const [query, setQuery] = useState('');
+  const [transferText, setTransferText] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const catalog = useMemo(() => buildInventoryCatalog(recipes, bottlenecks, routeMaterials), [recipes, bottlenecks, routeMaterials]);
+  const catalogByKey = useMemo(() => new Map(catalog.map((material) => [material.key, material])), [catalog]);
+  const inventoryCount = Object.keys(inventory).length;
+  const inventoryTotal = Object.values(inventory).reduce((sum, value) => sum + Number(value || 0), 0);
+  const recommendations = useMemo(() => getCraftableRecipes(recipes, inventory).slice(0, 18), [recipes, inventory]);
+  const readyCount = recommendations.filter((row) => row.status === 'ready').length;
+  const nearCount = recommendations.filter((row) => row.status === 'near').length;
+  const normalizedQuery = norm(query);
+  const visibleMaterials = useMemo(() => {
+    const rows = catalog.filter((material) => !normalizedQuery || norm(`${material.zh} ${material.name} ${material.source}`).includes(normalizedQuery));
+    return rows
+      .sort((a, b) => Number(inventory[b.key] || 0) - Number(inventory[a.key] || 0) || b.weight - a.weight)
+      .slice(0, normalizedQuery ? 36 : 18);
+  }, [catalog, inventory, normalizedQuery]);
+
+  const commitInventory = (next, message = '') => {
+    setInventory(next);
+    saveInventory(next);
+    if (message) setNotice(message);
+  };
+  const handleChange = (key, value) => commitInventory(updateInventoryItem(inventory, key, value));
+  const clearInventory = () => commitInventory({}, '背包已清空');
+  const exportInventory = () => {
+    setTransferText(JSON.stringify(inventory, null, 2));
+    setNotice('已生成导出 JSON');
+  };
+  const importInventory = () => {
+    try {
+      const parsed = JSON.parse(transferText || '{}');
+      const next = Object.fromEntries(Object.entries(parsed)
+        .map(([key, value]) => [norm(key), Math.max(0, Math.floor(Number(value) || 0))])
+        .filter(([, value]) => value > 0));
+      commitInventory(next, '导入完成');
+    } catch {
+      setNotice('JSON 格式不正确');
+    }
+  };
+
+  return <section className="inventory-crafting-shell">
+    <article className="craft-safe-card inventory-panel-card">
+      <div className="craft-safe-title">
+        <h2>我的材料背包</h2>
+        <small>localStorage</small>
+      </div>
+      <div className="inventory-kpis">
+        <div><span>材料种类</span><strong>{inventoryCount}</strong></div>
+        <div><span>总数量</span><strong>{fmt(inventoryTotal)}</strong></div>
+        <div><span>可制作</span><strong>{readyCount}</strong></div>
+        <div><span>接近完成</span><strong>{nearCount}</strong></div>
+      </div>
+      <div className="inventory-toolbar">
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索材料 / 矿石 / 怪物掉落..." />
+        <button type="button" onClick={() => { saveInventory(inventory); setNotice('背包已保存'); }}>保存背包</button>
+        <button type="button" onClick={exportInventory}>导出 JSON</button>
+        <button type="button" onClick={clearInventory}>清空</button>
+      </div>
+      <div className="inventory-grid">
+        {visibleMaterials.map((material) => <InventoryItemRow
+          key={material.key}
+          material={material}
+          quantity={inventory[material.key] || 0}
+          items={items}
+          onChange={handleChange}
+          onSelectMaterial={onSelectMaterial}
+        />)}
+      </div>
+      <div className="inventory-transfer">
+        <textarea value={transferText} onChange={(event) => setTransferText(event.target.value)} placeholder="粘贴导入 JSON，或点击导出生成当前背包 JSON" />
+        <button type="button" onClick={importInventory}>导入 JSON</button>
+        {notice && <span>{notice}</span>}
+      </div>
+    </article>
+    <CraftableRecommendationPanel recommendations={recommendations} items={items} onSelectMaterial={(name) => {
+      const material = catalogByKey.get(norm(name));
+      onSelectMaterial(material?.name || name);
+    }} />
+  </section>;
+}
+
 export default function CraftingMaterialsPageSafe() {
   const [data, setData] = useState({ recipes: FALLBACK_RECIPES, items: [], monsters: [], source: 'fallback', error: '' });
   const [scope, setScope] = useState('all');
@@ -346,6 +614,7 @@ export default function CraftingMaterialsPageSafe() {
     <header className="craft-safe-hero"><div><span>MCW Crafting · Guidebook</span><h1>材料与锻造路线</h1><p>先选专业，再看推荐路线、缺什么材料、去哪刷，最后用配方库查细节。</p></div><em>{data.source === 'official' ? `已读取 AppData · ${data.recipes.length} 配方` : '内置示例数据'}</em></header>
     <nav className="craft-safe-tabs">{PROFESSIONS.map((profession) => <button key={profession.id} className={scope === profession.id ? 'active' : ''} onClick={() => setScope((current) => current === profession.id ? 'all' : profession.id)}><ProfessionIcon profession={profession} /><strong>{profession.zh}</strong></button>)}</nav>
     <section className="craft-safe-controls"><label><span>路线</span><select value={mode} onChange={(e) => setMode(e.target.value)}>{MODES.map((row) => <option key={row.id} value={row.id}>{row.zh}</option>)}</select></label><label><span>目标</span><select value={targetLevel} onChange={(e) => setTargetLevel(Number(e.target.value))}>{[3,4,5,6,7,8,9,10].map((level) => <option key={level} value={level}>Lv.{level}</option>)}</select></label></section>
+    <InventoryCraftingPanel recipes={data.recipes} bottlenecks={bottlenecks} routeMaterials={route.totalMaterials} items={data.items} onSelectMaterial={setSelectedMaterial} />
     <section className="craft-safe-grid"><article className="craft-safe-card"><div className="craft-safe-title"><h2>{activeProfession ? <ProfessionIcon profession={activeProfession} title /> : <span className="craft-safe-prof-icon title"><span>全</span></span>}{scope === 'all' ? '全部专业总览' : `${activeProfession.zh}升级策略`}</h2><small>{scope === 'all' ? '六大专业' : activeProfession.zh}</small></div><p>{scope === 'all' ? '查看六个专业共用材料、瓶颈材料和配方库。' : activeProfession.note}</p><div className="craft-safe-kpis"><div><span>{scope === 'all' ? '配方数量' : '制作次数'}</span><strong>{scope === 'all' ? fmt(scopedRecipes.length) : fmt(route.totalCrafts)}</strong></div><div><span>{scope === 'all' ? '材料种类' : '估算成本'}</span><strong>{scope === 'all' ? fmt(bottlenecks.length) : `${fmt(route.totalCost)} meso`}</strong></div><div><span>最大瓶颈</span><strong>{mainBottleneck?.zh || '-'}</strong></div></div><p className="note">{scope === 'all' ? '点上方专业进入该专业；再次点击同一专业回到全部。' : MODES.find((row) => row.id === mode)?.desc}</p></article>
     <article className="craft-safe-card"><div className="craft-safe-title"><h2>{scope === 'all' ? '重点囤货' : '推荐路线'}</h2><small>{scope === 'all' ? 'Top 材料' : `Lv.1 → Lv.${targetLevel}`}</small></div><div className="craft-safe-list">{scope === 'all' ? bottlenecks.slice(0, 8).map((row, i) => <button key={row.name} onClick={() => setSelectedMaterial(row.name)}><b>#{i+1}</b><MaterialIcon name={row.name} items={data.items} size={20} /><span>{row.zh}<small>总需求 {row.qty}</small></span><em>{row.score}</em></button>) : route.steps.map((step) => <button key={`${step.level}-${step.recipe.id}`} onClick={() => setSelectedMaterial(step.recipe.materials[0]?.name || activeMaterial)}><b>Lv.{step.level}→{step.to}</b><span>{translate(step.recipe.output)}</span><em>x{step.crafts}</em></button>)}</div></article>
     <article className="craft-safe-card"><div className="craft-safe-title"><h2>{scope === 'all' ? '材料入口' : '当前材料清单'}</h2><small>点击查掉落</small></div><div className="craft-safe-chips">{(scope === 'all' ? bottlenecks.slice(0, 10) : route.totalMaterials).map((material) => <button key={material.name} className={norm(activeMaterial) === norm(material.name) ? 'active' : ''} onClick={() => setSelectedMaterial(material.name)}><MaterialIcon name={material.name} items={data.items} size={20} />{material.zh || translate(material.name)}{material.qty ? ` x${material.qty}` : ''}</button>)}</div></article></section>

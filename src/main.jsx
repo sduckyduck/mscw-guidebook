@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client';
 import './utils/staffWeaponPickerPatch.js';
 import AppMediaEnhanced from './AppMediaEnhanced.jsx';
 import CoverIntro from './components/CoverIntro.jsx';
-import CraftingMaterialsPageSafe from './components/CraftingMaterialsPageSafe.jsx';
 import CommunityBuildsPage from './components/CommunityBuildsPage.jsx';
 import AdminBuildsPage from './components/AdminBuildsPage.jsx';
 import './utils/cmsNoCacheFetchPatch.js';
@@ -31,19 +30,7 @@ import './styles/skill-icon-click.css';
 import './styles/skill-panel-actions.css';
 import './styles/craftable-gear.css';
 import './styles/equipment-inspect.css';
-
-const TABS = [['overview', '总览'], ['character', '角色'], ['maps', '地图'], ['materials', '材料']];
-
-function replaceHash(tab) {
-  const nextUrl = tab === 'overview'
-    ? `${window.location.pathname}${window.location.search}`
-    : `${window.location.pathname}${window.location.search}#${tab}`;
-  window.history.replaceState(null, '', nextUrl);
-}
-
-function goToBuilds() {
-  window.location.assign('/builds');
-}
+import './styles/app-polish.css';
 
 function isBuildRoute() {
   return window.location.pathname === '/builds' || window.location.pathname.startsWith('/builds/');
@@ -54,13 +41,11 @@ function isAdminRoute() {
 }
 
 function GuidebookRouter() {
-  const [materialsOpen, setMaterialsOpen] = useState(() => window.location.hash === '#materials');
   const [buildRouteOpen, setBuildRouteOpen] = useState(() => isBuildRoute());
   const [adminRouteOpen, setAdminRouteOpen] = useState(() => isAdminRoute());
 
   useEffect(() => {
     const sync = () => {
-      setMaterialsOpen(window.location.hash === '#materials');
       setBuildRouteOpen(isBuildRoute());
       setAdminRouteOpen(isAdminRoute());
     };
@@ -72,36 +57,10 @@ function GuidebookRouter() {
     };
   }, []);
 
-  const openTab = (tab) => {
-    replaceHash(tab);
-    setMaterialsOpen(tab === 'materials');
-    setBuildRouteOpen(false);
-    setAdminRouteOpen(false);
-  };
-
   if (adminRouteOpen) return <AdminBuildsPage />;
   if (buildRouteOpen) return <CommunityBuildsPage />;
 
-  if (materialsOpen) {
-    return <main className="app-shell">
-      <nav className="top-tabs">
-        {TABS.map(([id, name]) => <button key={id} className={id === 'materials' ? 'top-tab active' : 'top-tab'} onClick={() => openTab(id)}>{name}</button>)}
-        <button className="top-tab" onClick={goToBuilds}>玩家Build</button>
-      </nav>
-      <CraftingMaterialsPageSafe />
-    </main>;
-  }
-
-  return <div onClickCapture={(event) => {
-    const button = event.target?.closest?.('button');
-    if (button?.textContent?.trim() === '材料') {
-      event.preventDefault();
-      event.stopPropagation();
-      openTab('materials');
-    }
-  }}>
-    <AppMediaEnhanced />
-  </div>;
+  return <AppMediaEnhanced />;
 }
 
 function AppWithIntro() {

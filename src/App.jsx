@@ -778,7 +778,7 @@ function buildProfessionList(officialData) {
     return {
       id: profession.id,
       name: local?.name ?? profession.name,
-      icon: local?.icon ?? '🔧',
+      icon: local?.icon ?? 'UI',
       focus: local?.focus ?? `Skill ID ${profession.skillId}`,
     };
   });

@@ -1,10 +1,10 @@
 export const PROFESSIONS = [
-  { id: 'smithing', name: '锻造', icon: '⚒️', focus: '战士武器与金属装备' },
-  { id: 'weaponcrafting', name: '武器制作', icon: '🗡️', focus: '职业武器路线' },
-  { id: 'tailoring', name: '裁缝', icon: '🧵', focus: '布甲与法师装备' },
-  { id: 'woodcrafting', name: '木工', icon: '🪵', focus: '弓弩、木材与远程装备' },
-  { id: 'leatherworking', name: '皮革', icon: '🧤', focus: '飞侠/弓手皮革装备' },
-  { id: 'arcforge', name: '融合机体', icon: '🔮', focus: '核心材料融合与高阶组件' },
+  { id: 'smithing', name: '锻造', icon: 'SM', focus: '战士武器与金属装备' },
+  { id: 'weaponcrafting', name: '武器制作', icon: 'WP', focus: '职业武器路线' },
+  { id: 'tailoring', name: '裁缝', icon: 'TL', focus: '布甲与法师装备' },
+  { id: 'woodcrafting', name: '木工', icon: 'WD', focus: '弓弩、木材与远程装备' },
+  { id: 'leatherworking', name: '皮革', icon: 'LT', focus: '飞侠/弓手皮革装备' },
+  { id: 'arcforge', name: '融合机体', icon: 'AF', focus: '核心材料融合与高阶组件' },
 ];
 
 export const MATERIALS = [

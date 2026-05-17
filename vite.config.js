@@ -84,4 +84,7 @@ function mscwAlgorithmPatch() {
 export default defineConfig({
   plugins: [mscwAlgorithmPatch(), react()],
   base: process.env.GITHUB_ACTIONS ? '/mscw-guidebook/' : '/',
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react/jsx-runtime', 'lucide-react'],
+  },
 });

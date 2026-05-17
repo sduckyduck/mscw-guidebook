@@ -219,6 +219,7 @@ function PointRow({ label, value, points, minValue, canMinus, canPlus, onMinus, 
 
 function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus, onInspect }) {
   const rowClass = ['mg-skill-row clickable', skill.locked ? 'locked' : '', skill.tier === 'second' ? 'second-job' : 'first-job'].filter(Boolean).join(' ');
+  const progress = Math.max(0, Math.min(100, Math.round((Number(skill.level || 0) / Math.max(1, Number(skill.max || 1))) * 100)));
   return (
     <article className={rowClass} role="button" tabIndex={0} onClick={onInspect} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onInspect(); }}>
       <button
@@ -238,10 +239,15 @@ function SkillPointRow({ skill, canMinus, canPlus, onMinus, onPlus, onInspect })
       <div className="mg-skill-main">
         <strong>{skill.name}</strong>
         <span>Lv. {skill.level}/{skill.max}{skill.locked ? ' · Lv.30 后开放' : ' · 点击图标加点'}</span>
+        <div className="mg-skill-progress" aria-hidden><i style={{ width: `${progress}%` }} /></div>
       </div>
       <div className="mg-mini-controls" onClick={(event) => event.stopPropagation()}>
         <button onClick={onMinus} disabled={!canMinus}>-</button>
         <button onClick={onPlus} disabled={!canPlus}>+</button>
+      </div>
+      <div className="mg-skill-tooltip" role="tooltip">
+        <strong>{skill.name}</strong>
+        <span>当前 Lv.{skill.level}/{skill.max} · {skill.locked ? '二转后开放' : canPlus ? '可继续分配 SP' : canMinus ? '可回退 1 点' : '暂无可用调整'}</span>
       </div>
     </article>
   );

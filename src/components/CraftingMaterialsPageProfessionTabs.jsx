@@ -6,13 +6,13 @@ import '../styles/materials-advanced.css';
 import '../styles/materials-prof-tabs.css';
 
 const PROFESSIONS = [
-  { id: 'all', zh: '全部', icon: '✨', note: '查看六个专业共用材料、瓶颈材料和配方库。' },
-  { id: 'smithing', zh: '锻造', icon: '⚒️', note: '金属板材、矿石精炼和重装材料。' },
-  { id: 'weaponcrafting', zh: '武器制作', icon: '🗡️', note: '武器底材、攻击路线和高价值装备。' },
-  { id: 'tailoring', zh: '裁缝', icon: '🧵', note: '布料、法师装备和轻甲路线。' },
-  { id: 'woodcrafting', zh: '木工', icon: '🪵', note: '木料、弓弩、法杖和把手材料。' },
-  { id: 'leatherworking', zh: '皮革', icon: '🧤', note: '皮革、手套、飞侠和弓手相关材料。' },
-  { id: 'arcforge', zh: '炼金', icon: '⚗️', note: '催化剂、结晶、魔法材料和后期高价值节点。' },
+  { id: 'all', zh: '全部', icon: 'ALL', note: '查看六个专业共用材料、瓶颈材料和配方库。' },
+  { id: 'smithing', zh: '锻造', icon: 'SM', note: '金属板材、矿石精炼和重装材料。' },
+  { id: 'weaponcrafting', zh: '武器制作', icon: 'WP', note: '武器底材、攻击路线和高价值装备。' },
+  { id: 'tailoring', zh: '裁缝', icon: 'TL', note: '布料、法师装备和轻甲路线。' },
+  { id: 'woodcrafting', zh: '木工', icon: 'WD', note: '木料、弓弩、法杖和把手材料。' },
+  { id: 'leatherworking', zh: '皮革', icon: 'LT', note: '皮革、手套、飞侠和弓手相关材料。' },
+  { id: 'arcforge', zh: '炼金', icon: 'AF', note: '催化剂、结晶、魔法材料和后期高价值节点。' },
 ];
 
 const PROFESSION_IDS = PROFESSIONS.filter((row) => row.id !== 'all').map((row) => row.id);
