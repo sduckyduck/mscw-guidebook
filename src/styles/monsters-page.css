@@ -418,6 +418,423 @@
   color: rgba(255, 255, 255, 0.82);
 }
 
+/* === Detail head action button ("添加掉落") === */
+.mg-monsters-detail-head {
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+}
+.mg-monsters-quick-add {
+  align-self: center;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 0;
+  background: linear-gradient(135deg, #20b7ae, #25c7bb);
+  color: #fff;
+  font-size: .92rem;
+  font-weight: 1000;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(18, 154, 149, .32);
+}
+.mg-monsters-quick-add:hover { filter: brightness(1.05); }
+
+/* === Aggregated player reports list === */
+.mg-monsters-aggregate-empty {
+  padding: 18px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: .9rem;
+  font-weight: 800;
+}
+.mg-monsters-aggregate-empty strong { color: #fff; font-weight: 1000; }
+
+.mg-monsters-aggregate-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.mg-monsters-aggregate-row {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.mg-monsters-aggregate-row.is-expanded { background: rgba(255, 255, 255, 0.12); }
+.mg-monsters-aggregate-main {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+}
+.mg-monsters-aggregate-icon {
+  width: 50px; height: 50px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.mg-monsters-aggregate-icon img {
+  width: 42px; height: 42px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.mg-monsters-aggregate-icon span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 1.2rem;
+  font-weight: 1000;
+}
+.mg-monsters-aggregate-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.mg-monsters-aggregate-info strong {
+  font-size: .98rem;
+  font-weight: 1000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mg-monsters-aggregate-info span {
+  font-size: .76rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.74);
+}
+.mg-monsters-aggregate-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.mg-monsters-aggregate-plus {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 220, 200, 0.5);
+  background: rgba(58, 198, 165, 0.26);
+  color: #d9f7ec;
+  font-size: .8rem;
+  font-weight: 1000;
+  cursor: pointer;
+}
+.mg-monsters-aggregate-plus:hover {
+  background: rgba(58, 198, 165, 0.42);
+  color: #fff;
+}
+.mg-monsters-aggregate-toggle {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: .78rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+.mg-monsters-aggregate-toggle:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.mg-monsters-aggregate-row .mg-monsters-report-list {
+  padding: 0 14px 12px;
+  margin: 0;
+  gap: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.18);
+  padding-top: 10px;
+}
+
+/* === Modal scaffold (picker + confirm) === */
+.mg-monsters-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 30, 35, 0.62);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 200;
+}
+.mg-monsters-modal {
+  width: min(620px, 96vw);
+  max-height: min(80vh, 760px);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 12px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: linear-gradient(165deg, #1d8579 0%, #155c68 100%);
+  border: 1px solid rgba(16, 62, 64, 0.6);
+  color: #fff;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+}
+.mg-monsters-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mg-monsters-modal-head h3 {
+  margin: 0;
+  font-size: 1.18rem;
+  font-weight: 1000;
+}
+.mg-monsters-modal-head button {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 1000;
+  cursor: pointer;
+}
+.mg-monsters-modal-head button:hover { background: rgba(255, 255, 255, 0.28); }
+
+/* === Item picker === */
+.mg-monsters-picker { grid-template-rows: auto auto auto auto 1fr; }
+.mg-monsters-picker-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+}
+.mg-monsters-picker-tabs button {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: .82rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.mg-monsters-picker-tabs button em {
+  font-style: normal;
+  font-size: .7rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.86);
+}
+.mg-monsters-picker-tabs button.is-active {
+  background: rgba(255, 255, 255, 0.96);
+  color: #176d5b;
+}
+.mg-monsters-picker-tabs button.is-active em {
+  background: rgba(33, 128, 107, 0.18);
+  color: #176d5b;
+}
+.mg-monsters-picker-search input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: .9rem;
+  font-weight: 700;
+  outline: none;
+}
+.mg-monsters-picker-search input:focus {
+  border-color: rgba(120, 220, 200, 0.6);
+  box-shadow: 0 0 0 3px rgba(120, 220, 200, 0.22);
+}
+.mg-monsters-picker-hint {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: .74rem;
+  font-weight: 800;
+}
+.mg-monsters-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 0 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+  max-height: 48vh;
+}
+.mg-monsters-picker-list::-webkit-scrollbar { width: 6px; }
+.mg-monsters-picker-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.24); border-radius: 999px; }
+.mg-monsters-picker-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.mg-monsters-picker-row:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(120, 220, 200, 0.5);
+}
+.mg-monsters-picker-icon {
+  width: 38px; height: 38px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.16);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.mg-monsters-picker-icon img {
+  width: 32px; height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.mg-monsters-picker-icon span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 1rem;
+  font-weight: 1000;
+}
+.mg-monsters-picker-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.mg-monsters-picker-text strong {
+  font-size: .9rem;
+  font-weight: 1000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mg-monsters-picker-text span {
+  font-size: .7rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
+}
+.mg-monsters-picker-id {
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: .7rem;
+  font-weight: 800;
+}
+.mg-monsters-picker-empty {
+  list-style: none;
+  padding: 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+/* === Quick-confirm dialog === */
+.mg-monsters-confirm { grid-template-rows: auto auto 1fr auto; }
+.mg-monsters-confirm-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.mg-monsters-confirm-from {
+  font-weight: 1000;
+  font-size: .94rem;
+  color: rgba(255, 255, 255, 0.86);
+}
+.mg-monsters-confirm-arrow {
+  color: rgba(255, 255, 255, 0.58);
+  font-weight: 1000;
+  font-size: 1.1rem;
+}
+.mg-monsters-confirm-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  font-size: .9rem;
+  font-weight: 1000;
+}
+.mg-monsters-confirm-item img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.mg-monsters-confirm-item em {
+  font-style: normal;
+  font-size: .72rem;
+  font-weight: 900;
+  color: #587274;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef3f0;
+}
+.mg-monsters-confirm-fields {
+  display: grid;
+  gap: 10px;
+}
+.mg-monsters-confirm-fields label {
+  display: grid;
+  gap: 6px;
+}
+.mg-monsters-confirm-fields label > span {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: .8rem;
+  font-weight: 900;
+}
+.mg-monsters-confirm-fields input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: .9rem;
+  font-weight: 700;
+  outline: none;
+}
+.mg-monsters-confirm-fields input:focus {
+  border-color: rgba(120, 220, 200, 0.6);
+  box-shadow: 0 0 0 3px rgba(120, 220, 200, 0.22);
+}
+.mg-monsters-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+.mg-monsters-primary,
+.mg-monsters-secondary {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 11px;
+  font-size: .88rem;
+  font-weight: 1000;
+  cursor: pointer;
+}
+.mg-monsters-primary {
+  border: 0;
+  background: linear-gradient(135deg, #20b7ae, #25c7bb);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(18, 154, 149, .32);
+}
+.mg-monsters-primary:hover { filter: brightness(1.06); }
+.mg-monsters-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  color: rgba(255, 255, 255, 0.86);
+}
+.mg-monsters-secondary:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
 /* === Mobile === */
 @media (max-width: 880px) {
   .mg-monsters-layout {
