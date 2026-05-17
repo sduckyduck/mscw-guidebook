@@ -208,6 +208,7 @@ export default function AppMediaEnhanced() {
 
   return <main className="app-shell">
     <AppHeaderBar tab={tab} onTabChange={changeTab} classLine={classLine} level={level} />
+    <MobileTabBar tab={tab} onTabChange={changeTab} />
     {edition.dataMode !== 'official-appdata' && <p className="load-error">国服数据/公式已预留，当前暂不启用真实推荐。</p>}
     {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} maps={maps} weapon={weapon} gear={gear} stats={stats} skillPlan={skillPlan} statPlan={statPlan} effectiveApAllocation={effectiveApAllocation} candidatesBySlot={candidatesBySlot} items={activeData.items} budget={budget} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} onApChange={changeAp} />}
     {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
@@ -271,6 +272,19 @@ function Dashboard({ controls, classLine, branch, gender, level, bestMonster, be
     </div>
     <p className="mg-footer">© 2026 MapleGuide | by SduckyDuck</p>
   </section>;
+}
+
+function MobileTabBar({ tab, onTabChange }) {
+  const tabs = [['overview','总览'],['character','角色'],['maps','地图'],['monsters','怪物'],['quests','任务'],['materials','材料']];
+  return (
+    <nav className="top-tabs mg-mobile-tabs">
+      {tabs.map(([id, name]) => (
+        <button key={id} type="button" className={tab === id ? 'top-tab active' : 'top-tab'} onClick={() => onTabChange(id)}>
+          {name}
+        </button>
+      ))}
+    </nav>
+  );
 }
 
 function AppHeaderBar({ tab, onTabChange, classLine, level }) {
