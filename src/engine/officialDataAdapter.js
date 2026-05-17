@@ -27,7 +27,18 @@ const JOB_BY_SKILL_PREFIX = {
   '500': 'pirate', '510': 'brawler', '520': 'gunslinger',
 };
 
-const EMPTY_DATA = { source: 'empty', overview: null, monsters: [], maps: [], recipes: [], materials: [], professions: [], items: [], skillGroups: [] };
+const CHINA_BETA_MAX_LEVEL = 100;
+const CHINA_BETA_MAP_ID_RANGES = [
+  [100000000, 109999999],
+  [110000000, 110099999],
+  [120040000, 120049999],
+];
+const CHINA_BETA_AREA_PATTERNS = [
+  /金银岛|维多利亚|林中之城|蚂蚁洞|黄金海滩|黄金海岸/i,
+  /victoria|sleepywood|ant\s*tunnel|gold\s*beach|florina/i,
+];
+
+const EMPTY_DATA = { source: 'empty', overview: null, monsters: [], maps: [], quests: [], recipes: [], materials: [], professions: [], items: [], skillGroups: [] };
 
 export async function loadOfficialGuideData(options = {}) {
   const source = typeof options === 'string' ? options : options.source ?? options.dataMode ?? 'catalog';
@@ -49,6 +60,7 @@ function createEditionAwareData({ globalData, chinaData }) {
     get overview() { return choose().overview; },
     get monsters() { return choose().monsters; },
     get maps() { return choose().maps; },
+    get quests() { return choose().quests; },
     get recipes() { return choose().recipes; },
     get materials() { return choose().materials; },
     get professions() { return choose().professions; },
@@ -94,6 +106,7 @@ async function loadAppDataGuideData() {
     overview: overview?.stats ?? null,
     monsters,
     maps,
+    quests: [],
     recipes,
     materials,
     professions,
@@ -103,25 +116,28 @@ async function loadAppDataGuideData() {
 }
 
 async function loadCmsGuideData() {
-  const [itemsRaw, lookupsRaw, mapsRaw, monstersRaw, skillsRaw] = await Promise.all([
+  const [itemsRaw, lookupsRaw, mapsRaw, monstersRaw, skillsRaw, questsRaw] = await Promise.all([
     fetchJson(cmsPath('items')),
     fetchJson(cmsPath('lookups')).catch(() => ({})),
     fetchJson(cmsPath('maps')),
     fetchJson(cmsPath('monsters')),
     fetchJson(cmsPath('skills')),
+    fetchJson(cmsPath('quests')).catch(() => []),
   ]);
 
   const lookups = normalizeLookups(lookupsRaw);
-  const monsters = normalizeCmsMonsters(records(monstersRaw, ['monsters', 'mob', 'mobs', 'data']), lookups);
-  const maps = normalizeCmsMaps(records(mapsRaw, ['maps', 'regions', 'data']), monsters, lookups);
+  const allMonsters = normalizeCmsMonsters(records(monstersRaw, ['monsters', 'mob', 'mobs', 'data']), lookups);
+  const { monsters, maps } = scopeCmsChinaBetaWorld(records(mapsRaw, ['maps', 'regions', 'data']), allMonsters, lookups);
   const items = normalizeCmsItems(records(itemsRaw, ['items', 'equipment', 'equips', 'data']), lookups);
   const skillGroups = normalizeCmsSkillGroups(records(skillsRaw, ['skills', 'data']), lookups);
+  const quests = normalizeCmsQuests(records(questsRaw, ['quests', 'data']), lookups);
 
   return {
     source: 'cms-china',
     overview: null,
     monsters,
     maps,
+    quests,
     recipes: [],
     materials: [],
     professions: [],
@@ -382,7 +398,7 @@ function slugify(value) {
 }
 
 function normalizeLookups(raw) {
-  const out = { items: {}, monsters: {}, maps: {}, skills: {} };
+  const out = { items: {}, monsters: {}, maps: {}, skills: {}, quests: {} };
   const source = raw && typeof raw === 'object' ? raw : {};
   for (const key of Object.keys(out)) {
     out[key] = source[key] ?? source[`${key}ById`] ?? source[key.slice(0, -1)] ?? {};
@@ -426,18 +442,50 @@ function bool(obj, keys) {
   return value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true';
 }
 
+function normalizeCmsLookupId(value) {
+  const raw = String(value ?? '').trim().replace(/\.0$/, '').replace(/\.img$/i, '');
+  const digits = raw.match(/\d+/g)?.join('') ?? raw;
+  return digits.replace(/^0+(?=\d)/, '') || digits || raw;
+}
+
+function lookupCandidates(id, bucket = '') {
+  const raw = String(id ?? '').trim().replace(/\.0$/, '').replace(/\.img$/i, '');
+  const normalized = normalizeCmsLookupId(raw);
+  const widths = { items: 8, monsters: 7, maps: 9, skills: 7, quests: 5 };
+  const candidates = [id, raw, normalized, Number(raw), Number(normalized)];
+  if (/^\d+$/.test(normalized) && widths[bucket]) candidates.push(normalized.padStart(widths[bucket], '0'));
+  return [...new Set(candidates.filter((value) => value !== undefined && value !== null && value !== '' && !Number.isNaN(value)))];
+}
+
 function lookupName(lookups, bucket, id, fallback) {
   const table = lookups?.[bucket] ?? {};
-  const item = table[id] ?? table[String(id)] ?? table[Number(id)];
-  if (typeof item === 'string') return item;
-  return read(item, ['name', 'zh', 'cn', 'displayName'], fallback) ?? fallback;
+  for (const key of lookupCandidates(id, bucket)) {
+    const item = table[key];
+    if (item === undefined || item === null) continue;
+    if (typeof item === 'string') return item;
+    const name = read(item, ['name', 'zh', 'cn', 'displayName', 'label', 'title'], '');
+    if (name) return name;
+  }
+  return fallback;
+}
+
+function cleanCmsDisplayName(value, prefix, id) {
+  const raw = String(value ?? '').trim();
+  const normalizedId = normalizeCmsLookupId(id);
+  const bad = !raw
+    || raw === '0'
+    || raw === String(id)
+    || raw === normalizedId
+    || /^0?\d+(\.img)?$/i.test(raw)
+    || /(^|\/)0?\d+\.img$/i.test(raw);
+  return bad ? `${prefix} ${normalizedId || id}` : raw;
 }
 
 function normalizeCmsItems(items, lookups) {
   return items.map((item) => {
     const id = String(read(item, ['id', 'itemId', 'item_id', 'code'], '')).replace(/\.0$/, '');
     const padded = padItemId(id);
-    const name = text(item, ['name', 'displayName', 'label', 'title'], lookupName(lookups, 'items', id, `Item ${id}`));
+    const name = cleanCmsDisplayName(text(item, ['name', 'displayName', 'label', 'title'], lookupName(lookups, 'items', id, `Item ${id}`)), '物品', id);
     const type = text(item, ['type', 'itemType', 'subCategory', 'sub_category', 'categoryName'], '').toLowerCase();
     const stats = item.stats ?? item.info ?? item;
     const slot = detectSlot({ id: padded, type });
@@ -528,17 +576,19 @@ function jobLabel(reqJob) {
 
 function normalizeCmsMonsters(monsters, lookups) {
   return monsters.map((monster) => {
-    const id = String(read(monster, ['id', 'mobId', 'monsterId', 'code'], '')).replace(/\.0$/, '');
+    const id = String(read(monster, ['id', 'mobId', 'monsterId', 'code'], '')).replace(/\.0$/, '').replace(/\.img$/i, '');
     const level = num(monster, ['level', 'lv'], 1);
     const avoid = num(monster, ['eva', 'avoid', 'avoidability'], 0);
     const thumbnail = text(monster, ['thumbnail', 'icon', 'image'], '');
     const mapRefs = read(monster, ['maps', 'mapIds', 'spawns'], []);
+    const name = cleanCmsDisplayName(text(monster, ['name', 'displayName', 'label', 'title', 'zh', 'cn'], lookupName(lookups, 'monsters', id, `Monster ${id}`)), '怪物', id);
 
     return {
       ...monster,
       id,
       rawId: id,
-      name: text(monster, ['name', 'displayName', 'label'], lookupName(lookups, 'monsters', id, `Monster ${id}`)),
+      name,
+      title: name,
       level,
       hp: num(monster, ['hp', 'maxHP'], 1),
       mp: num(monster, ['mp', 'maxMP'], 0),
@@ -570,17 +620,119 @@ function normalizeMapRefs(value) {
   return [];
 }
 
+function isChinaBetaMapId(value) {
+  const id = Number(normalizeCmsLookupId(value));
+  return Number.isFinite(id) && CHINA_BETA_MAP_ID_RANGES.some(([min, max]) => id >= min && id <= max);
+}
+
+function searchableText(value, depth = 0) {
+  if (value === null || value === undefined || depth > 4) return '';
+  if (typeof value !== 'object') return String(value);
+  if (Array.isArray(value)) return value.map((item) => searchableText(item, depth + 1)).join(' ');
+  return Object.entries(value)
+    .filter(([key]) => !/thumbnail|icon|image|canvas|frame|png|audio|sound/i.test(key))
+    .map(([, item]) => searchableText(item, depth + 1))
+    .join(' ');
+}
+
+function isChinaBetaMapCandidate(map, lookups) {
+  const id = read(map, ['id', 'mapId', 'code', 'rawId'], '');
+  if (isChinaBetaMapId(id)) return true;
+  const haystack = [
+    text(map, ['name', 'displayName', 'streetName', 'street_name', 'region', 'continent'], ''),
+    lookupName(lookups, 'maps', id, ''),
+    searchableText(map),
+  ].join(' ');
+  return CHINA_BETA_AREA_PATTERNS.some((pattern) => pattern.test(haystack));
+}
+
+function addIdVariants(set, id) {
+  if (id === undefined || id === null || id === '') return;
+  set.add(String(id).replace(/\.0$/, '').replace(/\.img$/i, ''));
+  set.add(normalizeCmsLookupId(id));
+}
+
+function hasIdVariant(set, id) {
+  return set.has(String(id).replace(/\.0$/, '').replace(/\.img$/i, '')) || set.has(normalizeCmsLookupId(id));
+}
+
+function getRawMapMonsterRefs(map) {
+  return normalizeMapMonsterRefs(read(map, ['monsters', 'mobs', 'spawns', 'life'], []));
+}
+
+function collectRawMapMonsterIds(map, out) {
+  for (const ref of getRawMapMonsterRefs(map)) addIdVariants(out, ref.id);
+}
+
+function filterRawMapMonsterRefs(map, allowedMonsterIds) {
+  const next = { ...map };
+  for (const key of ['monsters', 'mobs', 'spawns', 'life']) {
+    const value = next[key];
+    if (Array.isArray(value)) {
+      next[key] = value.filter((entry) => {
+        const id = typeof entry === 'object' ? read(entry, ['id', 'mobId', 'monsterId'], '') : entry;
+        return hasIdVariant(allowedMonsterIds, id);
+      });
+    } else if (value && typeof value === 'object') {
+      next[key] = Object.fromEntries(Object.entries(value).filter(([id, entry]) => hasIdVariant(allowedMonsterIds, read(entry, ['id', 'mobId', 'monsterId'], id))));
+    }
+  }
+  return next;
+}
+
+function filterMonsterMapRefs(monster, allowedMapIds) {
+  const maps = safeArray(monster.maps).filter((ref) => allowedMapIds.has(Number(ref.id)) || isChinaBetaMapId(ref.id));
+  return { ...monster, maps };
+}
+
+function scopeCmsChinaBetaWorld(mapsRaw, monsters, lookups) {
+  const mapRecords = recordsFromRegions(mapsRaw).filter(Boolean);
+  const allowedMaps = mapRecords.filter((map) => isChinaBetaMapCandidate(map, lookups));
+  const allowedMapIds = new Set(allowedMaps.map((map) => Number(read(map, ['id', 'mapId', 'code', 'rawId'], 0))).filter(Number.isFinite));
+
+  const monsterIdsFromAllowedMaps = new Set();
+  for (const map of allowedMaps) collectRawMapMonsterIds(map, monsterIdsFromAllowedMaps);
+
+  const scopedMonsters = monsters.map((monster) => filterMonsterMapRefs(monster, allowedMapIds)).filter((monster) => {
+    if (monster.level > CHINA_BETA_MAX_LEVEL) return false;
+    return monster.maps.length > 0 || hasIdVariant(monsterIdsFromAllowedMaps, monster.id);
+  });
+
+  const allowedMonsterIds = new Set();
+  for (const monster of scopedMonsters) addIdVariants(allowedMonsterIds, monster.id);
+
+  const scopedRawMaps = allowedMaps.map((map) => filterRawMapMonsterRefs(map, allowedMonsterIds));
+
+  const scopedMaps = normalizeCmsMaps(scopedRawMaps, scopedMonsters, lookups)
+    .filter((map) => isChinaBetaMapCandidate(map, lookups) && map.levelRange[0] <= CHINA_BETA_MAX_LEVEL);
+
+  const monsterIdsInMaps = new Set();
+  for (const map of scopedMaps) {
+    for (const monster of map.monsterDetails) addIdVariants(monsterIdsInMaps, monster.id);
+  }
+
+  const usedMapIds = new Set(scopedMaps.map((map) => Number(map.rawId)));
+  const monstersInScope = scopedMonsters.filter((monster) => {
+    if (hasIdVariant(monsterIdsInMaps, monster.id)) return true;
+    return safeArray(monster.maps).some((ref) => usedMapIds.has(Number(ref.id)));
+  });
+
+  return { monsters: monstersInScope, maps: scopedMaps };
+}
+
 function normalizeCmsMaps(mapsRaw, monsters, lookups) {
-  const monsterById = new Map(monsters.map((monster) => [String(monster.id), monster]));
+  const monsterById = new Map(monsters.flatMap((monster) => lookupCandidates(monster.id, 'monsters').map((id) => [String(id), monster])));
   const maps = recordsFromRegions(mapsRaw).map((map) => normalizeMap(map, monsterById, lookups)).filter(Boolean);
   const mapById = new Map(maps.map((map) => [Number(map.rawId), map]));
 
   for (const monster of monsters) {
     for (const ref of monster.maps ?? []) {
       if (!mapById.has(Number(ref.id))) {
-        mapById.set(Number(ref.id), normalizeMap({ id: ref.id, name: ref.name, monsters: [] }, monsterById, lookups));
+        const normalizedMap = normalizeMap({ id: ref.id, name: ref.name, monsters: [] }, monsterById, lookups);
+        if (normalizedMap) mapById.set(Number(ref.id), normalizedMap);
       }
       const map = mapById.get(Number(ref.id));
+      if (!map) continue;
       if (!map.monsterDetails.some((item) => String(item.id) === String(monster.id))) {
         map.monsterDetails.push({ ...monster, spawnCount: ref.count, mobTime: ref.mobTime });
       }
@@ -599,12 +751,13 @@ function normalizeMap(map, monsterById, lookups) {
   const id = String(read(map, ['id', 'mapId', 'code'], '')).replace(/\.0$/, '');
   if (!id) return null;
   const thumbnail = text(map, ['thumbnail', 'minimap', 'image'], '');
-  const refs = normalizeMapMonsterRefs(read(map, ['monsters', 'mobs', 'spawns'], []));
+  const refs = normalizeMapMonsterRefs(read(map, ['monsters', 'mobs', 'spawns', 'life'], []));
+  const mapName = cleanCmsDisplayName(text(map, ['name', 'displayName', 'street_name'], lookupName(lookups, 'maps', id, `Map ${id}`)), '地图', id);
   return {
     ...map,
     id,
     rawId: Number(id),
-    name: text(map, ['name', 'displayName', 'street_name'], lookupName(lookups, 'maps', id, `Map ${id}`)),
+    name: mapName,
     streetName: text(map, ['streetName', 'street_name'], ''),
     region: text(map, ['region', 'continent'], '国服'),
     isTown: bool(map, ['isTown', 'is_town', 'town']),
@@ -612,7 +765,7 @@ function normalizeMap(map, monsterById, lookups) {
     thumbnail: thumbnail ? appDataPath(thumbnail) : null,
     minimap: thumbnail ? appDataPath(thumbnail) : null,
     monsterDetails: refs.map((ref) => {
-      const monster = monsterById.get(String(ref.id));
+      const monster = monsterById.get(String(ref.id)) ?? monsterById.get(String(normalizeCmsLookupId(ref.id)));
       return monster ? { ...monster, spawnCount: ref.count, mobTime: ref.mobTime } : null;
     }).filter(Boolean),
   };
@@ -641,6 +794,26 @@ function finalizeMap(map) {
   };
 }
 
+function normalizeCmsQuests(quests, lookups) {
+  return quests.map((quest) => {
+    const id = String(read(quest, ['id', 'questId', 'quest_id', 'code'], '')).replace(/\.0$/, '');
+    const minLevel = num(quest, ['minLevel', 'reqLevel', 'startLevel', 'level', 'info.level'], 1);
+    const rawMaxLevel = num(quest, ['maxLevel', 'levelMax', 'endLevel', 'requiredMaxLevel'], CHINA_BETA_MAX_LEVEL);
+    const maxLevel = Math.min(rawMaxLevel || CHINA_BETA_MAX_LEVEL, CHINA_BETA_MAX_LEVEL);
+    const name = cleanCmsDisplayName(text(quest, ['name', 'displayName', 'label', 'title'], lookupName(lookups, 'quests', id, `Quest ${id}`)), '任务', id);
+
+    return {
+      ...quest,
+      id,
+      name,
+      title: name,
+      level: minLevel,
+      minLevel,
+      maxLevel,
+    };
+  }).filter((quest) => quest.id && quest.minLevel <= CHINA_BETA_MAX_LEVEL);
+}
+
 function normalizeCmsSkillGroups(skills, lookups) {
   const rows = skills.map((skill) => {
     const id = String(read(skill, ['id', 'skillId', 'code'], '')).replace(/\.0$/, '');
@@ -649,7 +822,7 @@ function normalizeCmsSkillGroups(skills, lookups) {
     return {
       ...skill,
       id,
-      name: text(skill, ['name', 'displayName', 'label'], lookupName(lookups, 'skills', id, `Skill ${id}`)),
+      name: cleanCmsDisplayName(text(skill, ['name', 'displayName', 'label'], lookupName(lookups, 'skills', id, `Skill ${id}`)), '技能', id),
       maxLevel: num(skill, ['maxLevel', 'max_level', 'max'], 0),
       thumbnail: thumbnail ? appDataPath(thumbnail) : cmsSkillIconPath(id),
       allLevelStats: read(skill, ['allLevelStats', 'all_level_stats', 'levelStats'], []),
