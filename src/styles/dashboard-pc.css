@@ -764,7 +764,7 @@
     font-size: .74rem; font-weight: 1000;
     flex: 0 0 auto;
   }
-  .mg-task-status.in-progress { background: rgba(218, 247, 240, .96); color: #0f6d67; }
+  .mg-task-status.in-progress { background: rgba(218, 247, 240, .96); color: #1d6878; }
   .mg-task-status.available { background: #eef3f0; color: var(--muted); }
 
   /* Resource priorities */
@@ -1030,7 +1030,7 @@
     padding: 16px 17px;
     border: 1px solid rgba(16, 62, 64, .58);
     border-radius: 10px;
-    background: linear-gradient(165deg, #2c8b84 0%, #176873 100%);
+    background: linear-gradient(165deg, #2c8095 0%, #15576f 100%);
     box-shadow: 0 18px 38px rgba(15, 76, 80, .22);
     color: #fff;
   }
@@ -1165,7 +1165,7 @@
     border-radius: 10px;
     background:
       radial-gradient(circle at 92% 4%, rgba(255,255,255,.14), transparent 190px),
-      linear-gradient(165deg, #2b8983 0%, #176a72 100%);
+      linear-gradient(165deg, #2a7c95 0%, #155a72 100%);
     box-shadow: 0 20px 42px rgba(15, 76, 80, .2);
     color: #fff;
   }
@@ -1366,7 +1366,7 @@
     border-radius: 10px;
     background:
       radial-gradient(circle at 92% 8%, rgba(255,255,255,.12), transparent 140px),
-      linear-gradient(165deg, #2c8b84 0%, #176873 100%);
+      linear-gradient(165deg, #2c8095 0%, #15576f 100%);
   }
 
   .mg-status-panel .mg-status-route {
@@ -1698,7 +1698,7 @@
   body .mg-character-dashboard-figure1 .mg-ap-stats-panel-v2 {
     background:
       radial-gradient(circle at 92% 6%, rgba(255,255,255,.14), transparent 200px),
-      linear-gradient(165deg, #2b8983 0%, #176a72 100%) !important;
+      linear-gradient(165deg, #2a7c95 0%, #155a72 100%) !important;
     border: 1px solid rgba(16, 62, 64, 0.58) !important;
     border-radius: 14px !important;
     color: #fff !important;
@@ -1801,7 +1801,7 @@
   body .mg-character-dashboard-figure1 .mg-skill-side-card {
     background:
       radial-gradient(circle at 92% 6%, rgba(255,255,255,.12), transparent 180px),
-      linear-gradient(165deg, #2b8983 0%, #176a72 100%) !important;
+      linear-gradient(165deg, #2a7c95 0%, #155a72 100%) !important;
     border: 1px solid rgba(16, 62, 64, 0.58) !important;
     border-radius: 14px !important;
     box-shadow: 0 18px 38px rgba(15, 76, 80, 0.18) !important;
@@ -1820,7 +1820,7 @@
   body .app-shell > .craft-safe-page {
     background:
       radial-gradient(circle at 88% 8%, rgba(255, 255, 255, 0.16), transparent 220px),
-      linear-gradient(160deg, #0f6d67 0%, #155c68 100%) !important;
+      linear-gradient(160deg, #1d6878 0%, #14495a 100%) !important;
     border: 1px solid rgba(16, 62, 64, 0.58) !important;
     border-radius: 22px !important;
     box-shadow: 0 22px 54px rgba(12, 75, 80, 0.28) !important;
