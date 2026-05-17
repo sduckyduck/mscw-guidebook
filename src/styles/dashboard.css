@@ -693,6 +693,19 @@
   white-space: nowrap;
 }
 
+/* ── Overview tab: single-column scrolling layout ──────────────────────────
+   Renders the same panels as the dense 3-col grid but stacked vertically,
+   centered at 720px, regardless of viewport. Used on the 总览 tab.
+   The 角色 tab (SkillPanel) is a separate component — no overlap.           */
+.mg-overview-column {
+  display: grid;
+  gap: 28px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  padding-bottom: 90px;
+}
+
 /* Mobile: preserve the compact two-column dashboard shown in the mock. */
 @media (max-width: 760px) {
   body .app-shell { padding: max(6px, env(safe-area-inset-top)) 6px calc(24px + env(safe-area-inset-bottom)); }
