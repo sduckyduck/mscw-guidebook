@@ -1,3 +1,5 @@
+import('./chinaHpTogglePatch.js');
+
 const STORAGE_KEY = 'mscw-guidebook-state-v2';
 const PATCH_NODE_ID = 'china-beta-materials-replacement';
 const STYLE_NODE_ID = 'china-beta-feature-styles';
