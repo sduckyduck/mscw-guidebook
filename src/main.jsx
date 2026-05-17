@@ -19,6 +19,7 @@ import './utils/dashboardDisplayFormatter.js';
 import './utils/baseAttackFormulaPatch.js';
 import './utils/zhNameTranslationPatch.js';
 import './utils/equipmentSlotInspect.js';
+import './utils/chinaBetaFeaturePatch.js';
 import './styles.css';
 import './styles/cover-intro.css';
 import './styles/materials-page.css';
