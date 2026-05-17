@@ -1693,17 +1693,17 @@
 
   body .mg-character-figure1-layout-v2 { gap: 18px !important; }
 
-  /* AP summary + AP stats panels — teal gradient like the rest of the site */
+  /* AP summary + AP stats panels — same glass-soft as monster-page inner panels */
   body .mg-character-dashboard-figure1 .mg-ap-summary-panel-v2,
   body .mg-character-dashboard-figure1 .mg-ap-stats-panel-v2 {
-    background:
-      radial-gradient(circle at 92% 6%, rgba(255,255,255,.14), transparent 200px),
-      linear-gradient(165deg, #2a7c95 0%, #155a72 100%) !important;
-    border: 1px solid rgba(16, 62, 64, 0.58) !important;
-    border-radius: 14px !important;
-    color: #fff !important;
+    background: var(--client-glass-soft) !important;
+    border: 1px solid var(--client-line) !important;
+    border-radius: 18px !important;
+    color: var(--client-ink) !important;
     padding: 20px 22px !important;
-    box-shadow: 0 18px 38px rgba(15, 76, 80, 0.18) !important;
+    box-shadow: var(--client-shadow-soft) !important;
+    backdrop-filter: blur(14px) saturate(145%);
+    -webkit-backdrop-filter: blur(14px) saturate(145%);
   }
 
   body .mg-character-dashboard-figure1 .mg-ap-grid-horizontal-v2 {
@@ -1799,116 +1799,59 @@
 
   body .mg-character-dashboard-figure1 .mg-sp-panel,
   body .mg-character-dashboard-figure1 .mg-skill-side-card {
-    background:
-      radial-gradient(circle at 92% 6%, rgba(255,255,255,.12), transparent 180px),
-      linear-gradient(165deg, #2a7c95 0%, #155a72 100%) !important;
-    border: 1px solid rgba(16, 62, 64, 0.58) !important;
-    border-radius: 14px !important;
-    box-shadow: 0 18px 38px rgba(15, 76, 80, 0.18) !important;
-    color: #fff !important;
+    background: var(--client-glass-soft) !important;
+    border: 1px solid var(--client-line) !important;
+    border-radius: 18px !important;
+    box-shadow: var(--client-shadow-soft) !important;
+    color: var(--client-ink) !important;
     padding: 20px !important;
+    backdrop-filter: blur(14px) saturate(145%);
+    -webkit-backdrop-filter: blur(14px) saturate(145%);
   }
 
   /* ============================================================
-     Unified page tone: wrap every tab body in the same teal
-     gradient used by the overview / monster pages, so 地图 /
-     任务 / 材料 stop reading as navy slabs.
+     Unified page tone: match the monster page exactly — transparent
+     outer wrappers so the scenic body bg shows through, with inner
+     panels using --client-glass-soft (the lighter navy glass).
      ============================================================ */
 
   body .app-shell > .section-card.mg-quest-section,
   body .app-shell > .section-card.mg-maps-section,
   body .app-shell > .craft-safe-page {
-    background:
-      radial-gradient(circle at 88% 8%, rgba(255, 255, 255, 0.16), transparent 220px),
-      linear-gradient(160deg, #1d6878 0%, #14495a 100%) !important;
-    border: 1px solid rgba(16, 62, 64, 0.58) !important;
-    border-radius: 22px !important;
-    box-shadow: 0 22px 54px rgba(12, 75, 80, 0.28) !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    color: var(--client-ink) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Materials page inner panels: use the lighter glass-soft (same as monster page panels) */
+  body .craft-safe-page > .craft-safe-hero,
+  body .craft-safe-page > .craft-safe-tabs,
+  body .craft-safe-page > .craft-safe-card,
+  body .craft-safe-page > .craft-safe-controls {
+    background: var(--client-glass-soft) !important;
+    border: 1px solid var(--client-line) !important;
+    box-shadow: var(--client-shadow-soft) !important;
+    color: var(--client-ink) !important;
+    backdrop-filter: blur(14px) saturate(145%);
+    -webkit-backdrop-filter: blur(14px) saturate(145%);
+  }
+
+  /* Section titles directly on transparent wrappers */
+  body .app-shell > .section-card.mg-maps-section > h2,
+  body .app-shell > .section-card.mg-quest-section > h2 {
     color: #fff !important;
-    padding: clamp(16px, 3vw, 26px) !important;
-    margin-top: 14px;
-    overflow: hidden !important;
+    text-shadow: 0 2px 14px rgba(0, 12, 32, 0.4);
   }
-
-  /* Inner cards (quest cards, map cards, craft cards) -> glassy white-on-teal */
-  body .mg-quest-section .mg-quest-hero,
-  body .mg-quest-section .mg-quest-toolbar,
-  body .mg-quest-section .mg-quest-card,
-  body .mg-quest-section .mg-quest-empty,
-  body .craft-safe-page .craft-safe-hero,
-  body .craft-safe-page .craft-safe-tabs,
-  body .craft-safe-page .craft-safe-card,
-  body .craft-safe-page .craft-safe-controls {
-    background: rgba(255, 255, 255, 0.085) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 12px 28px rgba(15, 76, 80, 0.18) !important;
-    color: #fff !important;
-    backdrop-filter: blur(14px);
-  }
-
-  /* Map cards: keep the white photo card body, but soften the heavy border */
-  body .mg-maps-section .mg-map-card-redesign {
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
-    box-shadow: 0 14px 30px rgba(15, 76, 80, 0.22) !important;
-  }
-
-  /* Light text inside the unified containers */
-  body .mg-quest-section h2,
-  body .mg-quest-section h3,
-  body .mg-quest-section strong,
-  body .mg-quest-section label,
-  body .craft-safe-page h1,
-  body .craft-safe-page h2,
-  body .craft-safe-page h3,
-  body .craft-safe-page strong {
-    color: #fff !important;
-  }
-
-  body .mg-quest-section .mg-quest-hero p,
-  body .mg-quest-section .mg-quest-hero span,
-  body .mg-quest-section .mg-quest-toolbar span,
-  body .mg-quest-section .mg-quest-card header span,
-  body .mg-quest-section .mg-quest-meta span,
-  body .mg-quest-section .mg-quest-lines span,
-  body .mg-quest-section .mg-quest-rewards span,
-  body .mg-quest-section .mg-quest-empty span,
-  body .craft-safe-page p,
-  body .craft-safe-page small,
-  body .craft-safe-page span,
-  body .craft-safe-page em {
-    color: rgba(255, 255, 255, 0.78) !important;
-  }
-
-  /* Quest toolbar pills */
-  body .mg-quest-toolbar input,
-  body .craft-safe-controls input,
-  body .craft-safe-controls select {
-    background: rgba(255, 255, 255, 0.92) !important;
-    color: #0f172a !important;
-    border-color: rgba(255, 255, 255, 0.28) !important;
-  }
-  body .mg-quest-toolbar input::placeholder { color: rgba(15, 23, 42, 0.5); }
-
-  body .mg-quest-toolbar button {
-    background: rgba(255, 255, 255, 0.14) !important;
-    border: 1px solid rgba(255, 255, 255, 0.26) !important;
-    color: rgba(255, 255, 255, 0.92) !important;
-  }
-  body .mg-quest-toolbar button:hover {
-    background: rgba(255, 255, 255, 0.26) !important;
-  }
-  body .mg-quest-toolbar button.is-active {
-    background: rgba(58, 198, 165, 0.32) !important;
-    border-color: rgba(120, 220, 200, 0.6) !important;
-    color: #fff !important;
-  }
-
-  /* Maps page title at top of wrapper */
-  body .app-shell > .section-card.mg-maps-section > h2 {
-    color: #fff !important;
-  }
-  body .app-shell > .section-card.mg-maps-section > .section-copy {
-    color: rgba(255, 255, 255, 0.82) !important;
+  body .app-shell > .section-card.mg-maps-section > .section-copy,
+  body .app-shell > .section-card.mg-quest-section > .section-copy {
+    color: rgba(255, 255, 255, 0.86) !important;
+    text-shadow: 0 2px 10px rgba(0, 12, 32, 0.34);
   }
 }
 
