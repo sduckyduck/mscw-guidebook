@@ -1,6 +1,8 @@
 const STORAGE_KEY = 'mscw-guidebook-state-v2';
+const TOGGLE_STORAGE_KEY = 'mscw-guidebook-china-hp-washing-enabled';
 const TOGGLE_ID = 'china-hp-toggle-field';
 const STYLE_ID = 'china-hp-toggle-style';
+let renderScheduled = false;
 
 function readState() {
   try {
@@ -15,33 +17,12 @@ function writeState(next) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 }
 
-function ensureDefault() {
-  const state = readState();
-  if (state.hpWashingEnabled === undefined) {
-    writeState({ ...state, hpWashingEnabled: false, hpRouteEnabled: false });
-  }
+function readEnabled() {
+  return window.localStorage.getItem(TOGGLE_STORAGE_KEY) === 'true';
 }
 
-function preserveToggleWhenAppSaves() {
-  if (window.__mscwChinaHpToggleStoragePatched) return;
-  window.__mscwChinaHpToggleStoragePatched = true;
-  const originalSetItem = window.localStorage.setItem.bind(window.localStorage);
-  window.localStorage.setItem = (key, value) => {
-    if (key === STORAGE_KEY) {
-      try {
-        const oldState = readState();
-        const nextState = JSON.parse(value || '{}');
-        if (oldState.hpWashingEnabled !== undefined && nextState.hpWashingEnabled === undefined) {
-          nextState.hpWashingEnabled = oldState.hpWashingEnabled;
-          nextState.hpRouteEnabled = oldState.hpWashingEnabled;
-          value = JSON.stringify(nextState);
-        }
-      } catch {
-        // keep original value
-      }
-    }
-    return originalSetItem(key, value);
-  };
+function writeEnabled(enabled) {
+  window.localStorage.setItem(TOGGLE_STORAGE_KEY, enabled ? 'true' : 'false');
 }
 
 function getEditionSelect() {
@@ -81,7 +62,8 @@ function ensureStyle() {
   document.head.appendChild(style);
 }
 
-function renderToggle() {
+function renderToggleNow() {
+  renderScheduled = false;
   const existing = document.getElementById(TOGGLE_ID);
   if (!isChinaEdition()) {
     existing?.remove();
@@ -91,48 +73,58 @@ function renderToggle() {
   const grid = document.querySelector('.mg-field-grid');
   if (!grid) return;
   ensureStyle();
-  const state = readState();
-  const enabled = state.hpWashingEnabled === true;
+  const enabled = readEnabled();
   const label = enabled ? '洗血：开启' : '洗血：关闭';
   const hint = enabled ? '当前路线会影响 INT、HP/MP、装备和怪物推荐。' : '当前使用普通 AP/HP/MP 逻辑，不套用洗血路线。';
 
-  if (!existing) {
-    const field = document.createElement('div');
+  let field = document.getElementById(TOGGLE_ID);
+  if (!field) {
+    field = document.createElement('div');
     field.id = TOGGLE_ID;
     field.className = 'mg-field china-hp-toggle-field';
     field.innerHTML = `<label>洗血</label><button type="button" class="china-hp-toggle-btn"></button><small></small>`;
     grid.appendChild(field);
   }
 
-  const field = document.getElementById(TOGGLE_ID);
   const button = field.querySelector('button');
   const small = field.querySelector('small');
-  button.textContent = label;
+  if (button.textContent !== label) button.textContent = label;
   button.classList.toggle('is-on', enabled);
-  small.textContent = hint;
+  if (small.textContent !== hint) small.textContent = hint;
+}
+
+function scheduleRender() {
+  if (renderScheduled) return;
+  renderScheduled = true;
+  window.setTimeout(renderToggleNow, 60);
 }
 
 function toggleHpMode() {
+  const nextEnabled = !readEnabled();
+  writeEnabled(nextEnabled);
   const state = readState();
-  const nextEnabled = state.hpWashingEnabled !== true;
   writeState({ ...state, hpWashingEnabled: nextEnabled, hpRouteEnabled: nextEnabled, apAllocation: null });
   window.location.reload();
 }
 
 function installChinaHpToggle() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  preserveToggleWhenAppSaves();
-  ensureDefault();
+  if (window.__mscwChinaHpToggleInstalled) return;
+  window.__mscwChinaHpToggleInstalled = true;
 
-  const schedule = () => window.setTimeout(renderToggle, 0);
-  schedule();
+  if (window.localStorage.getItem(TOGGLE_STORAGE_KEY) === null) writeEnabled(false);
+  scheduleRender();
+  window.setTimeout(scheduleRender, 400);
+  window.setTimeout(scheduleRender, 1200);
 
   document.addEventListener('click', (event) => {
     if (event.target?.closest?.(`#${TOGGLE_ID} button`)) toggleHpMode();
   }, true);
-  document.addEventListener('change', schedule, true);
-  const root = document.querySelector('#root');
-  if (root) new MutationObserver(schedule).observe(root, { childList: true, subtree: true });
+  document.addEventListener('change', (event) => {
+    const label = event.target?.closest?.('.mg-field')?.querySelector('label')?.textContent?.trim();
+    if (label === '版本') scheduleRender();
+  }, true);
+  window.addEventListener('hashchange', scheduleRender);
 }
 
 installChinaHpToggle();
