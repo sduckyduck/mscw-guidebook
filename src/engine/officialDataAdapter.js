@@ -787,7 +787,7 @@ function normalizeCmsQuests(quests, lookups) {
     const maxLevel = Math.min(rawMaxLevel || CHINA_BETA_MAX_LEVEL, CHINA_BETA_MAX_LEVEL);
     const name = cleanCmsDisplayName(text(quest, ['name', 'displayName', 'label', 'title'], lookupName(lookups, 'quests', id, `Quest ${id}`)), '任务', id);
     return { ...quest, id, name, title: name, level: minLevel, minLevel, maxLevel };
-  }).filter((quest) => quest.id && quest.minLevel <= CHINA_BETA_MAX_LEVEL);
+  }).filter((quest) => quest.id && quest.minLevel <= CHINA_BETA_MAX_LEVEL && !/^任务\s/.test(quest.name));
 }
 
 function normalizeCmsSkillGroups(skills, lookups) {

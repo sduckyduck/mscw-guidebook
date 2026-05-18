@@ -862,7 +862,7 @@ function QuestPage({ level, classLine, quests: questsProp }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (Array.isArray(questsProp)) return;
+    if (questsProp?.length > 0) return;
     let alive = true;
     fetch(`${baseUrl()}AppData/quests.json`)
       .then((response) => {
@@ -879,7 +879,7 @@ function QuestPage({ level, classLine, quests: questsProp }) {
   }, [questsProp]);
 
   const quests = useMemo(() => {
-    if (Array.isArray(questsProp)) return questsProp;
+    if (questsProp?.length > 0) return questsProp;
     return Array.isArray(payload?.quests) ? payload.quests : [];
   }, [questsProp, payload]);
   const visibleQuests = useMemo(() => {
