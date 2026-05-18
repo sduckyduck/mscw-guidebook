@@ -86,13 +86,14 @@ function getCurrentEditionId() {
 }
 
 async function loadAppDataGuideData() {
-  const [overview, monstersRaw, mapsRaw, craftingRaw, itemsRaw, skillsRaw] = await Promise.all([
+  const [overview, monstersRaw, mapsRaw, craftingRaw, itemsRaw, skillsRaw, questsRaw] = await Promise.all([
     fetchJson(appDataPath('AppData/overview.json')),
     fetchJson(appDataPath('AppData/monsters.json')),
     fetchJson(appDataPath('AppData/maps.json')),
     fetchJson(appDataPath('AppData/crafting.json')),
     fetchJson(appDataPath('AppData/items.json')),
     fetchJson(appDataPath('AppData/skills.json')),
+    fetchJson(appDataPath('AppData/quests.json')).catch(() => ({ quests: [] })),
   ]);
 
   const monsters = normalizeAppMonsters(monstersRaw?.monsters ?? []);
@@ -100,13 +101,14 @@ async function loadAppDataGuideData() {
   const { recipes, materials, professions } = normalizeAppCrafting(craftingRaw?.disciplines ?? []);
   const items = normalizeAppItems(itemsRaw?.items ?? []);
   const skillGroups = normalizeAppSkillGroups(skillsRaw ?? {});
+  const quests = normalizeAppQuests(questsRaw?.quests ?? []);
 
   return {
     source: 'official-appdata',
     overview: overview?.stats ?? null,
     monsters,
     maps,
-    quests: [],
+    quests,
     recipes,
     materials,
     professions,
@@ -306,6 +308,13 @@ function normalizeAppCrafting(disciplines) {
   return { recipes, materials: [...materialMap.values()], professions };
 }
 
+function normalizeAppQuests(quests) {
+  return safeArray(quests).filter((quest) => {
+    const name = String(quest.name ?? '');
+    return quest.id && name && !/^\d+$/.test(name);
+  });
+}
+
 function normalizeAppItems(items) {
   return safeArray(items).map((item) => ({
     ...item,
@@ -392,7 +401,10 @@ function slugify(value) {
 function normalizeLookups(raw) {
   const out = { items: {}, monsters: {}, maps: {}, skills: {}, quests: {} };
   const source = raw && typeof raw === 'object' ? raw : {};
-  for (const key of Object.keys(out)) out[key] = source[key] ?? source[`${key}ById`] ?? source[key.slice(0, -1)] ?? {};
+  for (const key of Object.keys(out)) {
+    const singular = key.slice(0, -1);
+    out[key] = source[key] ?? source[`${key}ById`] ?? source[singular] ?? source[`${singular}_names`] ?? {};
+  }
   return out;
 }
 
@@ -770,7 +782,7 @@ function finalizeMap(map) {
 function normalizeCmsQuests(quests, lookups) {
   return quests.map((quest) => {
     const id = String(read(quest, ['id', 'questId', 'quest_id', 'code', '__recordKey'], '')).replace(/\.0$/, '').replace(/\.img$/i, '');
-    const minLevel = num(quest, ['minLevel', 'reqLevel', 'startLevel', 'level', 'info.level'], 1);
+    const minLevel = num(quest, ['minLevel', 'min_level', 'level_min', 'reqLevel', 'startLevel', 'level', 'info.level'], 1);
     const rawMaxLevel = num(quest, ['maxLevel', 'levelMax', 'endLevel', 'requiredMaxLevel'], CHINA_BETA_MAX_LEVEL);
     const maxLevel = Math.min(rawMaxLevel || CHINA_BETA_MAX_LEVEL, CHINA_BETA_MAX_LEVEL);
     const name = cleanCmsDisplayName(text(quest, ['name', 'displayName', 'label', 'title'], lookupName(lookups, 'quests', id, `Quest ${id}`)), '任务', id);

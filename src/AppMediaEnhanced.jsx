@@ -217,7 +217,7 @@ export default function AppMediaEnhanced() {
     {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
     {tab === 'monsters' && <MonsterReportPage data={activeData} />}
-    {tab === 'quests' && <QuestPage level={level} classLine={classLine} />}
+    {tab === 'quests' && <QuestPage level={level} classLine={classLine} quests={activeData.quests} />}
     {tab === 'materials' && <MaterialsPage data={activeData} />}
     {pickerSlot && <GearPicker slot={pickerSlot} items={candidatesBySlot[pickerSlot] ?? []} current={gear.find((item) => item.slot === pickerSlot)} onChoose={(item) => chooseGear(pickerSlot, item)} onClose={() => setPickerSlot(null)} />}
     {error && <p className="load-error">官方数据读取提示：{error}</p>}
@@ -855,13 +855,14 @@ function MapsPage({ maps, data }) {
   </Section>;
 }
 
-function QuestPage({ level, classLine }) {
+function QuestPage({ level, classLine, quests: questsProp }) {
   const [payload, setPayload] = useState(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('near');
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (Array.isArray(questsProp)) return;
     let alive = true;
     fetch(`${baseUrl()}AppData/quests.json`)
       .then((response) => {
@@ -875,9 +876,12 @@ function QuestPage({ level, classLine }) {
         if (alive) setError(err.message || '任务数据读取失败');
       });
     return () => { alive = false; };
-  }, []);
+  }, [questsProp]);
 
-  const quests = useMemo(() => Array.isArray(payload?.quests) ? payload.quests : [], [payload]);
+  const quests = useMemo(() => {
+    if (Array.isArray(questsProp)) return questsProp;
+    return Array.isArray(payload?.quests) ? payload.quests : [];
+  }, [questsProp, payload]);
   const visibleQuests = useMemo(() => {
     const q = query.trim().toLowerCase();
     return quests
