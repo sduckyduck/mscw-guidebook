@@ -95,7 +95,11 @@ export default function AppMediaEnhanced() {
   const edition = EDITIONS.find((x) => x.id === editionId) ?? EDITIONS[0];
   const minLevel = edition.minLevel ?? 10;
   const maxLevel = edition.maxLevel ?? 50;
-  const activeData = edition.dataMode === 'official-appdata' ? (data ?? emptyData) : emptyData;
+  const activeData = !data
+    ? emptyData
+    : edition.dataSource === 'cms-china'
+      ? (data.byEdition?.china ?? emptyData)
+      : (data.byEdition?.global ?? data);
   const skillGroups = activeData.skillGroups ?? [];
   const classes = CLASS_LINES.filter((x) => edition.classIds.includes(x.id));
   const classLine = classes.find((x) => x.id === classId) ?? classes[0];
@@ -209,7 +213,6 @@ export default function AppMediaEnhanced() {
   return <main className="app-shell">
     <AppHeaderBar tab={tab} onTabChange={changeTab} classLine={classLine} level={level} />
     <MobileTabBar tab={tab} onTabChange={changeTab} />
-    {edition.dataMode !== 'official-appdata' && <p className="load-error">国服数据/公式已预留，当前暂不启用真实推荐。</p>}
     {tab === 'overview' && <Dashboard controls={controls} classLine={classLine} branch={branch} gender={gender} level={level} bestMonster={bestMonster} bestMap={bestMap} maps={maps} weapon={weapon} gear={gear} stats={stats} skillPlan={skillPlan} statPlan={statPlan} effectiveApAllocation={effectiveApAllocation} candidatesBySlot={candidatesBySlot} items={activeData.items} budget={budget} onPickSlot={openGearPicker} onOpenMaps={() => changeTab('maps')} onApChange={changeAp} />}
     {tab === 'character' && <SkillPanel plan={skillPlan} apNote={apNote} statPlan={statPlan} classLine={classLine} gender={gender} gear={gear} level={level} weapon={weapon} apAllocation={effectiveApAllocation} onApChange={changeAp} onApReset={resetAp} onSkillChange={changeSkill} onSkillReset={resetSkills} />}
     {tab === 'maps' && <MapsPage maps={maps} data={activeData} />}
